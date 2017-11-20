@@ -12,19 +12,7 @@ make deps
 
 
 ### Install
-The application data is stored in the "players" directory under:
-```
-Windows:    /ProgramData
-Linux:      /var/lib
-MacOS:      /Library/Application Support
-```
-which needs to be created as root as follows (for example on linux) :
-
-```
-sudo mkdir /var/lib/players-test
-sudo chmod 777 /var/lib/players-test
-
-``` 
+The application data is stored in the "players" directory under the "HOME" directory
 
 
 ### Run
@@ -38,36 +26,36 @@ HOST=localhost
 
 List the IDs of all players
 ```
-curl ${USER}:${PASSWORD}@${HOST}:8080/players
+curl ${USER}:${PASSWORD}@${HOST}:8080/people
 
 httpStatus: 200
-response:   {"players":[1001,1002]}
+response:   {"people":[1001,1002]}
 ```
 
 
-Add a new Player
+Add a new Person
 ```
-curl -X POST -d "{\"name\":\"xxx\"}" ${USER}:${PASSWORD}@${HOST}:8080/player
+curl -X POST -d "{\"name\":\"xxx\"}" ${USER}:${PASSWORD}@${HOST}:8080/person
 
 httpStatus: 200
 response:   {"httpStatus":200,"message":"ok"}
 ```
 
-Delete a player
+Delete a person
 ```
 ID=1002
-curl -X DELETE ${USER}:${PASSWORD}@${HOST}:8080/player/${ID}
+curl -X DELETE ${USER}:${PASSWORD}@${HOST}:8080/person/${ID}
 
 httpStatus: 200
 response:   {"httpStatus":200,"message":"ok"}
 ```
 
-Get the details of a player
+Get the details of a person
 ```
-curl ${USER}:${PASSWORD}@${HOST}:8080/player/${ID}
+curl ${USER}:${PASSWORD}@${HOST}:8080/person/${ID}
 
 httpStatus: 200
-response:   {"player":{"name":"FRED"}}
+response:   {"person":{"name":"FRED"}}
 ```
 
 

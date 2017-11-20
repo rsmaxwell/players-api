@@ -54,6 +54,8 @@ func init() {
 	peopleDirectory = rootdir + "/people"
 	peopleDataDirectory = peopleDirectory + "/data"
 	peopleInfoFile = peopleDirectory + "/info.json"
+
+	logger.Logger.Printf("peopleDirectory = %s\n", peopleDirectory)
 }
 
 func removeContents(dir string) error {

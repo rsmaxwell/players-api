@@ -50,7 +50,7 @@ while read -r machine; do
     # Install the application
     #########################################################################################
     echo "Make application directory"
-    makeDirectory ${ssh_port} ${userid} ${password} ${address} "/opt/players" "root" "root" "755"
+    makeDirectory ${ssh_port} ${userid} ${password} ${address} "/home/${userid}/players" "${userid}" "${userid}" "755"
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"
@@ -58,15 +58,15 @@ while read -r machine; do
     fi
 
     echo "Make application binary directory"
-    makeDirectory ${ssh_port} ${userid} ${password} ${address} "/opt/players/bin" "root" "root" "755"
+    makeDirectory ${ssh_port} ${userid} ${password} ${address} "/home/${userid}/players/bin" "${userid}" "${userid}" "755"
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"
         exit 1
     fi
 
-    echo "Copy Application binary: /opt/players/bin/players-linux-386"
-    copyFile ${ssh_port} ${userid} ${password} ${address} "players-linux-386" "/opt/players/bin/players-linux-386" ${userid} ${userid} "755"
+    echo "Copy Application binary: /home/${userid}/players/bin/players-server-linux-386"
+    copyFile ${ssh_port} ${userid} ${password} ${address} "players-server-linux-386" "/home/${userid}/players/bin/players-server-linux-386" ${userid} ${userid} "755"
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"
@@ -93,8 +93,12 @@ while read -r machine; do
 [Unit]
 Description=The server for the Players application
 
+
 [Service]
-ExecStart=/bin/bash -c "/opt/players/bin/players-linux-386 1> /home/richard/players.stdout 2> /home/richard/players.stderr"
+User=${userid}
+Environment=HOME=/home/${userid}
+ExecStartPre=/bin/mkdir -p /home/${userid}/players"
+ExecStart=/bin/bash -c "/home/${userid}/players/bin/players-server-linux-386 1> /home/${userid}/players/stdout.txt 2> /home/${userid}/players/stderr.txt"
 
 [Install]
 WantedBy=multi-user.target

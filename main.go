@@ -295,6 +295,7 @@ func checkUser(u, p string) bool {
 
 func main() {
 
+	logger.Logger.Printf("Players Server")
 	flag.StringVar(&username, "username", "foo", "username")
 	flag.StringVar(&password, "password", "bar", "password")
 	flag.IntVar(&port, "port", 4200, "an int")

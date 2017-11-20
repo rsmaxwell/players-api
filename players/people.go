@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/rsmaxwell/players/logger"
+	"github.com/rsmaxwell/players-server/logger"
 )
 
 // Person Structure

@@ -1,0 +1,771 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/rsmaxwell/players/main.go (70.7%)</option>
+				
+				<option value="file1">github.com/rsmaxwell/players/players/players.go (75.4%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "encoding/json"
+        "flag"
+        "fmt"
+        "io"
+        "io/ioutil"
+        "net/http"
+        "strconv"
+
+        "github.com/gorilla/mux"
+
+        "github.com/rsmaxwell/players/logger"
+        "github.com/rsmaxwell/players/players"
+)
+
+var (
+        port                      int
+        username                  string
+        password                  string
+        clientSuccess             int
+        clientError               int
+        clientAuthenticationError int
+        serverError               int
+)
+
+// Error Response JSON object
+type messageResponseJSON struct {
+        Message string `json:"message"`
+}
+
+// metrics Response JSON object
+type metricsResponseJSON struct {
+        ClientSuccess             int `json:"clientSuccess"`
+        ClientError               int `json:"clientError"`
+        ClientAuthenticationError int `json:"clientAuthenticationError"`
+        ServerError               int `json:"serverError"`
+}
+
+// Players details Response JSON object
+type playerDetailsResponseJSON struct {
+        Player players.Player `json:"player"`
+}
+
+// List players Response JSON object
+type listPlayersResponseJSON struct {
+        Players []int `json:"players"`
+}
+
+// Number of players Response JSON object
+type numberOfPlayersResponseJSON struct {
+        NumberOfPlayers int `json:"numberOfPlayers"`
+}
+
+// Handle writing ermessageror response.
+func writeMessageResponse(w http.ResponseWriter, httpStatus int, message string) <span class="cov8" title="9">{
+        logger.Logger.Printf("Response: %d %s - %s", httpStatus, http.StatusText(httpStatus), message)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(httpStatus)
+        json.NewEncoder(w).Encode(messageResponseJSON{
+                Message: message,
+        })
+}</span>
+
+// Handle writing numberOfPlayers response
+func writePlayerInfoResponse(w http.ResponseWriter, r *http.Request) <span class="cov3" title="2">{
+        // Check the user calling the service
+        user, pass, _ := r.BasicAuth()
+        if !checkUser(user, pass) </span><span class="cov1" title="1">{
+                writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">listOfPlayers, err := players.List()
+        if err != nil </span><span class="cov0" title="0">{
+                writeMessageResponse(w, http.StatusInternalServerError, "Error getting list of players")
+                serverError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">numberOfPlayers := len(listOfPlayers)
+
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(numberOfPlayersResponseJSON{
+                NumberOfPlayers: numberOfPlayers,
+        })</span>
+}
+
+// Handle writing the GET list of Players response
+func writeGetListOfPlayersResponse(w http.ResponseWriter, r *http.Request) <span class="cov3" title="2">{
+        // Check the user calling the service
+        user, pass, _ := r.BasicAuth()
+        if !checkUser(user, pass) </span><span class="cov1" title="1">{
+                writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">listOfPlayers, err := players.List()
+        if err != nil </span><span class="cov0" title="0">{
+                writeMessageResponse(w, http.StatusInternalServerError, "Error getting list of players")
+                serverError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(listPlayersResponseJSON{
+                Players: listOfPlayers,
+        })</span>
+}
+
+// Write the GET player response
+func writeGetPlayerDetailsResponse(w http.ResponseWriter, r *http.Request, idString string) <span class="cov3" title="2">{
+        // Check the user calling the service
+        user, pass, _ := r.BasicAuth()
+        if !checkUser(user, pass) </span><span class="cov1" title="1">{
+                writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">id, err := strconv.Atoi(idString)
+        if err != nil </span><span class="cov0" title="0">{
+                writeMessageResponse(w, http.StatusNotFound, "Not Found")
+                clientError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">player, err := players.Details(id)
+
+        if err != nil </span><span class="cov0" title="0">{
+                writeMessageResponse(w, http.StatusNotFound, "Not Found")
+                clientError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(playerDetailsResponseJSON{
+                Player: *player,
+        })</span>
+}
+
+// Write the POST Add Player response
+func writePostAddPlayerResponse(w http.ResponseWriter, r *http.Request) <span class="cov3" title="2">{
+        // Check the user calling the service
+        user, pass, _ := r.BasicAuth()
+        if !checkUser(user, pass) </span><span class="cov1" title="1">{
+                writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">var p players.Player
+
+        limitedReader := &amp;io.LimitedReader{R: r.Body, N: 20 * 1024}
+        b, err := ioutil.ReadAll(limitedReader)
+        if err != nil </span><span class="cov0" title="0">{
+                writeMessageResponse(w, http.StatusBadRequest, fmt.Sprintf("Too much data posted in Add Player request"))
+                clientError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">err = json.Unmarshal(b, &amp;p)
+        if err != nil </span><span class="cov0" title="0">{
+                writeMessageResponse(w, http.StatusBadRequest, fmt.Sprintf("Could not parse player data for Add Player request"))
+                clientError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">err = players.AddPlayer(p)
+        if err != nil </span><span class="cov0" title="0">{
+                writeMessageResponse(w, http.StatusBadRequest, fmt.Sprintf("Could not create a new player. err:%s", err))
+                serverError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">w.Header().Set("Content-Type", "application/json")
+        writeMessageResponse(w, http.StatusOK, "ok")</span>
+}
+
+// Write the DELETE player response
+func writeDeletePlayerResponse(w http.ResponseWriter, r *http.Request, idString string) <span class="cov3" title="2">{
+        // Check the user calling the service
+        user, pass, _ := r.BasicAuth()
+        if !checkUser(user, pass) </span><span class="cov1" title="1">{
+                writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        // Convert the ID into a number
+        <span class="cov1" title="1">id, err := strconv.Atoi(idString)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Printf(err.Error())
+                writeMessageResponse(w, http.StatusBadRequest, fmt.Sprintf("The ID:%s is not a number", idString))
+                clientError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">players.Delete(id)
+
+        w.Header().Set("Content-Type", "application/json")
+        writeMessageResponse(w, http.StatusOK, "ok")</span>
+}
+
+// Write the GET metrics response
+func writeGetMetricsResponse(w http.ResponseWriter, r *http.Request) <span class="cov3" title="2">{
+        // Check the user calling the service
+        user, pass, _ := r.BasicAuth()
+        if !checkUser(user, pass) </span><span class="cov1" title="1">{
+                writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov1" title="1">w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(metricsResponseJSON{
+                ClientSuccess:             clientSuccess,
+                ClientError:               clientError,
+                ClientAuthenticationError: clientAuthenticationError,
+                ServerError:               serverError,
+        })</span>
+}
+
+// Handlers for REST API routes
+func setupHandlers(r *mux.Router) <span class="cov9" title="12">{
+
+        // PlayerInfo
+        r.HandleFunc("/playerinfo", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
+                        writePlayerInfoResponse(w, req)
+                }</span>)).Methods(http.MethodGet)
+
+        // ListPlayers
+        <span class="cov9" title="12">r.HandleFunc("/players", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
+                        writeGetListOfPlayersResponse(w, req)
+                }</span>)).Methods(http.MethodGet)
+
+        // Player Details
+        <span class="cov9" title="12">r.HandleFunc("/player/{id}", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
+                        writeGetPlayerDetailsResponse(w, req, mux.Vars(req)["id"])
+                }</span>)).Methods(http.MethodGet)
+
+        // Add Player
+        <span class="cov9" title="12">r.HandleFunc("/player", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
+                        writePostAddPlayerResponse(w, req)
+                }</span>)).Methods(http.MethodPost)
+
+        // Delete Player
+        <span class="cov9" title="12">r.HandleFunc("/player/{id}", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
+                        writeDeletePlayerResponse(w, req, mux.Vars(req)["id"])
+                }</span>)).Methods(http.MethodDelete)
+
+        // Metrics
+        <span class="cov9" title="12">r.HandleFunc("/metrics", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
+                        writeGetMetricsResponse(w, req)
+                }</span>)).Methods(http.MethodGet)
+
+        // Not Found
+        <span class="cov9" title="12">r.NotFoundHandler = http.HandlerFunc(logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov0" title="0">{
+                        writeMessageResponse(w, http.StatusNotFound, "Not Found")
+                        clientError++
+                }</span>))
+}
+
+// Simple check on the user calling the service
+func checkUser(u, p string) bool <span class="cov10" title="14">{
+
+        fmt.Printf("checkUser: username = %s, %s\n", username, u)
+        fmt.Printf("checkUser: password = %s, %s\n", password, p)
+
+        if u == username &amp;&amp; p == password </span><span class="cov7" title="7">{
+                return true
+        }</span>
+        <span class="cov7" title="7">return false</span>
+}
+
+func main() <span class="cov0" title="0">{
+
+        flag.StringVar(&amp;username, "username", "foo", "username")
+        flag.StringVar(&amp;password, "password", "bar", "password")
+        flag.IntVar(&amp;port, "port", 8082, "an int")
+        flag.Parse()
+
+        logger.Logger.Printf("Registering Router and setting Handlers")
+        router := mux.NewRouter()
+        setupHandlers(router)
+
+        logger.Logger.Printf("Listening on port: %d", port)
+        err := http.ListenAndServe(fmt.Sprintf(":%d", port), router)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Fatalf(err.Error())
+        }</span>
+
+        <span class="cov0" title="0">logger.Logger.Printf("Success")</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package players
+
+import (
+        "encoding/json"
+        "flag"
+        "fmt"
+        "io/ioutil"
+        "log"
+        "os"
+        "path/filepath"
+        "strconv"
+
+        "github.com/rsmaxwell/players/logger"
+        "github.com/rsmaxwell/players/platform"
+)
+
+// Player Structure
+type Player struct {
+        Name string `json:"name"`
+}
+
+// Info structure
+type Info struct {
+        CurrentID int `json:"currentID"`
+}
+
+var (
+        rootdir             string
+        playerDirectory     string
+        playerDataDirectory string
+        playerInfoFile      string
+)
+
+func init() <span class="cov1" title="1">{
+        // use a different appname when testing so thet tests do not zap the actual application data
+        if flag.Lookup("test.v") == nil </span><span class="cov0" title="0">{
+                rootdir = platform.ApplicationDataDirectory + "/players"
+        }</span><span class="cov1" title="1"> else {
+                rootdir = platform.ApplicationDataDirectory + "/players-test"
+        }</span>
+
+        <span class="cov1" title="1">playerDirectory = rootdir + "/players"
+        playerDataDirectory = playerDirectory + "/data"
+        playerInfoFile = playerDirectory + "/info.json"</span>
+}
+
+func removeContents(dir string) error <span class="cov6" title="13">{
+        d, err := os.Open(dir)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov6" title="13">defer d.Close()
+        names, err := d.Readdirnames(-1)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov6" title="13">for _, name := range names </span><span class="cov7" title="25">{
+                err = os.RemoveAll(filepath.Join(dir, name))
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+        }
+        <span class="cov6" title="13">return nil</span>
+}
+
+// CreatePlayerDirectory creates the player directory
+func CreatePlayerDirectory() error <span class="cov10" title="78">{
+
+        _, err := os.Stat(playerDirectory)
+        if err != nil </span><span class="cov6" title="13">{
+                err := os.MkdirAll(playerDirectory, 0755)
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+        }
+
+        <span class="cov10" title="78">_, err = os.Stat(playerDataDirectory)
+        if err != nil </span><span class="cov6" title="13">{
+                err := os.MkdirAll(playerDataDirectory, 0755)
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+        }
+
+        <span class="cov10" title="78">return nil</span>
+}
+
+// RemovePlayerDirectory removes ALL the player files
+func RemovePlayerDirectory() error <span class="cov6" title="14">{
+        logger.Logger.Printf("Remove player directory")
+
+        _, err := os.Stat(playerDirectory)
+        if err == nil </span><span class="cov6" title="13">{
+                err := removeContents(playerDirectory)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Logger.Panic(err.Error())
+                }</span>
+
+                <span class="cov6" title="13">os.Remove(playerDirectory)</span>
+        }
+
+        <span class="cov6" title="14">return nil</span>
+}
+
+// CreatePlayerInfoFile initialises the Info object from file
+func CreatePlayerInfoFile() (*Info, error) <span class="cov8" title="33">{
+
+        logger.Logger.Printf("Checking the infofile exists")
+        if _, err := os.Stat(playerInfoFile); os.IsNotExist(err) </span><span class="cov5" title="10">{
+
+                err := CreatePlayerDirectory()
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Logger.Panicf(err.Error())
+                }</span>
+
+                <span class="cov5" title="10">info := Info{CurrentID: 1000}
+                infoJSON, err := json.Marshal(info)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Logger.Panicf(err.Error())
+                }</span>
+
+                <span class="cov5" title="10">err = ioutil.WriteFile(playerInfoFile, infoJSON, 0644)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Logger.Panicf(err.Error())
+                }</span>
+        }
+
+        <span class="cov8" title="33">data, err := ioutil.ReadFile(playerInfoFile)
+        if err != nil </span><span class="cov1" title="1">{
+                logger.Logger.Panicf(err.Error())
+        }</span>
+
+        <span class="cov8" title="32">var i Info
+        err = json.Unmarshal(data, &amp;i)
+        if err != nil </span><span class="cov2" title="2">{
+                logger.Logger.Panicf(err.Error())
+        }</span>
+
+        <span class="cov8" title="30">return &amp;i, nil</span>
+}
+
+// GetAndIncrementCurrentID returns the CurrentID and then increments the CurrentID on disk
+func GetAndIncrementCurrentID() (int, error) <span class="cov7" title="22">{
+
+        // Make sure the player directory and info file exists
+        _, err := CreatePlayerInfoFile()
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, err
+        }</span>
+
+        // Read the player info file
+        <span class="cov7" title="21">data, err := ioutil.ReadFile(playerInfoFile)
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, err
+        }</span>
+
+        <span class="cov7" title="21">var i Info
+        err = json.Unmarshal(data, &amp;i)
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, err
+        }</span>
+
+        <span class="cov7" title="21">currentID := i.CurrentID
+
+        i.CurrentID = i.CurrentID + 1
+
+        infoJSON, err := json.Marshal(i)
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, err
+        }</span>
+
+        <span class="cov7" title="21">err = ioutil.WriteFile(playerInfoFile, infoJSON, 0644)
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, err
+        }</span>
+
+        <span class="cov7" title="21">return currentID, nil</span>
+}
+
+// NewPlayer initialises a Player object
+func NewPlayer(name string) (*Player, error) <span class="cov5" title="10">{
+        player := new(Player)
+        player.Name = name
+        return player, nil
+}</span>
+
+// AddPlayer adds a player to the list of players
+func AddPlayer(player Player) error <span class="cov5" title="10">{
+
+        err := CreatePlayerDirectory()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println(err)
+                return err
+        }</span>
+
+        <span class="cov5" title="10">id, err := GetAndIncrementCurrentID()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println(err)
+                return err
+        }</span>
+
+        <span class="cov5" title="10">playerJSON, err := json.Marshal(player)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Print(err)
+                return fmt.Errorf("internal error")
+        }</span>
+
+        <span class="cov5" title="10">err = CreatePlayerDirectory()
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Panicf(err.Error())
+        }</span>
+
+        <span class="cov5" title="10">playerfile := playerDataDirectory + "/" + strconv.Itoa(id) + ".json"
+        err = ioutil.WriteFile(playerfile, playerJSON, 0644)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Print(err)
+                return fmt.Errorf("internal error")
+        }</span>
+
+        <span class="cov5" title="10">return nil</span>
+}
+
+// List returns a list of the players IDs
+func List() ([]int, error) <span class="cov5" title="8">{
+
+        err := CreatePlayerDirectory()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println(err)
+                return nil, err
+        }</span>
+
+        <span class="cov5" title="8">files, err := ioutil.ReadDir(playerDataDirectory)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println(err)
+                return nil, err
+        }</span>
+
+        <span class="cov5" title="8">var list []int
+        for _, filenameInfo := range files </span><span class="cov6" title="14">{
+                var filename = filenameInfo.Name()
+                var extension = filepath.Ext(filename)
+                var name = filename[0 : len(filename)-len(extension)]
+
+                id, err := strconv.Atoi(name)
+
+                if err != nil </span><span class="cov2" title="2">{
+                        logger.Logger.Printf("Skipping unexpected player filename \"%s\". err = %s\n", filename, err)
+                }</span>
+
+                <span class="cov6" title="14">list = append(list, id)</span>
+        }
+
+        <span class="cov5" title="8">return list, nil</span>
+}
+
+// Details returns the details of the player with the matching ID
+func Details(id int) (*Player, error) <span class="cov7" title="27">{
+
+        err := CreatePlayerDirectory()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println(err)
+                return nil, err
+        }</span>
+
+        <span class="cov7" title="27">playerfile := playerDataDirectory + "/" + strconv.Itoa(id) + ".json"
+        if _, err := os.Stat(playerfile); os.IsNotExist(err) </span><span class="cov1" title="1">{
+                logger.Logger.Printf("The player file was not found. err = %s\n", err)
+                return nil, err
+        }</span>
+
+        <span class="cov7" title="26">data, err := ioutil.ReadFile(playerfile)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Printf("Could not read file. err = %s\n", err)
+                return nil, err
+        }</span>
+
+        <span class="cov7" title="26">var p Player
+        err = json.Unmarshal(data, &amp;p)
+        if err != nil </span><span class="cov1" title="1">{
+                logger.Logger.Printf("Could not parse info data. err = %s\n", err)
+                return nil, err
+        }</span>
+        <span class="cov7" title="25">return &amp;p, nil</span>
+}
+
+// Delete the player with the matching ID
+func Delete(id int) error <span class="cov4" title="6">{
+
+        err := CreatePlayerDirectory()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println(err)
+                return err
+        }</span>
+
+        <span class="cov4" title="6">playerfile := playerDataDirectory + "/" + strconv.Itoa(id) + ".json"
+        _, err = os.Stat(playerfile)
+        if err != nil </span><span class="cov1" title="1">{
+                logger.Logger.Print(err)
+                return fmt.Errorf("player [%d] not found", id)
+        }</span>
+
+        <span class="cov4" title="5">err = os.Remove(playerfile)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Print(err)
+                return fmt.Errorf("could not delete player [%d]", id)
+        }</span>
+
+        <span class="cov4" title="5">return nil</span>
+}
+
+// Reset resets the list of players
+func Reset(names ...string) error <span class="cov4" title="5">{
+
+        err := RemovePlayerDirectory()
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Fatal(err)
+        }</span>
+
+        <span class="cov4" title="5">err = CreatePlayerDirectory()
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Fatal(err)
+        }</span>
+
+        <span class="cov4" title="5">_, err = CreatePlayerInfoFile()
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Fatal(err)
+        }</span>
+
+        <span class="cov4" title="5">for _, element := range names </span><span class="cov3" title="4">{
+                player, err := NewPlayer(element)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Logger.Fatal(err)
+                }</span>
+
+                <span class="cov3" title="4">err = AddPlayer(*player)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Logger.Fatal(err)
+                }</span>
+        }
+
+        <span class="cov4" title="5">return nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

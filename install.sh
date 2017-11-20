@@ -93,7 +93,6 @@ while read -r machine; do
 [Unit]
 Description=The server for the Players application
 
-
 [Service]
 User=${userid}
 Environment=HOME=/home/${userid}

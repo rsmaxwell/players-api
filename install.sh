@@ -147,6 +147,11 @@ Restart=always
 RestartSec=3
 ExecStart=/bin/bash -c "/opt/players/bin/players 1> /home/${userid}/players.stdout 2> /home/${userid}/players.stderr"
 
+User=${userid}
+Environment=HOME=/home/${userid}
+ExecStartPre=/bin/mkdir -p /home/${userid}/players
+
+
 [Install]
 WantedBy=multi-user.target
 EOL

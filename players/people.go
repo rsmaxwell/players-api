@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/rsmaxwell/players/logger"
+	"github.com/rsmaxwell/players-server/logger"
 )
 
 // Person Structure
@@ -54,6 +54,8 @@ func init() {
 	peopleDirectory = rootdir + "/people"
 	peopleDataDirectory = peopleDirectory + "/data"
 	peopleInfoFile = peopleDirectory + "/info.json"
+
+	logger.Logger.Printf("peopleDirectory = %s\n", peopleDirectory)
 }
 
 func removeContents(dir string) error {

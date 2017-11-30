@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/rsmaxwell/players/players"
+	"github.com/rsmaxwell/players-server/players"
 	"github.com/stretchr/testify/assert"
 )
 

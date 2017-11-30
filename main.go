@@ -11,8 +11,8 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/rsmaxwell/players/logger"
-	"github.com/rsmaxwell/players/players"
+	"github.com/rsmaxwell/players-server/logger"
+	"github.com/rsmaxwell/players-server/players"
 )
 
 var (
@@ -295,9 +295,10 @@ func checkUser(u, p string) bool {
 
 func main() {
 
+	logger.Logger.Printf("Players Server")
 	flag.StringVar(&username, "username", "foo", "username")
 	flag.StringVar(&password, "password", "bar", "password")
-	flag.IntVar(&port, "port", 8082, "an int")
+	flag.IntVar(&port, "port", 4200, "an int")
 	flag.Parse()
 
 	logger.Logger.Printf("Registering Router and setting Handlers")

@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -296,17 +296,33 @@ func checkUser(u, p string) bool {
 func main() {
 
 	logger.Logger.Printf("Players Server")
-	flag.StringVar(&username, "username", "foo", "username")
-	flag.StringVar(&password, "password", "bar", "password")
-	flag.IntVar(&port, "port", 4200, "an int")
-	flag.Parse()
+	var ok bool
+
+	username, ok = os.LookupEnv("USERNAME")
+	if !ok {
+		username = "foo"
+	}
+
+	password, ok = os.LookupEnv("password")
+	if !ok {
+		password = "foo"
+	}
+
+	portstring, ok := os.LookupEnv("port")
+	if !ok {
+		portstring = "4200"
+	}
+	port, err := strconv.Atoi(portstring)
+	if err != nil {
+		logger.Logger.Fatalf(err.Error())
+	}
 
 	logger.Logger.Printf("Registering Router and setting Handlers")
 	router := mux.NewRouter()
 	setupHandlers(router)
 
 	logger.Logger.Printf("Listening on port: %d", port)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), router)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 	if err != nil {
 		logger.Logger.Fatalf(err.Error())
 	}

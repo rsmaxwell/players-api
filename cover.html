@@ -54,9 +54,9 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rsmaxwell/players-server/main.go (70.7%)</option>
+				<option value="file0">github.com/rsmaxwell/players-server/main.go (65.7%)</option>
 				
-				<option value="file1">github.com/rsmaxwell/players-server/players/people.go (75.3%)</option>
+				<option value="file1">github.com/rsmaxwell/players-server/players/people.go (75.4%)</option>
 				
 				</select>
 			</div>
@@ -83,17 +83,17 @@
 
 import (
         "encoding/json"
-        "flag"
         "fmt"
         "io"
         "io/ioutil"
         "net/http"
+        "os"
         "strconv"
 
         "github.com/gorilla/mux"
 
-        "github.com/rsmaxwell/players/logger"
-        "github.com/rsmaxwell/players/players"
+        "github.com/rsmaxwell/players-server/logger"
+        "github.com/rsmaxwell/players-server/players"
 )
 
 var (
@@ -376,17 +376,34 @@ func checkUser(u, p string) bool <span class="cov10" title="14">{
 
 func main() <span class="cov0" title="0">{
 
-        flag.StringVar(&amp;username, "username", "foo", "username")
-        flag.StringVar(&amp;password, "password", "bar", "password")
-        flag.IntVar(&amp;port, "port", 8082, "an int")
-        flag.Parse()
+        logger.Logger.Printf("Players Server")
+        var ok bool
 
-        logger.Logger.Printf("Registering Router and setting Handlers")
+        username, ok = os.LookupEnv("USERNAME")
+        if !ok </span><span class="cov0" title="0">{
+                username = "foo"
+        }</span>
+
+        <span class="cov0" title="0">password, ok = os.LookupEnv("password")
+        if !ok </span><span class="cov0" title="0">{
+                password = "foo"
+        }</span>
+
+        <span class="cov0" title="0">portstring, ok := os.LookupEnv("port")
+        if !ok </span><span class="cov0" title="0">{
+                portstring = "4200"
+        }</span>
+        <span class="cov0" title="0">port, err := strconv.Atoi(portstring)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Logger.Fatalf(err.Error())
+        }</span>
+
+        <span class="cov0" title="0">logger.Logger.Printf("Registering Router and setting Handlers")
         router := mux.NewRouter()
         setupHandlers(router)
 
         logger.Logger.Printf("Listening on port: %d", port)
-        err := http.ListenAndServe(fmt.Sprintf(":%d", port), router)
+        err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
         if err != nil </span><span class="cov0" title="0">{
                 logger.Logger.Fatalf(err.Error())
         }</span>
@@ -408,7 +425,7 @@ import (
         "runtime"
         "strconv"
 
-        "github.com/rsmaxwell/players/logger"
+        "github.com/rsmaxwell/players-server/logger"
 )
 
 // Person Structure
@@ -450,7 +467,9 @@ func init() <span class="cov1" title="1">{
 
         <span class="cov1" title="1">peopleDirectory = rootdir + "/people"
         peopleDataDirectory = peopleDirectory + "/data"
-        peopleInfoFile = peopleDirectory + "/info.json"</span>
+        peopleInfoFile = peopleDirectory + "/info.json"
+
+        logger.Logger.Printf("peopleDirectory = %s\n", peopleDirectory)</span>
 }
 
 func removeContents(dir string) error <span class="cov6" title="13">{

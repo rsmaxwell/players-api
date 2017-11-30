@@ -16,10 +16,8 @@ while read -r machine; do
     name=$(echo "$machine" | jq -r .name)
     address=$(echo "$machine" | jq -r .address)
     userid=$(echo "$machine" | jq -r .userid)
-    password=$(echo "$machine" | jq -r .password)
-    nexusGroup=$(echo "$machine" | jq -r .nexusGroup)
-    nexusUser=$(echo "$machine" | jq -r .nexusUser)
-    nexusPassword=$(echo "$machine" | jq -r .nexusPassword)
+    goos=$(echo "$machine" | jq -r .goos)
+    goarch=$(echo "$machine" | jq -r .goarch)
 
     tags=$(echo "$machine" | jq -r .tags)
     ports=$(echo "$machine" | jq -r .ports)
@@ -28,45 +26,96 @@ while read -r machine; do
     #########################################################################################
     # Are we interested in this machine ?
     #########################################################################################
-
-    echo "tags = ${tags}"
-
-    doit=false
+    enabled=false
+    players=false
     while read -r tag; do
-
-        echo "tag = ${tag}"
-
-        if [ $tag = "target" ]; then
-            doit=true
+        if [ $tag = "enabled" ]; then
+            enabled=true
+        elif [ $tag = "players" ]; then
+            players=true
         fi
     done <<< $(getTags "${tags}")
 
-    if [ "${doit}" = false ]; then
+    if [ "${enabled}" = false ]; then
+        continue;
+    elif [ "${players}" = false ]; then
         continue;
     fi
+
     echo "---[ ${name} ]-----"
 
     #########################################################################################
-    # Install the application
+    # Make application directory
     #########################################################################################
     echo "Make application directory"
-    makeDirectory ${ssh_port} ${userid} ${password} ${address} "/opt/players" "root" "root" "755"
+    directory="/opt/players"
+    callSshRetry ${ssh_port} ${userid} ${address} "sudo mkdir -p ${directory}"
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"
         exit 1
     fi
 
+    callSshRetry ${ssh_port} ${userid} ${address} "sudo chown root:root ${directory}"
+    result=$?
+    if [ ! $result == 0 ]; then
+        echo "result = $result"
+        exit 1
+    fi
+
+    callSshRetry ${ssh_port} ${userid} ${address} "sudo chmod 755 ${directory}"
+    result=$?
+    if [ ! $result == 0 ]; then
+        echo "result = $result"
+        exit 1
+    fi
+
+    #########################################################################################
+    # Make application binary directory
+    #########################################################################################
     echo "Make application binary directory"
-    makeDirectory ${ssh_port} ${userid} ${password} ${address} "/opt/players/bin" "root" "root" "755"
+    directory="/opt/players/bin"
+    callSshRetry ${ssh_port} ${userid} ${address} "sudo mkdir -p ${directory}"
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"
         exit 1
     fi
 
-    echo "Copy Application binary: /opt/players/bin/players-linux-386"
-    copyFile ${ssh_port} ${userid} ${password} ${address} "players-linux-386" "/opt/players/bin/players-linux-386" ${userid} ${userid} "755"
+    callSshRetry ${ssh_port} ${userid} ${address} "sudo chown root:root ${directory}"
+    result=$?
+    if [ ! $result == 0 ]; then
+        echo "result = $result"
+        exit 1
+    fi
+
+    callSshRetry ${ssh_port} ${userid} ${address} "sudo chmod 755 ${directory}"
+    result=$?
+    if [ ! $result == 0 ]; then
+        echo "result = $result"
+        exit 1
+    fi
+
+    #########################################################################################
+    # Copy Application binary
+    #########################################################################################
+    echo "Copy Application binary: /opt/players/bin/players"
+    tempfile=$(mktemp "/tmp/players.XXXXXX")
+    callScpRetry ${ssh_port} "players-linux-386" "${userid}@${address}:${tempfile}"
+    result=$?
+    if [ ! $result == 0 ]; then
+        echo "result = $result"
+        exit 1
+    fi
+
+    callSsh ${ssh_port} ${userid} ${address} "sudo chmod 755 ${tempfile}"
+    result=$?
+    if [ ! $result == 0 ]; then
+        echo "result = $result"
+        exit 1
+    fi
+
+    callSsh ${ssh_port} ${userid} ${address} "sudo mv ${tempfile} /opt/players/bin/players"
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"
@@ -77,7 +126,7 @@ while read -r machine; do
     # Create a service for the application
     #########################################################################################
     echo "Stop the service (if it exists)"
-    callSshSudo ${ssh_port} ${userid} ${password} ${address} "systemctl stop players"
+    callSsh ${ssh_port} ${userid} ${address} "sudo systemctl stop players"
     result=$?
     if [ $result == 0 ]; then
         : # ok
@@ -88,28 +137,57 @@ while read -r machine; do
         exit 1
     fi
 
-    tempfile="tempfile.txt"
+    tempfile=$(mktemp "/tmp/players.service.XXXXXX")
     cat >${tempfile} <<EOL
 [Unit]
 Description=The server for the Players application
 
 [Service]
-ExecStart=/bin/bash -c "/opt/players/bin/players-linux-386 1> /home/richard/players.stdout 2> /home/richard/players.stderr"
+Restart=always
+RestartSec=3
+ExecStart=/bin/bash -c "/opt/players/bin/players 1> /home/${userid}/players.stdout 2> /home/${userid}/players.stderr"
 
 [Install]
 WantedBy=multi-user.target
 EOL
 
     echo "Copy the service file"
-    copyFile ${ssh_port} ${userid} ${password} ${address} ${tempfile} "/etc/systemd/system/players.service" "root" "root" 644
+    callScpRetry ${ssh_port} "${tempfile}" "${userid}@${address}:${tempfile}"
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"
         exit 1
     fi
 
-    echo "Delete the local temporary file"
-    rm -rf ${tempfile}
+    callSsh ${ssh_port} ${userid} ${address} "sudo chown root:root ${tempfile}"
+    result=$?
+    if [ ! $result == 0 ]; then
+        echo "result = $result"
+        exit 1
+    fi
+
+    callSsh ${ssh_port} ${userid} ${address} "sudo chmod 644 ${tempfile}"
+    result=$?
+    if [ ! $result == 0 ]; then
+        echo "result = $result"
+        exit 1
+    fi
+
+    callSsh ${ssh_port} ${userid} ${address} "sudo mv ${tempfile} /etc/systemd/system/players.service"
+    result=$?
+    if [ ! $result == 0 ]; then
+        echo "result = $result"
+        exit 1
+    fi
+
+    callSsh ${ssh_port} ${userid} ${address} "sudo bash -c \"rm -rf /tmp/players.*\""
+    result=$?
+    if [ ! $result == 0 ]; then
+        echo "result = $result"
+        exit 1
+    fi
+
+    rm -rf /tmp/players.*
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"
@@ -117,7 +195,7 @@ EOL
     fi
 
     echo "Reload systemd"
-    retrysshsudo ${ssh_port} ${userid} ${password} ${address} "systemctl daemon-reload"
+    callSsh ${ssh_port} ${userid} ${address} "sudo systemctl daemon-reload"
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"
@@ -125,7 +203,7 @@ EOL
     fi
 
     echo "Enable the service"
-    retrysshsudo ${ssh_port} ${userid} ${password} ${address} "systemctl enable players"
+    callSsh ${ssh_port} ${userid} ${address} "sudo systemctl enable players"
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"
@@ -133,7 +211,7 @@ EOL
     fi
 
     echo "Start the service"
-    retrysshsudo ${ssh_port} ${userid} ${password} ${address} "systemctl start players"
+    callSsh ${ssh_port} ${userid} ${address} "sudo systemctl start players"
     result=$?
     if [ ! $result == 0 ]; then
         echo "result = $result"

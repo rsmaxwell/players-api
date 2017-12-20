@@ -22,7 +22,7 @@ Given the following variables are set:
 USER=user
 PASSWORD=pass
 HOST=localhost
-PORT=4200
+PORT=4201
 ```
 
 List the IDs of all players

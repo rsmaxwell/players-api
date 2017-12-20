@@ -12,7 +12,6 @@ machine=${1}
 # Get the properties for this machine
 #########################################################################################
 properties=$(cat ${inventoryDir}/${machine})
-
 machinepath=${machine#./}
 machinepath=${machinepath%.json}
 

@@ -310,7 +310,7 @@ func main() {
 
 	portstring, ok := os.LookupEnv("port")
 	if !ok {
-		portstring = "4200"
+		portstring = "4201"
 	}
 	port, err := strconv.Atoi(portstring)
 	if err != nil {
@@ -321,6 +321,7 @@ func main() {
 	router := mux.NewRouter()
 	setupHandlers(router)
 
+	logger.Logger.Printf("Username = %s, Password = %s", username, password)
 	logger.Logger.Printf("Listening on port: %d", port)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 	if err != nil {

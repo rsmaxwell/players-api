@@ -28,13 +28,14 @@ while read -r machine; do
     #########################################################################################
     enabled=false
     players=false
+    set -x
     while read -r tag; do
         if [ $tag = "enabled" ]; then
             enabled=true
         elif [ $tag = "players" ]; then
             players=true
         fi
-    done <<< $(getTags "${tags}")
+    done <<< "$(getTags \"${tags}\")"
 
     if [ "${enabled}" = false ]; then
         continue;
@@ -43,6 +44,8 @@ while read -r machine; do
     fi
 
     echo "---[ ${name} ]-----"
+
+    exit 99
 
     #########################################################################################
     # Make application directory

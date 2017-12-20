@@ -54,7 +54,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rsmaxwell/players-server/main.go (65.7%)</option>
+				<option value="file0">github.com/rsmaxwell/players-server/main.go (65.3%)</option>
 				
 				<option value="file1">github.com/rsmaxwell/players-server/players/people.go (75.4%)</option>
 				
@@ -391,7 +391,7 @@ func main() <span class="cov0" title="0">{
 
         <span class="cov0" title="0">portstring, ok := os.LookupEnv("port")
         if !ok </span><span class="cov0" title="0">{
-                portstring = "4200"
+                portstring = "4201"
         }</span>
         <span class="cov0" title="0">port, err := strconv.Atoi(portstring)
         if err != nil </span><span class="cov0" title="0">{
@@ -402,6 +402,7 @@ func main() <span class="cov0" title="0">{
         router := mux.NewRouter()
         setupHandlers(router)
 
+        logger.Logger.Printf("Username = %s, Password = %s", username, password)
         logger.Logger.Printf("Listening on port: %d", port)
         err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
         if err != nil </span><span class="cov0" title="0">{

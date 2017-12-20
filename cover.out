@@ -59,9 +59,9 @@ github.com/rsmaxwell/players-server/main.go:311.2,312.9 2 0
 github.com/rsmaxwell/players-server/main.go:312.9,314.3 1 0
 github.com/rsmaxwell/players-server/main.go:315.2,316.16 2 0
 github.com/rsmaxwell/players-server/main.go:316.16,318.3 1 0
-github.com/rsmaxwell/players-server/main.go:320.2,326.16 6 0
-github.com/rsmaxwell/players-server/main.go:326.16,328.3 1 0
-github.com/rsmaxwell/players-server/main.go:330.2,330.33 1 0
+github.com/rsmaxwell/players-server/main.go:320.2,327.16 7 0
+github.com/rsmaxwell/players-server/main.go:327.16,329.3 1 0
+github.com/rsmaxwell/players-server/main.go:331.2,331.33 1 0
 github.com/rsmaxwell/players-server/players/people.go:34.23,36.31 2 1
 github.com/rsmaxwell/players-server/players/people.go:36.31,38.3 1 0
 github.com/rsmaxwell/players-server/players/people.go:38.3,38.36 1 1

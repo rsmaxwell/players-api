@@ -461,9 +461,9 @@ func init() <span class="cov1" title="1">{
         home := homeDir()
 
         if flag.Lookup("test.v") == nil </span><span class="cov0" title="0">{
-                rootdir = home + "/players"
+                rootdir = home + "/players-server"
         }</span><span class="cov1" title="1"> else {
-                rootdir = home + "/players-test"
+                rootdir = home + "/players-server-test"
         }</span>
 
         <span class="cov1" title="1">peopleDirectory = rootdir + "/people"

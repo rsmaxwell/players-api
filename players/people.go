@@ -46,9 +46,9 @@ func init() {
 	home := homeDir()
 
 	if flag.Lookup("test.v") == nil {
-		rootdir = home + "/players"
+		rootdir = home + "/players-server"
 	} else {
-		rootdir = home + "/players-test"
+		rootdir = home + "/players-server-test"
 	}
 
 	peopleDirectory = rootdir + "/people"

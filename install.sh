@@ -49,79 +49,31 @@ fi
 #########################################################################################
 title ${machinepath}
 
+
 #########################################################################################
-# Make application directory
+# Is the app already installed
 #########################################################################################
-echo "Make application directory"
-directory="/opt/players"
-callSshRetry ${ssh_port} ${username} ${address} "sudo mkdir -p ${directory}"
+destination="/opt/players-server/bin/players-server"
+
+output=$(callSshRetry ${ssh_port} ${username} ${address} "if [ -f ${destination} ]; then echo 'true'; else echo 'false'; fi")
 result=$?
 if [ ! $result == 0 ]; then
     echo "result = $result"
     exit 1
 fi
 
-callSshRetry ${ssh_port} ${username} ${address} "sudo chown root:root ${directory}"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
-
-callSshRetry ${ssh_port} ${username} ${address} "sudo chmod 755 ${directory}"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
+if [ "${output}" == "true" ]; then
+    echo "players-server is already installed"
+    exit 0
 fi
 
 #########################################################################################
-# Make application binary directory
+# Copy the app binary to a temporary location on the target machine
 #########################################################################################
-echo "Make application binary directory"
-directory="/opt/players/bin"
-callSshRetry ${ssh_port} ${username} ${address} "sudo mkdir -p ${directory}"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
 
-callSshRetry ${ssh_port} ${username} ${address} "sudo chown root:root ${directory}"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
+binary="players-server-$(Goos)-$(Goarch)"
+tempfile=$(mktemp "/tmp/players-server.XXXXXX")
 
-callSshRetry ${ssh_port} ${username} ${address} "sudo chmod 755 ${directory}"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
-
-#########################################################################################
-# Copy Application binary
-#########################################################################################
-goos=$(Goos)
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
-
-goarch=$(Goarch)
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
-
-binary="players-server-${goos}-${goarch}"
-echo "Copy Application binary: ${binary}   /opt/players/bin/players-server"
-
-tempfile=$(mktemp "/tmp/players.XXXXXX")
 callScpRetry ${ssh_port} "${binary}" "${username}@${address}:${tempfile}"
 result=$?
 if [ ! $result == 0 ]; then
@@ -129,17 +81,97 @@ if [ ! $result == 0 ]; then
     exit 1
 fi
 
-callSsh ${ssh_port} ${username} ${address} "sudo chmod 755 ${tempfile}"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
+#########################################################################################
+# Create an install script
+#########################################################################################
+echo "Create a script to install the Player-server app"
+
+script=$(mktemp "/tmp/install-players-server.XXXXXX")
+
+echo "script = ${script}"
+
+cat >${script} <<EOL
+#!/bin/bash
+
+#########################################################################################
+# Make application directory
+#########################################################################################
+echo "Make application directory"
+directory="/opt/players-server"
+sudo mkdir -p \${directory}
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
     exit 1
 fi
 
-callSsh ${ssh_port} ${username} ${address} "sudo mv ${tempfile} /opt/players/bin/players-server"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
+sudo chown root:root \${directory}
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
+    exit 1
+fi
+
+sudo chmod 755 \${directory}
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
+    exit 1
+fi
+
+#########################################################################################
+# Make application directory
+#########################################################################################
+directory="/opt/players-server/bin"
+echo "Make application directory: \${directory}"
+sudo mkdir -p \${directory}
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
+    exit 1
+fi
+
+echo "Set ownership of the application directory: \${directory}"
+sudo chown root:root \${directory}
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
+    exit 1
+fi
+
+echo "Set permissions for the application directory: \${directory}"
+sudo chmod 755 \${directory}
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
+    exit 1
+fi
+
+#########################################################################################
+# Copy Application binary
+#########################################################################################
+binary=${binary}
+tempfile=${tempfile}
+echo "Copy Application binary: \${tempfile}   \${directory}/\${binary}"
+
+sudo chmod 755 \${tempfile}
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
+    exit 1
+fi
+
+sudo chown ${username}:${username} \${tempfile}
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
+    exit 1
+fi
+
+sudo mv \${tempfile} \${directory}/players-server
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
     exit 1
 fi
 
@@ -147,103 +179,123 @@ fi
 # Create a service for the application
 #########################################################################################
 echo "Stop the service (if it exists)"
-callSsh ${ssh_port} ${username} ${address} "sudo systemctl stop players"
-result=$?
-if [ $result == 0 ]; then
+sudo systemctl stop players-server
+result=\$?
+if [ \$result == 0 ]; then
     : # ok
-elif [ $result == 5 ]; then
+elif [ \$result == 5 ]; then
     : # ok, service not defined yet
 else
-    echo "result = $result"
+    echo "result = \$result"
     exit 1
 fi
 
-tempfile=$(mktemp "/tmp/players.service.XXXXXX")
-cat >${tempfile} <<EOL
+tempfile=\$(mktemp "/tmp/players-server.service.XXXXXX")
+cat >\${tempfile} <<EOF
 [Unit]
-Description=The server for the Players application
+Description=The server for the Players application - \${directory} - ${username}
 
 [Service]
 Restart=always
 RestartSec=3
-ExecStart=/bin/bash -c "/opt/players/bin/players 1> /home/${username}/players.stdout 2> /home/${username}/players.stderr"
+ExecStart=/bin/bash -c "\${directory}/players-server 1> /home/${username}/players-server/stdout.txt 2> /home/${username}/players-server/stderr.txt"
 
-User=${username}
+User=\${username}
 Environment=HOME=/home/${username}
-ExecStartPre=/bin/mkdir -p /home/${username}/players
+ExecStartPre=/bin/mkdir -p /home/${username}/players-server
 
 
 [Install]
 WantedBy=multi-user.target
-EOL
+EOF
 
-
-
-
-echo "Copy the service file"
-callScpRetry ${ssh_port} "${tempfile}" "${username}@${address}:${tempfile}"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
+sudo chown root:root \${tempfile}
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
     exit 1
 fi
 
-callSsh ${ssh_port} ${username} ${address} "sudo chown root:root ${tempfile}"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
+sudo chmod 644 \${tempfile}
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
     exit 1
 fi
 
-callSsh ${ssh_port} ${username} ${address} "sudo chmod 644 ${tempfile}"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
+sudo mv \${tempfile} /etc/systemd/system/players-server.service
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
     exit 1
 fi
 
-callSsh ${ssh_port} ${username} ${address} "sudo mv ${tempfile} /etc/systemd/system/players.service"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
-
-callSsh ${ssh_port} ${username} ${address} "sudo bash -c \"rm -rf /tmp/players.*\""
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
+sudo bash -c "rm -rf /tmp/players-server.*"
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
     exit 1
 fi
 
 rm -rf /tmp/players.*
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
     exit 1
 fi
 
 echo "Reload systemd"
-callSsh ${ssh_port} ${username} ${address} "sudo systemctl daemon-reload"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
+sudo systemctl daemon-reload     
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
     exit 1
 fi
 
 echo "Enable the service"
-callSsh ${ssh_port} ${username} ${address} "sudo systemctl enable players"
+sudo systemctl enable players-server
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
+    exit 1
+fi
+
+echo "Start the service"
+sudo systemctl start players-server
+result=\$?
+if [ ! \$result == 0 ]; then
+    echo "result = \$result"
+    exit 1
+fi
+
+echo "Cleanup"
+rm -rf /tmp/players-server.service.*
+
+EOL
+
+#########################################################################################
+# Run the script on the target machine
+#########################################################################################
+echo "Run remote script"
+runScript ${ssh_port} ${username} ${address} ${script}
 result=$?
 if [ ! $result == 0 ]; then
     echo "result = $result"
     exit 1
 fi
 
-echo "Start the service"
-callSsh ${ssh_port} ${username} ${address} "sudo systemctl start players"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
+#########################################################################################
+# Cleanup
+#########################################################################################
+echo "Cleanup"
+rm -rf "/tmp/install-players-server.*"
+
+
+
+
+
+
+
+
+
 

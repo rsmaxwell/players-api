@@ -55,17 +55,17 @@ title ${machinepath}
 #########################################################################################
 echo "Create a script to install the Player-server app"
 
-script=$(mktemp "/tmp/install-players-server.XXXXXX")
+script=$(mktemp "/tmp/install-players-api.XXXXXX")
 
 cat >${script} <<EOL
 #!/bin/bash
 
 echo "Stop the service"
-sudo systemctl stop players-server
+sudo systemctl stop players-api
 result=\$?
 if [ \$result == 0 ]; then
     echo "Disable the service"
-    sudo systemctl disable players-server
+    sudo systemctl disable players-api
     result=\$?
     if [ \$result == 0 ]; then
         echo "ok"
@@ -84,7 +84,7 @@ else
 fi
 
 echo "Delete the service"
-sudo rm -rf /etc/systemd/system/players-server.service
+sudo rm -rf /etc/systemd/system/players-api.service
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -92,7 +92,7 @@ if [ ! \$result == 0 ]; then
 fi
 
 echo "Cleanup"
-sudo rm -rf /opt/players-server
+sudo rm -rf /opt/players-api
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -116,4 +116,4 @@ fi
 # Cleanup
 #########################################################################################
 echo "Cleanup"
-rm -rf "/tmp/install-players-server.*"
+rm -rf "/tmp/install-players-api.*"

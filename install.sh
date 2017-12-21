@@ -53,7 +53,7 @@ title ${machinepath}
 #########################################################################################
 # Is the app already installed
 #########################################################################################
-destination="/opt/players-server/bin/players-server"
+destination="/opt/players-api/bin/players-api"
 
 output=$(callSshRetry ${ssh_port} ${username} ${address} "if [ -f ${destination} ]; then echo 'true'; else echo 'false'; fi")
 result=$?
@@ -63,7 +63,7 @@ if [ ! $result == 0 ]; then
 fi
 
 if [ "${output}" == "true" ]; then
-    echo "players-server is already installed"
+    echo "players-api is already installed"
     exit 0
 fi
 
@@ -71,8 +71,8 @@ fi
 # Copy the app binary to a temporary location on the target machine
 #########################################################################################
 
-binary="players-server-$(Goos)-$(Goarch)"
-tempfile=$(mktemp "/tmp/players-server.XXXXXX")
+binary="players-api-$(Goos)-$(Goarch)"
+tempfile=$(mktemp "/tmp/players-api.XXXXXX")
 
 callScpRetry ${ssh_port} "${binary}" "${username}@${address}:${tempfile}"
 result=$?
@@ -86,7 +86,7 @@ fi
 #########################################################################################
 echo "Create a script to install the Player-server app"
 
-script=$(mktemp "/tmp/install-players-server.XXXXXX")
+script=$(mktemp "/tmp/install-players-api.XXXXXX")
 
 echo "script = ${script}"
 
@@ -97,7 +97,7 @@ cat >${script} <<EOL
 # Make application directory
 #########################################################################################
 echo "Make application directory"
-directory="/opt/players-server"
+directory="/opt/players-api"
 sudo mkdir -p \${directory}
 result=\$?
 if [ ! \$result == 0 ]; then
@@ -122,7 +122,7 @@ fi
 #########################################################################################
 # Make application directory
 #########################################################################################
-directory="/opt/players-server/bin"
+directory="/opt/players-api/bin"
 echo "Make application directory: \${directory}"
 sudo mkdir -p \${directory}
 result=\$?
@@ -168,7 +168,7 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
-sudo mv \${tempfile} \${directory}/players-server
+sudo mv \${tempfile} \${directory}/players-api
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -179,7 +179,7 @@ fi
 # Create a service for the application
 #########################################################################################
 echo "Stop the service (if it exists)"
-sudo systemctl stop players-server
+sudo systemctl stop players-api
 result=\$?
 if [ \$result == 0 ]; then
     : # ok
@@ -190,7 +190,7 @@ else
     exit 1
 fi
 
-tempfile=\$(mktemp "/tmp/players-server.service.XXXXXX")
+tempfile=\$(mktemp "/tmp/players-api.service.XXXXXX")
 cat >\${tempfile} <<EOF
 [Unit]
 Description=The server for the Players application - \${directory} - ${username}
@@ -198,11 +198,11 @@ Description=The server for the Players application - \${directory} - ${username}
 [Service]
 Restart=always
 RestartSec=3
-ExecStart=/bin/bash -c "\${directory}/players-server 1> /home/${username}/players-server/stdout.txt 2> /home/${username}/players-server/stderr.txt"
+ExecStart=/bin/bash -c "\${directory}/players-api 1> /home/${username}/players-api/stdout.txt 2> /home/${username}/players-api/stderr.txt"
 
 User=\${username}
 Environment=HOME=/home/${username}
-ExecStartPre=/bin/mkdir -p /home/${username}/players-server
+ExecStartPre=/bin/mkdir -p /home/${username}/players-api
 
 
 [Install]
@@ -223,14 +223,14 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
-sudo mv \${tempfile} /etc/systemd/system/players-server.service
+sudo mv \${tempfile} /etc/systemd/system/players-api.service
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
     exit 1
 fi
 
-sudo bash -c "rm -rf /tmp/players-server.*"
+sudo bash -c "rm -rf /tmp/players-api.*"
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -253,7 +253,7 @@ if [ ! \$result == 0 ]; then
 fi
 
 echo "Enable the service"
-sudo systemctl enable players-server
+sudo systemctl enable players-api
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -261,7 +261,7 @@ if [ ! \$result == 0 ]; then
 fi
 
 echo "Start the service"
-sudo systemctl start players-server
+sudo systemctl start players-api
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -269,7 +269,7 @@ if [ ! \$result == 0 ]; then
 fi
 
 echo "Cleanup"
-rm -rf /tmp/players-server.service.*
+rm -rf /tmp/players-api.service.*
 
 EOL
 
@@ -288,7 +288,7 @@ fi
 # Cleanup
 #########################################################################################
 echo "Cleanup"
-rm -rf "/tmp/install-players-server.*"
+rm -rf "/tmp/install-players-api.*"
 
 
 

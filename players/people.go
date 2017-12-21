@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/rsmaxwell/players-server/logger"
+	"github.com/rsmaxwell/players-api/logger"
 )
 
 // Person Structure
@@ -46,9 +46,9 @@ func init() {
 	home := homeDir()
 
 	if flag.Lookup("test.v") == nil {
-		rootdir = home + "/players-server"
+		rootdir = home + "/players-api"
 	} else {
-		rootdir = home + "/players-server-test"
+		rootdir = home + "/players-api-test"
 	}
 
 	peopleDirectory = rootdir + "/people"

@@ -11,8 +11,8 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/rsmaxwell/players-server/logger"
-	"github.com/rsmaxwell/players-server/players"
+	"github.com/rsmaxwell/players-api/logger"
+	"github.com/rsmaxwell/players-api/players"
 )
 
 var (

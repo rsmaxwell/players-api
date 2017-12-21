@@ -54,9 +54,9 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rsmaxwell/players-server/main.go (65.3%)</option>
+				<option value="file0">github.com/rsmaxwell/players-api/main.go (65.3%)</option>
 				
-				<option value="file1">github.com/rsmaxwell/players-server/players/people.go (75.4%)</option>
+				<option value="file1">github.com/rsmaxwell/players-api/players/people.go (75.4%)</option>
 				
 				</select>
 			</div>
@@ -92,8 +92,8 @@ import (
 
         "github.com/gorilla/mux"
 
-        "github.com/rsmaxwell/players-server/logger"
-        "github.com/rsmaxwell/players-server/players"
+        "github.com/rsmaxwell/players-api/logger"
+        "github.com/rsmaxwell/players-api/players"
 )
 
 var (
@@ -426,7 +426,7 @@ import (
         "runtime"
         "strconv"
 
-        "github.com/rsmaxwell/players-server/logger"
+        "github.com/rsmaxwell/players-api/logger"
 )
 
 // Person Structure
@@ -461,9 +461,9 @@ func init() <span class="cov1" title="1">{
         home := homeDir()
 
         if flag.Lookup("test.v") == nil </span><span class="cov0" title="0">{
-                rootdir = home + "/players-server"
+                rootdir = home + "/players-api"
         }</span><span class="cov1" title="1"> else {
-                rootdir = home + "/players-server-test"
+                rootdir = home + "/players-api-test"
         }</span>
 
         <span class="cov1" title="1">peopleDirectory = rootdir + "/people"

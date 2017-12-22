@@ -19,7 +19,6 @@ var (
 	port                      int
 	username                  string
 	password                  string
-	context                   string
 	clientSuccess             int
 	clientError               int
 	clientAuthenticationError int
@@ -239,37 +238,37 @@ func writeGetMetricsResponse(w http.ResponseWriter, r *http.Request) {
 func setupHandlers(r *mux.Router) {
 
 	// PersonInfo
-	r.HandleFunc(fmt.Sprintf("%s/personinfo", context), logger.LogHandler(
+	r.HandleFunc("/personinfo", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writePersonInfoResponse(w, req)
 		})).Methods(http.MethodGet)
 
 	// ListPeople
-	r.HandleFunc(fmt.Sprintf("%s/people", context), logger.LogHandler(
+	r.HandleFunc("/people", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeGetListOfPeopleResponse(w, req)
 		})).Methods(http.MethodGet)
 
 	// Person Details
-	r.HandleFunc(fmt.Sprintf("%s/person/{id}", context), logger.LogHandler(
+	r.HandleFunc("/person/{id}", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeGetPersonDetailsResponse(w, req, mux.Vars(req)["id"])
 		})).Methods(http.MethodGet)
 
 	// Add Person
-	r.HandleFunc(fmt.Sprintf("%s/person", context), logger.LogHandler(
+	r.HandleFunc("/person", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writePostAddPersonResponse(w, req)
 		})).Methods(http.MethodPost)
 
 	// Delete Person
-	r.HandleFunc(fmt.Sprintf("%s/person/{id}", context), logger.LogHandler(
+	r.HandleFunc("/person/{id}", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeDeletePersonResponse(w, req, mux.Vars(req)["id"])
 		})).Methods(http.MethodDelete)
 
 	// Metrics
-	r.HandleFunc(fmt.Sprintf("%s/metrics", context), logger.LogHandler(
+	r.HandleFunc("/metrics", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeGetMetricsResponse(w, req)
 		})).Methods(http.MethodGet)
@@ -318,18 +317,12 @@ func main() {
 		logger.Logger.Fatalf(err.Error())
 	}
 
-	context, ok = os.LookupEnv("CONTEXT")
-	if !ok {
-		context = "/players-api"
-	}
-
 	logger.Logger.Printf("Registering Router and setting Handlers")
 	router := mux.NewRouter()
 	setupHandlers(router)
 
 	logger.Logger.Printf("Username = %s, Password = %s", username, password)
 	logger.Logger.Printf("Listening on port: %d", port)
-	logger.Logger.Printf("Context: %s", context)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 	if err != nil {
 		logger.Logger.Fatalf(err.Error())

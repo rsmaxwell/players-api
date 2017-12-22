@@ -23,12 +23,11 @@ USER=foo
 PASSWORD=bar
 HOST=localhost
 PORT=4201
-CONTEXT=/players-api
 ```
 
 List the IDs of all players
 ```
-curl ${USER}:${PASSWORD}@${HOST}:${PORT}${CONTEXT}/people
+curl ${USER}:${PASSWORD}@${HOST}:${PORT}/people
 
 httpStatus: 200
 response:   {"people":[1001,1002]}
@@ -37,7 +36,7 @@ response:   {"people":[1001,1002]}
 
 Add a new Person
 ```
-curl -X POST -d "{\"name\":\"xxx\"}" ${USER}:${PASSWORD}@${HOST}:${PORT}${CONTEXT}/person
+curl -X POST -d "{\"name\":\"xxx\"}" ${USER}:${PASSWORD}@${HOST}:${PORT}/person
 
 httpStatus: 200
 response:   {"httpStatus":200,"message":"ok"}
@@ -46,7 +45,7 @@ response:   {"httpStatus":200,"message":"ok"}
 Delete a person
 ```
 ID=1002
-curl -X DELETE ${USER}:${PASSWORD}@${HOST}:${PORT}${CONTEXT}/person/${ID}
+curl -X DELETE ${USER}:${PASSWORD}@${HOST}:${PORT}/person/${ID}
 
 httpStatus: 200
 response:   {"httpStatus":200,"message":"ok"}
@@ -54,7 +53,7 @@ response:   {"httpStatus":200,"message":"ok"}
 
 Get the details of a person
 ```
-curl ${USER}:${PASSWORD}@${HOST}:${PORT}${CONTEXT}/person/${ID}
+curl ${USER}:${PASSWORD}@${HOST}:${PORT}/person/${ID}
 
 httpStatus: 200
 response:   {"person":{"name":"FRED"}}

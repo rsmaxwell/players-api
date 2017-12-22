@@ -305,7 +305,7 @@ func main() {
 
 	password, ok = os.LookupEnv("password")
 	if !ok {
-		password = "foo"
+		password = "bar"
 	}
 
 	portstring, ok := os.LookupEnv("port")
@@ -317,13 +317,19 @@ func main() {
 		logger.Logger.Fatalf(err.Error())
 	}
 
+	context, ok = os.LookupEnv("CONTEXT")
+	if !ok {
+		username = "/players-api"
+	}
+
 	logger.Logger.Printf("Registering Router and setting Handlers")
 	router := mux.NewRouter()
 	setupHandlers(router)
 
 	logger.Logger.Printf("Username = %s, Password = %s", username, password)
 	logger.Logger.Printf("Listening on port: %d", port)
-	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
+	logger.Logger.Printf("Context: %s", context)
+	err = http.ListenAndServe(fmt.Sprintf("%s:%d", context, port), router)
 	if err != nil {
 		logger.Logger.Fatalf(err.Error())
 	}

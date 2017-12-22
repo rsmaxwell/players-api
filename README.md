@@ -19,8 +19,8 @@ The application data is stored in the "players" directory under the "HOME" direc
 
 Given the following variables are set:
 ```
-USER=user
-PASSWORD=pass
+USER=foo
+PASSWORD=bar
 HOST=localhost
 PORT=4201
 CONTEXT=/players-api

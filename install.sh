@@ -84,7 +84,7 @@ fi
 #########################################################################################
 # Create an install script
 #########################################################################################
-echo "Create a script to install the Player-server app"
+echo "Create a script to install the player-api app"
 
 script=$(mktemp "/tmp/install-players-api.XXXXXX")
 

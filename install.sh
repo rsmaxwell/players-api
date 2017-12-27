@@ -245,7 +245,7 @@ if [ ! \$result == 0 ]; then
 fi
 
 echo "Reload systemd"
-sudo systemctl daemon-reload     
+sudo systemctl daemon-reload
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -288,7 +288,7 @@ fi
 # Cleanup
 #########################################################################################
 echo "Cleanup"
-rm -rf "/tmp/install-players-api.*"
+rm -rf /tmp/install-players-api.*
 
 
 

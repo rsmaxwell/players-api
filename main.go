@@ -58,17 +58,28 @@ func writeMessageResponse(w http.ResponseWriter, httpStatus int, message string)
 	logger.Logger.Printf("Response: %d %s - %s", httpStatus, http.StatusText(httpStatus), message)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatus)
+
 	json.NewEncoder(w).Encode(messageResponseJSON{
 		Message: message,
 	})
 }
 
+func setHeaders(rw http.ResponseWriter, req *http.Request) {
+	if origin := req.Header.Get("Origin"); origin == "http://localhost:4200" {
+		rw.Header().Set("Content-Type", "application/json")
+		rw.Header().Set("Access-Control-Allow-Origin", origin)
+		rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		rw.Header().Set("Access-Control-Allow-Headers",
+			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	}
+}
+
 // Handle writing numberOfPeople response
-func writePersonInfoResponse(w http.ResponseWriter, r *http.Request) {
+func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) {
 	// Check the user calling the service
-	user, pass, _ := r.BasicAuth()
+	user, pass, _ := req.BasicAuth()
 	if !checkUser(user, pass) {
-		writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
@@ -76,26 +87,32 @@ func writePersonInfoResponse(w http.ResponseWriter, r *http.Request) {
 
 	listOfPeople, err := players.List()
 	if err != nil {
-		writeMessageResponse(w, http.StatusInternalServerError, "Error getting list of people")
+		writeMessageResponse(rw, http.StatusInternalServerError, "Error getting list of people")
 		serverError++
 		return
 	}
 
 	numberOfPeople := len(listOfPeople)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(numberOfPeopleResponseJSON{
+	setHeaders(rw, req)
+
+	// Stop here if it is a preflighted OPTIONS request
+	if req.Method == http.MethodOptions {
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(numberOfPeopleResponseJSON{
 		NumberOfPeople: numberOfPeople,
 	})
 }
 
 // Handle writing the GET list of People response
-func writeGetListOfPeopleResponse(w http.ResponseWriter, r *http.Request) {
+func writeGetListOfPeopleResponse(rw http.ResponseWriter, req *http.Request) {
 	// Check the user calling the service
-	user, pass, _ := r.BasicAuth()
+	user, pass, _ := req.BasicAuth()
 	if !checkUser(user, pass) {
-		writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
@@ -103,24 +120,30 @@ func writeGetListOfPeopleResponse(w http.ResponseWriter, r *http.Request) {
 
 	listOfPeople, err := players.List()
 	if err != nil {
-		writeMessageResponse(w, http.StatusInternalServerError, "Error getting list of people")
+		writeMessageResponse(rw, http.StatusInternalServerError, "Error getting list of people")
 		serverError++
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(listPeopleResponseJSON{
+	setHeaders(rw, req)
+
+	// Stop here if it is a preflighted OPTIONS request
+	if req.Method == http.MethodOptions {
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(listPeopleResponseJSON{
 		People: listOfPeople,
 	})
 }
 
 // Write the GET person response
-func writeGetPersonDetailsResponse(w http.ResponseWriter, r *http.Request, idString string) {
+func writeGetPersonDetailsResponse(rw http.ResponseWriter, req *http.Request, idString string) {
 	// Check the user calling the service
-	user, pass, _ := r.BasicAuth()
+	user, pass, _ := req.BasicAuth()
 	if !checkUser(user, pass) {
-		writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
@@ -128,7 +151,7 @@ func writeGetPersonDetailsResponse(w http.ResponseWriter, r *http.Request, idStr
 
 	id, err := strconv.Atoi(idString)
 	if err != nil {
-		writeMessageResponse(w, http.StatusNotFound, "Not Found")
+		writeMessageResponse(rw, http.StatusNotFound, "Not Found")
 		clientError++
 		return
 	}
@@ -136,24 +159,30 @@ func writeGetPersonDetailsResponse(w http.ResponseWriter, r *http.Request, idStr
 	person, err := players.Details(id)
 
 	if err != nil {
-		writeMessageResponse(w, http.StatusNotFound, "Not Found")
+		writeMessageResponse(rw, http.StatusNotFound, "Not Found")
 		clientError++
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(personDetailsResponseJSON{
+	setHeaders(rw, req)
+
+	// Stop here if it is a preflighted OPTIONS request
+	if req.Method == http.MethodOptions {
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(personDetailsResponseJSON{
 		Person: *person,
 	})
 }
 
 // Write the POST Add Person response
-func writePostAddPersonResponse(w http.ResponseWriter, r *http.Request) {
+func writePostAddPersonResponse(rw http.ResponseWriter, req *http.Request) {
 	// Check the user calling the service
-	user, pass, _ := r.BasicAuth()
+	user, pass, _ := req.BasicAuth()
 	if !checkUser(user, pass) {
-		writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
@@ -161,38 +190,44 @@ func writePostAddPersonResponse(w http.ResponseWriter, r *http.Request) {
 
 	var p players.Person
 
-	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeMessageResponse(w, http.StatusBadRequest, fmt.Sprintf("Too much data posted in Add Person request"))
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted in Add Person request"))
 		clientError++
 		return
 	}
 
 	err = json.Unmarshal(b, &p)
 	if err != nil {
-		writeMessageResponse(w, http.StatusBadRequest, fmt.Sprintf("Could not parse person data for Add Person request"))
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse person data for Add Person request"))
 		clientError++
 		return
 	}
 
 	err = players.AddPerson(p)
 	if err != nil {
-		writeMessageResponse(w, http.StatusBadRequest, fmt.Sprintf("Could not create a new person. err:%s", err))
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not create a new person. err:%s", err))
 		serverError++
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	writeMessageResponse(w, http.StatusOK, "ok")
+	setHeaders(rw, req)
+
+	// Stop here if it is a preflighted OPTIONS request
+	if req.Method == http.MethodOptions {
+		return
+	}
+
+	writeMessageResponse(rw, http.StatusOK, "ok")
 }
 
 // Write the DELETE person response
-func writeDeletePersonResponse(w http.ResponseWriter, r *http.Request, idString string) {
+func writeDeletePersonResponse(rw http.ResponseWriter, req *http.Request, idString string) {
 	// Check the user calling the service
-	user, pass, _ := r.BasicAuth()
+	user, pass, _ := req.BasicAuth()
 	if !checkUser(user, pass) {
-		writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
@@ -202,31 +237,43 @@ func writeDeletePersonResponse(w http.ResponseWriter, r *http.Request, idString 
 	id, err := strconv.Atoi(idString)
 	if err != nil {
 		logger.Logger.Printf(err.Error())
-		writeMessageResponse(w, http.StatusBadRequest, fmt.Sprintf("The ID:%s is not a number", idString))
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("The ID:%s is not a number", idString))
 		clientError++
 		return
 	}
 
 	players.Delete(id)
 
-	w.Header().Set("Content-Type", "application/json")
-	writeMessageResponse(w, http.StatusOK, "ok")
+	setHeaders(rw, req)
+
+	// Stop here if it is a preflighted OPTIONS request
+	if req.Method == http.MethodOptions {
+		return
+	}
+
+	writeMessageResponse(rw, http.StatusOK, "ok")
 }
 
 // Write the GET metrics response
-func writeGetMetricsResponse(w http.ResponseWriter, r *http.Request) {
+func writeGetMetricsResponse(rw http.ResponseWriter, req *http.Request) {
 	// Check the user calling the service
-	user, pass, _ := r.BasicAuth()
+	user, pass, _ := req.BasicAuth()
 	if !checkUser(user, pass) {
-		writeMessageResponse(w, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(metricsResponseJSON{
+	setHeaders(rw, req)
+
+	// Stop here if it is a preflighted OPTIONS request
+	if req.Method == http.MethodOptions {
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(metricsResponseJSON{
 		ClientSuccess:             clientSuccess,
 		ClientError:               clientError,
 		ClientAuthenticationError: clientAuthenticationError,

@@ -350,12 +350,12 @@ func main() {
 		username = "foo"
 	}
 
-	password, ok = os.LookupEnv("password")
+	password, ok = os.LookupEnv("PASSWORD")
 	if !ok {
 		password = "bar"
 	}
 
-	portstring, ok := os.LookupEnv("port")
+	portstring, ok := os.LookupEnv("PORT")
 	if !ok {
 		portstring = "4201"
 	}

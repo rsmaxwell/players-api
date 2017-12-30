@@ -54,7 +54,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rsmaxwell/players-api/main.go (62.7%)</option>
+				<option value="file0">github.com/rsmaxwell/players-api/main.go (62.2%)</option>
 				
 				<option value="file1">github.com/rsmaxwell/players-api/players/people.go (75.4%)</option>
 				
@@ -412,13 +412,16 @@ func setupHandlers(r *mux.Router) <span class="cov9" title="12">{
 // Simple check on the user calling the service
 func checkUser(u, p string) bool <span class="cov10" title="14">{
 
-        fmt.Printf("checkUser: username = %s, %s\n", username, u)
-        fmt.Printf("checkUser: password = %s, %s\n", password, p)
-
-        if u == username &amp;&amp; p == password </span><span class="cov7" title="7">{
-                return true
+        if u != username </span><span class="cov7" title="7">{
+                fmt.Printf("checkUser: FAIL: username = %s, u = %s\n", username, u)
+                return false
+        }</span><span class="cov7" title="7"> else if p != password </span><span class="cov0" title="0">{
+                fmt.Printf("checkUser: FAIL: password = %s %s\n", password, p)
+                return false
         }</span>
-        <span class="cov7" title="7">return false</span>
+
+        <span class="cov7" title="7">fmt.Printf("checkUser: OK\n")
+        return true</span>
 }
 
 func main() <span class="cov0" title="0">{

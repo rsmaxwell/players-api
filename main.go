@@ -331,13 +331,16 @@ func setupHandlers(r *mux.Router) {
 // Simple check on the user calling the service
 func checkUser(u, p string) bool {
 
-	fmt.Printf("checkUser: username = %s, %s\n", username, u)
-	fmt.Printf("checkUser: password = %s, %s\n", password, p)
-
-	if u == username && p == password {
-		return true
+	if u != username {
+		fmt.Printf("checkUser: FAIL: username = %s, u = %s\n", username, u)
+		return false
+	} else if p != password {
+		fmt.Printf("checkUser: FAIL: password = %s %s\n", password, p)
+		return false
 	}
-	return false
+
+	fmt.Printf("checkUser: OK\n")
+	return true
 }
 
 func main() {

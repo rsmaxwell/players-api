@@ -23,6 +23,10 @@ username=$(echo "$properties" | jq -r .username)
 ssh=$(echo "$properties" | jq -r .ssh)
 ssh_port=$(echo "$ssh" | jq -r .port)
 
+players=$(echo "$properties" | jq -r .players)
+players_username=$(echo "$players" | jq -r .username)
+players_password=$(echo "$players" | jq -r .password)
+
 #########################################################################################
 # Are we interested in this machine ?
 #########################################################################################
@@ -72,7 +76,7 @@ fi
 #########################################################################################
 
 binary="players-api-$(Goos)-$(Goarch)"
-tempfile=$(mktemp "/tmp/players-api.XXXXXX")
+tempfile=$(mktemp "/tmp/install-players-api.XXXXXX")
 
 callScpRetry ${ssh_port} "${binary}" "${username}@${address}:${tempfile}"
 result=$?
@@ -86,7 +90,7 @@ fi
 #########################################################################################
 echo "Create a script to install the player-api app"
 
-script=$(mktemp "/tmp/install-players-api.XXXXXX")
+script=$(mktemp "/tmp/install-players-api.XXXXXX.sh")
 
 echo "script = ${script}"
 
@@ -193,17 +197,17 @@ fi
 tempfile=\$(mktemp "/tmp/players-api.service.XXXXXX")
 cat >\${tempfile} <<EOF
 [Unit]
-Description=The server for the Players application - \${directory} - ${username}
+Description=The server for the Players application
 
 [Service]
 Restart=always
 RestartSec=3
-ExecStart=/bin/bash -c "\${directory}/players-api 1> /home/${username}/players-api/stdout.txt 2> /home/${username}/players-api/stderr.txt"
-
-User=\${username}
+User=${username}
 Environment=HOME=/home/${username}
+Environment=USERNAME=${players_username}
+Environment=PASSWORD=${players_password}
 ExecStartPre=/bin/mkdir -p /home/${username}/players-api
-
+ExecStart=/bin/bash -c "\${directory}/players-api 1> /home/${username}/players-api/stdout.txt 2> /home/${username}/players-api/stderr.txt"
 
 [Install]
 WantedBy=multi-user.target
@@ -253,7 +257,7 @@ if [ ! \$result == 0 ]; then
 fi
 
 echo "Enable the service"
-sudo systemctl enable players-api
+sudo systemctl --quiet enable players-api
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -261,7 +265,7 @@ if [ ! \$result == 0 ]; then
 fi
 
 echo "Start the service"
-sudo systemctl start players-api
+sudo systemctl --quiet start players-api
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"

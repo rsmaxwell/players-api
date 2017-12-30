@@ -61,11 +61,11 @@ cat >${script} <<EOL
 #!/bin/bash
 
 echo "Stop the service"
-sudo systemctl stop players-api
+sudo systemctl --quiet stop players-api
 result=\$?
 if [ \$result == 0 ]; then
     echo "Disable the service"
-    sudo systemctl disable players-api
+    sudo systemctl --quiet disable players-api
     result=\$?
     if [ \$result == 0 ]; then
         echo "ok"

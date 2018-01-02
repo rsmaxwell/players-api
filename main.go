@@ -96,11 +96,6 @@ func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) {
 
 	setHeaders(rw, req)
 
-	// Stop here if it is a preflighted OPTIONS request
-	if req.Method == http.MethodOptions {
-		return
-	}
-
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(numberOfPeopleResponseJSON{
 		NumberOfPeople: numberOfPeople,
@@ -110,6 +105,7 @@ func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) {
 // Handle PreflightRequest
 func writePreflightRequest(rw http.ResponseWriter, req *http.Request) {
 	logger.Logger.Printf("writePreflightRequest")
+	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)
 }
 
@@ -132,11 +128,6 @@ func writeGetListOfPeopleResponse(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	setHeaders(rw, req)
-
-	// Stop here if it is a preflighted OPTIONS request
-	if req.Method == http.MethodOptions {
-		return
-	}
 
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(listPeopleResponseJSON{
@@ -171,11 +162,6 @@ func writeGetPersonDetailsResponse(rw http.ResponseWriter, req *http.Request, id
 	}
 
 	setHeaders(rw, req)
-
-	// Stop here if it is a preflighted OPTIONS request
-	if req.Method == http.MethodOptions {
-		return
-	}
 
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(personDetailsResponseJSON{
@@ -220,11 +206,6 @@ func writePostAddPersonResponse(rw http.ResponseWriter, req *http.Request) {
 
 	setHeaders(rw, req)
 
-	// Stop here if it is a preflighted OPTIONS request
-	if req.Method == http.MethodOptions {
-		return
-	}
-
 	writeMessageResponse(rw, http.StatusOK, "ok")
 }
 
@@ -252,11 +233,6 @@ func writeDeletePersonResponse(rw http.ResponseWriter, req *http.Request, idStri
 
 	setHeaders(rw, req)
 
-	// Stop here if it is a preflighted OPTIONS request
-	if req.Method == http.MethodOptions {
-		return
-	}
-
 	writeMessageResponse(rw, http.StatusOK, "ok")
 }
 
@@ -272,11 +248,6 @@ func writeGetMetricsResponse(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	setHeaders(rw, req)
-
-	// Stop here if it is a preflighted OPTIONS request
-	if req.Method == http.MethodOptions {
-		return
-	}
 
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(metricsResponseJSON{

@@ -107,6 +107,12 @@ func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) {
 	})
 }
 
+// Handle PreflightRequest
+func writePreflightRequest(rw http.ResponseWriter, req *http.Request) {
+	logger.Logger.Printf("writePreflightRequest")
+	rw.WriteHeader(http.StatusOK)
+}
+
 // Handle writing the GET list of People response
 func writeGetListOfPeopleResponse(rw http.ResponseWriter, req *http.Request) {
 	// Check the user calling the service
@@ -295,6 +301,11 @@ func setupHandlers(r *mux.Router) {
 		func(w http.ResponseWriter, req *http.Request) {
 			writeGetListOfPeopleResponse(w, req)
 		})).Methods(http.MethodGet)
+
+	r.HandleFunc("/people", logger.LogHandler(
+		func(w http.ResponseWriter, req *http.Request) {
+			writePreflightRequest(w, req)
+		})).Methods(http.MethodOptions)
 
 	// Person Details
 	r.HandleFunc("/person/{id}", logger.LogHandler(

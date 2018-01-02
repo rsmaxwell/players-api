@@ -54,7 +54,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rsmaxwell/players-api/main.go (62.2%)</option>
+				<option value="file0">github.com/rsmaxwell/players-api/main.go (61.3%)</option>
 				
 				<option value="file1">github.com/rsmaxwell/players-api/players/people.go (75.4%)</option>
 				
@@ -187,6 +187,12 @@ func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) <span cl
                 NumberOfPeople: numberOfPeople,
         })</span>
 }
+
+// Handle PreflightRequest
+func writePreflightRequest(rw http.ResponseWriter, req *http.Request) <span class="cov0" title="0">{
+        logger.Logger.Printf("writePreflightRequest")
+        rw.WriteHeader(http.StatusOK)
+}</span>
 
 // Handle writing the GET list of People response
 func writeGetListOfPeopleResponse(rw http.ResponseWriter, req *http.Request) <span class="cov3" title="2">{
@@ -376,6 +382,11 @@ func setupHandlers(r *mux.Router) <span class="cov9" title="12">{
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
                         writeGetListOfPeopleResponse(w, req)
                 }</span>)).Methods(http.MethodGet)
+
+        <span class="cov9" title="12">r.HandleFunc("/people", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov0" title="0">{
+                        writePreflightRequest(w, req)
+                }</span>)).Methods(http.MethodOptions)
 
         // Person Details
         <span class="cov9" title="12">r.HandleFunc("/person/{id}", logger.LogHandler(

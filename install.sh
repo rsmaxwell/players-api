@@ -12,10 +12,6 @@ machine=${1}
 # Get the properties for this machine
 #########################################################################################
 properties=$(cat ${inventoryDir}/${machine})
-machinepath=${machine#./}
-machinepath=${machinepath%.json}
-
-properties=$(cat ${inventoryDir}/${machine})
 tags=$(echo "$properties" | jq -r .tags)
 address=$(echo "$properties" | jq -rc .address)
 username=$(echo "$properties" | jq -r .username)
@@ -51,7 +47,7 @@ fi
 #########################################################################################
 # Actions
 #########################################################################################
-title ${machinepath}
+title $(dirname ${machine})
 
 
 #########################################################################################
@@ -293,6 +289,11 @@ fi
 #########################################################################################
 echo "Cleanup"
 rm -rf /tmp/install-players-api.*
+result=$?
+if [ ! $result == 0 ]; then
+    echo "result = $result"
+    exit 1
+fi
 
 
 

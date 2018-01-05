@@ -1,12 +1,12 @@
 package logger
 
 import (
-	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"net/http/httputil"
 	"os"
+	"strings"
 )
 
 var (
@@ -14,27 +14,52 @@ var (
 	Logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 )
 
+// formatRequest generates ascii representation of a request
+func formatRequest(r *http.Request) {
+
+	Logger.Printf("Request:\n")
+	Logger.Printf("  url : %v %v %v\n", r.Method, r.URL, r.Proto)
+	Logger.Printf("  host: %v\n", r.Host)
+	Logger.Println("  headers:")
+	for name, headers := range r.Header {
+		name = strings.ToLower(name)
+		for _, h := range headers {
+			Logger.Printf("    %v: %v\n", name, h)
+		}
+	}
+
+	if r.Method == "POST" {
+		r.ParseForm()
+		Logger.Printf("  post data:\n")
+		Logger.Printf("%s\n", r.Form.Encode())
+	}
+}
+
 // LogHandler logs an http reposonse
 func LogHandler(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		x, err := httputil.DumpRequest(r, true)
-		if err != nil {
-			http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
-			return
+		formatRequest(r)
+
+		recorder := httptest.NewRecorder()
+		fn(recorder, r)
+
+		resp := recorder.Result()
+		body, _ := ioutil.ReadAll(resp.Body)
+
+		Logger.Printf("Response: %d", resp.StatusCode)
+		Logger.Println("  Headers:")
+		for k, v := range recorder.HeaderMap {
+			Logger.Printf("    %s : %s", k, v)
 		}
-		Logger.Printf("%q", x)
-		rec := httptest.NewRecorder()
-		fn(rec, r)
-		Logger.Printf("status: %d", rec.Code)
-		Logger.Printf("%q", rec.Body)
+		Logger.Println("  Body : " + string(body))
 
-		w.WriteHeader(rec.Code)
-
-		h := w.Header()
-		for k, v := range rec.HeaderMap {
-			h[k] = v
+		for k, values := range recorder.HeaderMap {
+			for _, v := range values {
+				w.Header().Set(k, v)
+			}
 		}
 
-		w.Write(rec.Body.Bytes())
+		w.WriteHeader(recorder.Code)
+		w.Write(recorder.Body.Bytes())
 	}
 }

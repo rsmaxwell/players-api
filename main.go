@@ -65,19 +65,24 @@ func writeMessageResponse(w http.ResponseWriter, httpStatus int, message string)
 }
 
 func setHeaders(rw http.ResponseWriter, req *http.Request) {
-	if origin := req.Header.Get("Origin"); origin == "http://localhost:4200" {
-		rw.Header().Set("Content-Type", "application/json")
-		rw.Header().Set("Access-Control-Allow-Origin", origin)
-		rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		rw.Header().Set("Access-Control-Allow-Headers",
-			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	origin := req.Header.Get("Origin")
+
+	if origin == "" {
+		origin = "http://localhost:4200"
 	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Access-Control-Allow-Origin", origin)
+	rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	rw.Header().Set("Access-Control-Allow-Headers",
+		"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Authorization")
 }
 
 // Handle writing numberOfPeople response
 func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) {
 	// Check the user calling the service
 	user, pass, _ := req.BasicAuth()
+
 	if !checkUser(user, pass) {
 		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
 		clientError++
@@ -104,15 +109,17 @@ func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) {
 
 // Handle PreflightRequest
 func writePreflightRequest(rw http.ResponseWriter, req *http.Request) {
-	logger.Logger.Printf("writePreflightRequest")
 	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)
 }
 
 // Handle writing the GET list of People response
 func writeGetListOfPeopleResponse(rw http.ResponseWriter, req *http.Request) {
-	// Check the user calling the service
+
+	setHeaders(rw, req)
+
 	user, pass, _ := req.BasicAuth()
+
 	if !checkUser(user, pass) {
 		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
 		clientError++
@@ -126,8 +133,6 @@ func writeGetListOfPeopleResponse(rw http.ResponseWriter, req *http.Request) {
 		serverError++
 		return
 	}
-
-	setHeaders(rw, req)
 
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(listPeopleResponseJSON{
@@ -314,14 +319,14 @@ func setupHandlers(r *mux.Router) {
 func checkUser(u, p string) bool {
 
 	if u != username {
-		fmt.Printf("checkUser: FAIL: username = %s, u = %s\n", username, u)
+		logger.Logger.Printf("checkUser: FAIL: username = %s, u = %s\n", username, u)
 		return false
 	} else if p != password {
-		fmt.Printf("checkUser: FAIL: password = %s %s\n", password, p)
+		logger.Logger.Printf("checkUser: FAIL: password = %s %s\n", password, p)
 		return false
 	}
 
-	fmt.Printf("checkUser: OK\n")
+	logger.Logger.Printf("checkUser: OK\n")
 	return true
 }
 

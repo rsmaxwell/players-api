@@ -54,7 +54,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rsmaxwell/players-api/main.go (61.8%)</option>
+				<option value="file0">github.com/rsmaxwell/players-api/main.go (63.6%)</option>
 				
 				<option value="file1">github.com/rsmaxwell/players-api/players/people.go (75.4%)</option>
 				
@@ -100,6 +100,7 @@ var (
         port                      int
         username                  string
         password                  string
+        baseURL                   string
         clientSuccess             int
         clientError               int
         clientAuthenticationError int
@@ -145,20 +146,25 @@ func writeMessageResponse(w http.ResponseWriter, httpStatus int, message string)
         })
 }</span>
 
-func setHeaders(rw http.ResponseWriter, req *http.Request) <span class="cov7" title="6">{
-        if origin := req.Header.Get("Origin"); origin == "http://localhost:4200" </span><span class="cov0" title="0">{
-                rw.Header().Set("Content-Type", "application/json")
-                rw.Header().Set("Access-Control-Allow-Origin", origin)
-                rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-                rw.Header().Set("Access-Control-Allow-Headers",
-                        "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+func setHeaders(rw http.ResponseWriter, req *http.Request) <span class="cov7" title="7">{
+        origin := req.Header.Get("Origin")
+
+        if origin == "" </span><span class="cov7" title="7">{
+                origin = "http://localhost:4200"
         }</span>
+
+        <span class="cov7" title="7">rw.Header().Set("Content-Type", "application/json")
+        rw.Header().Set("Access-Control-Allow-Origin", origin)
+        rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+        rw.Header().Set("Access-Control-Allow-Headers",
+                "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Authorization")</span>
 }
 
 // Handle writing numberOfPeople response
 func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) <span class="cov3" title="2">{
         // Check the user calling the service
         user, pass, _ := req.BasicAuth()
+
         if !checkUser(user, pass) </span><span class="cov1" title="1">{
                 writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
                 clientError++
@@ -185,15 +191,17 @@ func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) <span cl
 
 // Handle PreflightRequest
 func writePreflightRequest(rw http.ResponseWriter, req *http.Request) <span class="cov0" title="0">{
-        logger.Logger.Printf("writePreflightRequest")
         setHeaders(rw, req)
         rw.WriteHeader(http.StatusOK)
 }</span>
 
 // Handle writing the GET list of People response
 func writeGetListOfPeopleResponse(rw http.ResponseWriter, req *http.Request) <span class="cov3" title="2">{
-        // Check the user calling the service
+
+        setHeaders(rw, req)
+
         user, pass, _ := req.BasicAuth()
+
         if !checkUser(user, pass) </span><span class="cov1" title="1">{
                 writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
                 clientError++
@@ -208,9 +216,7 @@ func writeGetListOfPeopleResponse(rw http.ResponseWriter, req *http.Request) <sp
                 return
         }</span>
 
-        <span class="cov1" title="1">setHeaders(rw, req)
-
-        rw.WriteHeader(http.StatusOK)
+        <span class="cov1" title="1">rw.WriteHeader(http.StatusOK)
         json.NewEncoder(rw).Encode(listPeopleResponseJSON{
                 People: listOfPeople,
         })</span>
@@ -343,42 +349,42 @@ func writeGetMetricsResponse(rw http.ResponseWriter, req *http.Request) <span cl
 func setupHandlers(r *mux.Router) <span class="cov9" title="12">{
 
         // PersonInfo
-        r.HandleFunc("/personinfo", logger.LogHandler(
+        r.HandleFunc(baseURL+"/personinfo", logger.LogHandler(
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
                         writePersonInfoResponse(w, req)
                 }</span>)).Methods(http.MethodGet)
 
         // ListPeople
-        <span class="cov9" title="12">r.HandleFunc("/people", logger.LogHandler(
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/people", logger.LogHandler(
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
                         writeGetListOfPeopleResponse(w, req)
                 }</span>)).Methods(http.MethodGet)
 
-        <span class="cov9" title="12">r.HandleFunc("/people", logger.LogHandler(
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/people", logger.LogHandler(
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov0" title="0">{
                         writePreflightRequest(w, req)
                 }</span>)).Methods(http.MethodOptions)
 
         // Person Details
-        <span class="cov9" title="12">r.HandleFunc("/person/{id}", logger.LogHandler(
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/person/{id}", logger.LogHandler(
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
                         writeGetPersonDetailsResponse(w, req, mux.Vars(req)["id"])
                 }</span>)).Methods(http.MethodGet)
 
         // Add Person
-        <span class="cov9" title="12">r.HandleFunc("/person", logger.LogHandler(
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/person", logger.LogHandler(
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
                         writePostAddPersonResponse(w, req)
                 }</span>)).Methods(http.MethodPost)
 
         // Delete Person
-        <span class="cov9" title="12">r.HandleFunc("/person/{id}", logger.LogHandler(
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/person/{id}", logger.LogHandler(
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
                         writeDeletePersonResponse(w, req, mux.Vars(req)["id"])
                 }</span>)).Methods(http.MethodDelete)
 
         // Metrics
-        <span class="cov9" title="12">r.HandleFunc("/metrics", logger.LogHandler(
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/metrics", logger.LogHandler(
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
                         writeGetMetricsResponse(w, req)
                 }</span>)).Methods(http.MethodGet)
@@ -395,14 +401,14 @@ func setupHandlers(r *mux.Router) <span class="cov9" title="12">{
 func checkUser(u, p string) bool <span class="cov10" title="14">{
 
         if u != username </span><span class="cov7" title="7">{
-                fmt.Printf("checkUser: FAIL: username = %s, u = %s\n", username, u)
+                logger.Logger.Printf("checkUser: FAIL: username = %s, u = %s\n", username, u)
                 return false
         }</span><span class="cov7" title="7"> else if p != password </span><span class="cov0" title="0">{
-                fmt.Printf("checkUser: FAIL: password = %s %s\n", password, p)
+                logger.Logger.Printf("checkUser: FAIL: password = %s %s\n", password, p)
                 return false
         }</span>
 
-        <span class="cov7" title="7">fmt.Printf("checkUser: OK\n")
+        <span class="cov7" title="7">logger.Logger.Printf("checkUser: OK\n")
         return true</span>
 }
 
@@ -421,6 +427,11 @@ func main() <span class="cov0" title="0">{
                 password = "bar"
         }</span>
 
+        <span class="cov0" title="0">baseURL, ok = os.LookupEnv("BASEURL")
+        if !ok </span><span class="cov0" title="0">{
+                baseURL = ""
+        }</span>
+
         <span class="cov0" title="0">portstring, ok := os.LookupEnv("PORT")
         if !ok </span><span class="cov0" title="0">{
                 portstring = "4201"
@@ -436,6 +447,7 @@ func main() <span class="cov0" title="0">{
 
         logger.Logger.Printf("Username = %s, Password = %s", username, password)
         logger.Logger.Printf("Listening on port: %d", port)
+        logger.Logger.Printf("base URL: %s", baseURL)
         err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
         if err != nil </span><span class="cov0" title="0">{
                 logger.Logger.Fatalf(err.Error())

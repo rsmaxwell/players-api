@@ -19,6 +19,7 @@ var (
 	port                      int
 	username                  string
 	password                  string
+	baseURL                   string
 	clientSuccess             int
 	clientError               int
 	clientAuthenticationError int
@@ -267,42 +268,42 @@ func writeGetMetricsResponse(rw http.ResponseWriter, req *http.Request) {
 func setupHandlers(r *mux.Router) {
 
 	// PersonInfo
-	r.HandleFunc("/personinfo", logger.LogHandler(
+	r.HandleFunc(baseURL+"/personinfo", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writePersonInfoResponse(w, req)
 		})).Methods(http.MethodGet)
 
 	// ListPeople
-	r.HandleFunc("/people", logger.LogHandler(
+	r.HandleFunc(baseURL+"/people", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeGetListOfPeopleResponse(w, req)
 		})).Methods(http.MethodGet)
 
-	r.HandleFunc("/people", logger.LogHandler(
+	r.HandleFunc(baseURL+"/people", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writePreflightRequest(w, req)
 		})).Methods(http.MethodOptions)
 
 	// Person Details
-	r.HandleFunc("/person/{id}", logger.LogHandler(
+	r.HandleFunc(baseURL+"/person/{id}", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeGetPersonDetailsResponse(w, req, mux.Vars(req)["id"])
 		})).Methods(http.MethodGet)
 
 	// Add Person
-	r.HandleFunc("/person", logger.LogHandler(
+	r.HandleFunc(baseURL+"/person", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writePostAddPersonResponse(w, req)
 		})).Methods(http.MethodPost)
 
 	// Delete Person
-	r.HandleFunc("/person/{id}", logger.LogHandler(
+	r.HandleFunc(baseURL+"/person/{id}", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeDeletePersonResponse(w, req, mux.Vars(req)["id"])
 		})).Methods(http.MethodDelete)
 
 	// Metrics
-	r.HandleFunc("/metrics", logger.LogHandler(
+	r.HandleFunc(baseURL+"/metrics", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeGetMetricsResponse(w, req)
 		})).Methods(http.MethodGet)
@@ -345,6 +346,11 @@ func main() {
 		password = "bar"
 	}
 
+	baseURL, ok = os.LookupEnv("BASEURL")
+	if !ok {
+		baseURL = ""
+	}
+
 	portstring, ok := os.LookupEnv("PORT")
 	if !ok {
 		portstring = "4201"
@@ -360,6 +366,7 @@ func main() {
 
 	logger.Logger.Printf("Username = %s, Password = %s", username, password)
 	logger.Logger.Printf("Listening on port: %d", port)
+	logger.Logger.Printf("base URL: %s", baseURL)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 	if err != nil {
 		logger.Logger.Fatalf(err.Error())

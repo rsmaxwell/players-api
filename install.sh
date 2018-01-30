@@ -5,7 +5,7 @@ machine=${1}
 #########################################################################################
 # Common definitions
 #########################################################################################
-. ${GITPROJECTS}/common/common.sh
+. ${GITHUBPROJECTS}/rsmaxwell/deploy/common.sh
 
 
 #########################################################################################
@@ -274,21 +274,9 @@ rm -rf /tmp/players-api.service.*
 EOL
 
 #########################################################################################
-# Run the script on the target machine
+# Run the task
 #########################################################################################
-echo "Run remote script"
-runScript ${ssh_port} ${username} ${address} ${script}
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
-
-#########################################################################################
-# Cleanup
-#########################################################################################
-echo "Cleanup"
-rm -rf /tmp/install-players-api.*
+runTask ${ssh_port} ${username} ${address} ${taskDir}
 result=$?
 if [ ! $result == 0 ]; then
     echo "result = $result"

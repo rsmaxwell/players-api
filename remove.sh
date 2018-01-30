@@ -56,7 +56,7 @@ script=${deployDir}/${taskDir}/script.sh
 
 cat >${script} <<EOL
 #!/bin/bash
-# players/remove.sh
+# players-api/remove.sh
 
 echo "Stop the service"
 sudo systemctl --quiet stop players-api
@@ -89,8 +89,8 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
-echo "Cleanup"
-sudo rm -rf /opt/players-api
+echo "Delete the app"
+sudo rm -rf /opt/players-api/bin/players-api
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -108,6 +108,5 @@ if [ ! $result == 0 ]; then
     echo "result = $result"
     exit 1
 fi
-
 
 

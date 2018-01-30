@@ -68,30 +68,16 @@ if [ "${output}" == "true" ]; then
 fi
 
 #########################################################################################
-# Copy the app binary to a temporary location on the target machine
+# Create a task
 #########################################################################################
+echo "Create a task"
 
-binary="players-api-$(Goos)-$(Goarch)"
-tempfile=$(mktemp "/tmp/install-players-api.XXXXXX")
-
-callScpRetry ${ssh_port} "${binary}" "${username}@${address}:${tempfile}"
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
-
-#########################################################################################
-# Create an install script
-#########################################################################################
-echo "Create a script to install the player-api app"
-
-script=$(mktemp "/tmp/install-players-api.XXXXXX.sh")
-
-echo "script = ${script}"
+taskDir=$(newTask)
+script=${deployDir}/${taskDir}/script.sh
 
 cat >${script} <<EOL
 #!/bin/bash
+# players/remove.sh
 
 #########################################################################################
 # Make application directory
@@ -151,24 +137,23 @@ fi
 # Copy Application binary
 #########################################################################################
 binary=${binary}
-tempfile=${tempfile}
 echo "Copy Application binary: \${tempfile}   \${directory}/\${binary}"
 
-sudo chmod 755 \${tempfile}
+sudo mv \${binary} \${directory}/players-api
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
     exit 1
 fi
 
-sudo chown ${username}:${username} \${tempfile}
+sudo chmod 755 \${directory}/players-api/\${binary}
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
     exit 1
 fi
 
-sudo mv \${tempfile} \${directory}/players-api
+sudo chown ${username}:${username} \${directory}/players-api/\${binary}
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -272,6 +257,18 @@ echo "Cleanup"
 rm -rf /tmp/players-api.service.*
 
 EOL
+
+
+#########################################################################################
+# Add the binary to the task
+#########################################################################################
+echo "Add the binary to the task"
+ln -s ${binary} ${deployDir}/${taskDir}/${binary}
+result=$?
+if [ ! $result == 0 ]; then
+    echo "result = $result"
+    exit 1
+fi
 
 #########################################################################################
 # Run the task

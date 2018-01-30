@@ -5,7 +5,7 @@ machine=${1}
 #########################################################################################
 # Common definitions
 #########################################################################################
-. ${GITPROJECTS}/common/common.sh
+. ${GITHUBPROJECTS}/rsmaxwell/deploy/common.sh
 
 
 #########################################################################################
@@ -47,14 +47,16 @@ title $(dirname ${machine})
 
 
 #########################################################################################
-# Create an install script
+# Create a task
 #########################################################################################
-echo "Create a script to install the player-api app"
+echo "Create a task"
 
-script=$(mktemp "/tmp/install-players-api.XXXXXX")
+taskDir=$(newTask)
+script=${deployDir}/${taskDir}/script.sh
 
 cat >${script} <<EOL
 #!/bin/bash
+# players-api/remove.sh
 
 echo "Stop the service"
 sudo systemctl --quiet stop players-api
@@ -87,8 +89,8 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
-echo "Cleanup"
-sudo rm -rf /opt/players-api
+echo "Delete the app"
+sudo rm -rf /opt/players-api/bin/players-api
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -97,22 +99,11 @@ fi
 
 EOL
 
-#########################################################################################
-# Run the script on the target machine
-#########################################################################################
-echo "Run remote script"
-runScript ${ssh_port} ${username} ${address} ${script}
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
 
 #########################################################################################
-# Cleanup
+# Run the task
 #########################################################################################
-echo "Cleanup"
-rm -rf "/tmp/install-players-api.*"
+runTask ${ssh_port} ${username} ${address} ${taskDir}
 result=$?
 if [ ! $result == 0 ]; then
     echo "result = $result"

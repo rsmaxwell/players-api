@@ -5,7 +5,7 @@ machine=${1}
 #########################################################################################
 # Common definitions
 #########################################################################################
-. ${GITPROJECTS}/common/common.sh
+. ${GITHUBPROJECTS}/rsmaxwell/deploy/common.sh
 
 
 #########################################################################################
@@ -82,16 +82,16 @@ if [ ! $result == 0 ]; then
 fi
 
 #########################################################################################
-# Create an install script
+# Create a task
 #########################################################################################
-echo "Create a script to install the player-api app"
+echo "Create a task"
 
-script=$(mktemp "/tmp/install-players-api.XXXXXX.sh")
-
-echo "script = ${script}"
+taskDir=$(newTask)
+script=${deployDir}/${taskDir}/script.sh
 
 cat >${script} <<EOL
 #!/bin/bash
+# players-api/install.sh
 
 #########################################################################################
 # Make application directory
@@ -190,8 +190,7 @@ else
     exit 1
 fi
 
-tempfile=\$(mktemp "/tmp/players-api.service.XXXXXX")
-cat >\${tempfile} <<EOF
+cat >players-api.service <<EOF
 [Unit]
 Description=The server for the Players application
 
@@ -209,35 +208,25 @@ ExecStart=/bin/bash -c "\${directory}/players-api 1> /home/${username}/players-a
 WantedBy=multi-user.target
 EOF
 
-sudo chown root:root \${tempfile}
+echo "Copy services file to systemd services dir"
+serviceFile="/etc/systemd/system/players-api.service"
+sudo mv players-api.service \${serviceFile}
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
     exit 1
 fi
 
-sudo chmod 644 \${tempfile}
+echo "Set ownership of services file"
+sudo chown root:root \${serviceFile}
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
     exit 1
 fi
 
-sudo mv \${tempfile} /etc/systemd/system/players-api.service
-result=\$?
-if [ ! \$result == 0 ]; then
-    echo "result = \$result"
-    exit 1
-fi
-
-sudo bash -c "rm -rf /tmp/players-api.*"
-result=\$?
-if [ ! \$result == 0 ]; then
-    echo "result = \$result"
-    exit 1
-fi
-
-rm -rf /tmp/players.*
+echo "Set mode of services file"
+sudo chmod 644 \${serviceFile}
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -268,27 +257,12 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
-echo "Cleanup"
-rm -rf /tmp/players-api.service.*
-
 EOL
 
 #########################################################################################
-# Run the script on the target machine
+# Run the task
 #########################################################################################
-echo "Run remote script"
-runScript ${ssh_port} ${username} ${address} ${script}
-result=$?
-if [ ! $result == 0 ]; then
-    echo "result = $result"
-    exit 1
-fi
-
-#########################################################################################
-# Cleanup
-#########################################################################################
-echo "Cleanup"
-rm -rf /tmp/install-players-api.*
+runTask ${ssh_port} ${username} ${address} ${taskDir}
 result=$?
 if [ ! $result == 0 ]; then
     echo "result = $result"

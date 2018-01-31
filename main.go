@@ -367,7 +367,7 @@ func checkUser(u, p string) bool {
 
 func main() {
 
-	logger.Logger.Printf("Players Server")
+	logger.Logger.Printf("Players Server: 2018-01-31 12:00")
 	var ok bool
 
 	username, ok = os.LookupEnv("USERNAME")
@@ -399,8 +399,7 @@ func main() {
 	setupHandlers(router)
 
 	logger.Logger.Printf("Username = %s, Password = %s", username, password)
-	logger.Logger.Printf("Listening on port: %d", port)
-	logger.Logger.Printf("base URL: %s", baseURL)
+	logger.Logger.Printf("Listening to base URL: '%s' port: %d", baseURL, port)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 	if err != nil {
 		logger.Logger.Fatalf(err.Error())

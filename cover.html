@@ -191,7 +191,7 @@ func writeAuthenticateResponse(rw http.ResponseWriter, req *http.Request) <span 
 // Handle Users - getAll
 func writeUsersGetAllResponse(rw http.ResponseWriter, req *http.Request) <span class="cov0" title="0">{
 
-        logger.Logger.Printf("writeUsersgetAlleResponse")
+        logger.Logger.Printf("writeUsersgetAllResponse")
 
         // Check the user calling the service
         user, pass, _ := req.BasicAuth()
@@ -470,7 +470,7 @@ func setupHandlers(r *mux.Router) <span class="cov9" title="12">{
         r.HandleFunc(baseURL+"/authenticate", logger.LogHandler(
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov0" title="0">{
                         writeAuthenticateResponse(w, req)
-                }</span>)).Methods(http.MethodGet)
+                }</span>)).Methods(http.MethodPost)
 
         // Users - getAll
         <span class="cov9" title="12">r.HandleFunc(baseURL+"/users", logger.LogHandler(

@@ -54,7 +54,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rsmaxwell/players-api/main.go (59.8%)</option>
+				<option value="file0">github.com/rsmaxwell/players-api/main.go (60.1%)</option>
 				
 				<option value="file1">github.com/rsmaxwell/players-api/players/people.go (75.4%)</option>
 				
@@ -448,7 +448,7 @@ func checkUser(u, p string) bool <span class="cov10" title="14">{
 
 func main() <span class="cov0" title="0">{
 
-        logger.Logger.Printf("Players Server")
+        logger.Logger.Printf("Players Server: 2018-01-31 12:00")
         var ok bool
 
         username, ok = os.LookupEnv("USERNAME")
@@ -480,8 +480,7 @@ func main() <span class="cov0" title="0">{
         setupHandlers(router)
 
         logger.Logger.Printf("Username = %s, Password = %s", username, password)
-        logger.Logger.Printf("Listening on port: %d", port)
-        logger.Logger.Printf("base URL: %s", baseURL)
+        logger.Logger.Printf("Listening to base URL: '%s' port: %d", baseURL, port)
         err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
         if err != nil </span><span class="cov0" title="0">{
                 logger.Logger.Fatalf(err.Error())

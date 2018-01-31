@@ -74,9 +74,9 @@ github.com/rsmaxwell/players-api/main.go:388.2,389.9 2 0
 github.com/rsmaxwell/players-api/main.go:389.9,391.3 1 0
 github.com/rsmaxwell/players-api/main.go:392.2,393.16 2 0
 github.com/rsmaxwell/players-api/main.go:393.16,395.3 1 0
-github.com/rsmaxwell/players-api/main.go:397.2,405.16 8 0
-github.com/rsmaxwell/players-api/main.go:405.16,407.3 1 0
-github.com/rsmaxwell/players-api/main.go:409.2,409.33 1 0
+github.com/rsmaxwell/players-api/main.go:397.2,404.16 7 0
+github.com/rsmaxwell/players-api/main.go:404.16,406.3 1 0
+github.com/rsmaxwell/players-api/main.go:408.2,408.33 1 0
 github.com/rsmaxwell/players-api/players/people.go:34.23,36.31 2 1
 github.com/rsmaxwell/players-api/players/people.go:36.31,38.3 1 0
 github.com/rsmaxwell/players-api/players/people.go:38.3,38.36 1 1

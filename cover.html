@@ -54,7 +54,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rsmaxwell/players-api/main.go (63.6%)</option>
+				<option value="file0">github.com/rsmaxwell/players-api/main.go (59.8%)</option>
 				
 				<option value="file1">github.com/rsmaxwell/players-api/players/people.go (75.4%)</option>
 				
@@ -106,6 +106,11 @@ var (
         clientAuthenticationError int
         serverError               int
 )
+
+// Authenticate Response JSON object
+type authenticateResponseJSON struct {
+        Token string `json:"token"`
+}
 
 // Error Response JSON object
 type messageResponseJSON struct {
@@ -160,7 +165,30 @@ func setHeaders(rw http.ResponseWriter, req *http.Request) <span class="cov7" ti
                 "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Authorization")</span>
 }
 
-// Handle writing numberOfPeople response
+// Handle authenticate response
+func writeAuthenticateResponse(rw http.ResponseWriter, req *http.Request) <span class="cov0" title="0">{
+
+        logger.Logger.Printf("writeAuthenticateResponse")
+
+        // Check the user calling the service
+        user, pass, _ := req.BasicAuth()
+
+        if !checkUser(user, pass) </span><span class="cov0" title="0">{
+                writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov0" title="0">token := "qwerty"
+
+        rw.WriteHeader(http.StatusOK)
+        json.NewEncoder(rw).Encode(authenticateResponseJSON{
+                Token: token,
+        })</span>
+}
+
+// Handle writing person info response
 func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) <span class="cov3" title="2">{
         // Check the user calling the service
         user, pass, _ := req.BasicAuth()
@@ -348,8 +376,14 @@ func writeGetMetricsResponse(rw http.ResponseWriter, req *http.Request) <span cl
 // Handlers for REST API routes
 func setupHandlers(r *mux.Router) <span class="cov9" title="12">{
 
+        // Authenticate
+        r.HandleFunc(baseURL+"/authenticate", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov0" title="0">{
+                        writeAuthenticateResponse(w, req)
+                }</span>)).Methods(http.MethodGet)
+
         // PersonInfo
-        r.HandleFunc(baseURL+"/personinfo", logger.LogHandler(
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/personinfo", logger.LogHandler(
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
                         writePersonInfoResponse(w, req)
                 }</span>)).Methods(http.MethodGet)

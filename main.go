@@ -26,6 +26,11 @@ var (
 	serverError               int
 )
 
+// Authenticate Response JSON object
+type authenticateResponseJSON struct {
+	Token string `json:"token"`
+}
+
 // Error Response JSON object
 type messageResponseJSON struct {
 	Message string `json:"message"`
@@ -79,7 +84,30 @@ func setHeaders(rw http.ResponseWriter, req *http.Request) {
 		"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Authorization")
 }
 
-// Handle writing numberOfPeople response
+// Handle authenticate response
+func writeAuthenticateResponse(rw http.ResponseWriter, req *http.Request) {
+
+	logger.Logger.Printf("writeAuthenticateResponse")
+
+	// Check the user calling the service
+	user, pass, _ := req.BasicAuth()
+
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	token := "qwerty"
+
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(authenticateResponseJSON{
+		Token: token,
+	})
+}
+
+// Handle writing person info response
 func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) {
 	// Check the user calling the service
 	user, pass, _ := req.BasicAuth()
@@ -266,6 +294,12 @@ func writeGetMetricsResponse(rw http.ResponseWriter, req *http.Request) {
 
 // Handlers for REST API routes
 func setupHandlers(r *mux.Router) {
+
+	// Authenticate
+	r.HandleFunc(baseURL+"/authenticate", logger.LogHandler(
+		func(w http.ResponseWriter, req *http.Request) {
+			writeAuthenticateResponse(w, req)
+		})).Methods(http.MethodGet)
 
 	// PersonInfo
 	r.HandleFunc(baseURL+"/personinfo", logger.LogHandler(

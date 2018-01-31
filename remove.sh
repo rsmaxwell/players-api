@@ -90,7 +90,7 @@ if [ ! \$result == 0 ]; then
 fi
 
 echo "Delete the app"
-sudo rm -rf /opt/players-api/bin/players-api
+sudo rm -rf /opt/players-api
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"

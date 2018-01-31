@@ -20,8 +20,10 @@ ssh=$(echo "$properties" | jq -r .ssh)
 ssh_port=$(echo "$ssh" | jq -r .port)
 
 players=$(echo "$properties" | jq -r .players)
-players_username=$(echo "$players" | jq -r .username)
-players_password=$(echo "$players" | jq -r .password)
+players_api=$(echo "$players" | jq -r .api)
+players_api_username=$(echo "$players_api" | jq -r .username)
+players_api_password=$(echo "$players_api" | jq -r .password)
+players_api_baseurl=$(echo "$players_api" | jq -r .baseurl)
 
 #########################################################################################
 # Are we interested in this machine ?
@@ -67,6 +69,9 @@ if [ "${output}" == "true" ]; then
     exit 0
 fi
 
+binary="players-api"
+fullbinary="${binary}-$(Goos)-$(Goarch)"
+
 #########################################################################################
 # Create a task
 #########################################################################################
@@ -77,38 +82,12 @@ script=${deployDir}/${taskDir}/script.sh
 
 cat >${script} <<EOL
 #!/bin/bash
-# players/remove.sh
+# players-api/remove.sh
 
 #########################################################################################
 # Make application directory
 #########################################################################################
-echo "Make application directory"
 directory="/opt/players-api"
-sudo mkdir -p \${directory}
-result=\$?
-if [ ! \$result == 0 ]; then
-    echo "result = \$result"
-    exit 1
-fi
-
-sudo chown root:root \${directory}
-result=\$?
-if [ ! \$result == 0 ]; then
-    echo "result = \$result"
-    exit 1
-fi
-
-sudo chmod 755 \${directory}
-result=\$?
-if [ ! \$result == 0 ]; then
-    echo "result = \$result"
-    exit 1
-fi
-
-#########################################################################################
-# Make application directory
-#########################################################################################
-directory="/opt/players-api/bin"
 echo "Make application directory: \${directory}"
 sudo mkdir -p \${directory}
 result=\$?
@@ -117,7 +96,7 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
-echo "Set ownership of the application directory: \${directory}"
+echo "Set directory ownership"
 sudo chown root:root \${directory}
 result=\$?
 if [ ! \$result == 0 ]; then
@@ -125,7 +104,7 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
-echo "Set permissions for the application directory: \${directory}"
+echo "Set directory mode"
 sudo chmod 755 \${directory}
 result=\$?
 if [ ! \$result == 0 ]; then
@@ -133,27 +112,27 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
+
 #########################################################################################
 # Copy Application binary
 #########################################################################################
 binary=${binary}
-echo "Copy Application binary: \${tempfile}   \${directory}/\${binary}"
-
-sudo mv \${binary} \${directory}/players-api
+echo "Copy Application binary: \${binary}   \${directory}/\${binary}"
+sudo mv \${binary} \${directory}/\${binary}
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
     exit 1
 fi
 
-sudo chmod 755 \${directory}/players-api/\${binary}
+sudo chmod 755 \${directory}/\${binary}
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
     exit 1
 fi
 
-sudo chown ${username}:${username} \${directory}/players-api/\${binary}
+sudo chown ${username}:${username} \${directory}/\${binary}
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -175,7 +154,8 @@ else
     exit 1
 fi
 
-tempfile=\$(mktemp "/tmp/players-api.service.XXXXXX")
+tempfile="players-api.service"
+echo "Create the services file: \${tempfile}"
 cat >\${tempfile} <<EOF
 [Unit]
 Description=The server for the Players application
@@ -185,8 +165,9 @@ Restart=always
 RestartSec=3
 User=${username}
 Environment=HOME=/home/${username}
-Environment=USERNAME=${players_username}
-Environment=PASSWORD=${players_password}
+Environment=USERNAME=${players_api_username}
+Environment=PASSWORD=${players_api_password}
+Environment=BASEURL=${players_api_baseurl}
 ExecStartPre=/bin/mkdir -p /home/${username}/players-api
 ExecStart=/bin/bash -c "\${directory}/players-api 1> /home/${username}/players-api/stdout.txt 2> /home/${username}/players-api/stderr.txt"
 
@@ -194,6 +175,7 @@ ExecStart=/bin/bash -c "\${directory}/players-api 1> /home/${username}/players-a
 WantedBy=multi-user.target
 EOF
 
+echo "Set file ownership"
 sudo chown root:root \${tempfile}
 result=\$?
 if [ ! \$result == 0 ]; then
@@ -201,6 +183,7 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
+echo "Set file mode"
 sudo chmod 644 \${tempfile}
 result=\$?
 if [ ! \$result == 0 ]; then
@@ -208,21 +191,9 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
-sudo mv \${tempfile} /etc/systemd/system/players-api.service
-result=\$?
-if [ ! \$result == 0 ]; then
-    echo "result = \$result"
-    exit 1
-fi
-
-sudo bash -c "rm -rf /tmp/players-api.*"
-result=\$?
-if [ ! \$result == 0 ]; then
-    echo "result = \$result"
-    exit 1
-fi
-
-rm -rf /tmp/players.*
+destination="/etc/systemd/system/"
+echo "Move the services file to systemd: \${destination}/\${tempfile}"
+sudo mv \${tempfile} \${destination}
 result=\$?
 if [ ! \$result == 0 ]; then
     echo "result = \$result"
@@ -253,9 +224,6 @@ if [ ! \$result == 0 ]; then
     exit 1
 fi
 
-echo "Cleanup"
-rm -rf /tmp/players-api.service.*
-
 EOL
 
 
@@ -263,7 +231,7 @@ EOL
 # Add the binary to the task
 #########################################################################################
 echo "Add the binary to the task"
-ln -s ${binary} ${deployDir}/${taskDir}/${binary}
+ln -s ${PWD}/${fullbinary} ${deployDir}/${taskDir}/${binary}
 result=$?
 if [ ! $result == 0 ]; then
     echo "result = $result"

@@ -54,7 +54,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rsmaxwell/players-api/main.go (60.1%)</option>
+				<option value="file0">github.com/rsmaxwell/players-api/main.go (48.9%)</option>
 				
 				<option value="file1">github.com/rsmaxwell/players-api/players/people.go (75.4%)</option>
 				
@@ -186,6 +186,96 @@ func writeAuthenticateResponse(rw http.ResponseWriter, req *http.Request) <span 
         json.NewEncoder(rw).Encode(authenticateResponseJSON{
                 Token: token,
         })</span>
+}
+
+// Handle Users - getAll
+func writeUsersGetAllResponse(rw http.ResponseWriter, req *http.Request) <span class="cov0" title="0">{
+
+        logger.Logger.Printf("writeUsersgetAlleResponse")
+
+        // Check the user calling the service
+        user, pass, _ := req.BasicAuth()
+
+        if !checkUser(user, pass) </span><span class="cov0" title="0">{
+                writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov0" title="0">rw.WriteHeader(http.StatusOK)</span>
+}
+
+// Handle Users - get by Id
+func writeUsersGetByIDResponse(rw http.ResponseWriter, req *http.Request, id string) <span class="cov0" title="0">{
+
+        logger.Logger.Printf("writeUsersGetByIdResponse")
+
+        // Check the user calling the service
+        user, pass, _ := req.BasicAuth()
+
+        if !checkUser(user, pass) </span><span class="cov0" title="0">{
+                writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov0" title="0">rw.WriteHeader(http.StatusOK)</span>
+}
+
+// Handle Users - create
+func writeUsersCreateResponse(rw http.ResponseWriter, req *http.Request) <span class="cov0" title="0">{
+
+        logger.Logger.Printf("writeUsersCreateResponse")
+
+        // Check the user calling the service
+        user, pass, _ := req.BasicAuth()
+
+        if !checkUser(user, pass) </span><span class="cov0" title="0">{
+                writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov0" title="0">rw.WriteHeader(http.StatusOK)</span>
+}
+
+// Handle Users - update
+func writeUsersUpdateResponse(rw http.ResponseWriter, req *http.Request) <span class="cov0" title="0">{
+
+        logger.Logger.Printf("writeUsersUpdateResponse")
+
+        // Check the user calling the service
+        user, pass, _ := req.BasicAuth()
+
+        if !checkUser(user, pass) </span><span class="cov0" title="0">{
+                writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov0" title="0">rw.WriteHeader(http.StatusOK)</span>
+}
+
+// Handle Users - delete
+func writeUsersDeleteResponse(rw http.ResponseWriter, req *http.Request) <span class="cov0" title="0">{
+
+        logger.Logger.Printf("writeUsersDeleteResponse")
+
+        // Check the user calling the service
+        user, pass, _ := req.BasicAuth()
+
+        if !checkUser(user, pass) </span><span class="cov0" title="0">{
+                writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+                clientError++
+                clientAuthenticationError++
+                return
+        }</span>
+
+        <span class="cov0" title="0">rw.WriteHeader(http.StatusOK)</span>
 }
 
 // Handle writing person info response
@@ -382,6 +472,36 @@ func setupHandlers(r *mux.Router) <span class="cov9" title="12">{
                         writeAuthenticateResponse(w, req)
                 }</span>)).Methods(http.MethodGet)
 
+        // Users - getAll
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/users", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov0" title="0">{
+                        writeUsersGetAllResponse(w, req)
+                }</span>)).Methods(http.MethodGet)
+
+        // Users - getById
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/users/{id}", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov0" title="0">{
+                        writeUsersGetByIDResponse(w, req, mux.Vars(req)["id"])
+                }</span>)).Methods(http.MethodGet)
+
+        // Users - create
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/users", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov0" title="0">{
+                        writeUsersCreateResponse(w, req)
+                }</span>)).Methods(http.MethodPost)
+
+        // Users - update
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/users", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov0" title="0">{
+                        writeUsersUpdateResponse(w, req)
+                }</span>)).Methods(http.MethodPut)
+
+        // Users - delete
+        <span class="cov9" title="12">r.HandleFunc(baseURL+"/users", logger.LogHandler(
+                func(w http.ResponseWriter, req *http.Request) </span><span class="cov0" title="0">{
+                        writeUsersDeleteResponse(w, req)
+                }</span>)).Methods(http.MethodDelete)
+
         // PersonInfo
         <span class="cov9" title="12">r.HandleFunc(baseURL+"/personinfo", logger.LogHandler(
                 func(w http.ResponseWriter, req *http.Request) </span><span class="cov3" title="2">{
@@ -448,7 +568,7 @@ func checkUser(u, p string) bool <span class="cov10" title="14">{
 
 func main() <span class="cov0" title="0">{
 
-        logger.Logger.Printf("Players Server: 2018-01-31 12:00")
+        logger.Logger.Printf("Players Server: 2018-01-31 13:30")
         var ok bool
 
         username, ok = os.LookupEnv("USERNAME")

@@ -107,6 +107,96 @@ func writeAuthenticateResponse(rw http.ResponseWriter, req *http.Request) {
 	})
 }
 
+// Handle Users - getAll
+func writeUsersGetAllResponse(rw http.ResponseWriter, req *http.Request) {
+
+	logger.Logger.Printf("writeUsersgetAlleResponse")
+
+	// Check the user calling the service
+	user, pass, _ := req.BasicAuth()
+
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+}
+
+// Handle Users - get by Id
+func writeUsersGetByIDResponse(rw http.ResponseWriter, req *http.Request, id string) {
+
+	logger.Logger.Printf("writeUsersGetByIdResponse")
+
+	// Check the user calling the service
+	user, pass, _ := req.BasicAuth()
+
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+}
+
+// Handle Users - create
+func writeUsersCreateResponse(rw http.ResponseWriter, req *http.Request) {
+
+	logger.Logger.Printf("writeUsersCreateResponse")
+
+	// Check the user calling the service
+	user, pass, _ := req.BasicAuth()
+
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+}
+
+// Handle Users - update
+func writeUsersUpdateResponse(rw http.ResponseWriter, req *http.Request) {
+
+	logger.Logger.Printf("writeUsersUpdateResponse")
+
+	// Check the user calling the service
+	user, pass, _ := req.BasicAuth()
+
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+}
+
+// Handle Users - delete
+func writeUsersDeleteResponse(rw http.ResponseWriter, req *http.Request) {
+
+	logger.Logger.Printf("writeUsersDeleteResponse")
+
+	// Check the user calling the service
+	user, pass, _ := req.BasicAuth()
+
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+}
+
 // Handle writing person info response
 func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) {
 	// Check the user calling the service
@@ -301,6 +391,36 @@ func setupHandlers(r *mux.Router) {
 			writeAuthenticateResponse(w, req)
 		})).Methods(http.MethodGet)
 
+	// Users - getAll
+	r.HandleFunc(baseURL+"/users", logger.LogHandler(
+		func(w http.ResponseWriter, req *http.Request) {
+			writeUsersGetAllResponse(w, req)
+		})).Methods(http.MethodGet)
+
+	// Users - getById
+	r.HandleFunc(baseURL+"/users/{id}", logger.LogHandler(
+		func(w http.ResponseWriter, req *http.Request) {
+			writeUsersGetByIDResponse(w, req, mux.Vars(req)["id"])
+		})).Methods(http.MethodGet)
+
+	// Users - create
+	r.HandleFunc(baseURL+"/users", logger.LogHandler(
+		func(w http.ResponseWriter, req *http.Request) {
+			writeUsersCreateResponse(w, req)
+		})).Methods(http.MethodPost)
+
+	// Users - update
+	r.HandleFunc(baseURL+"/users", logger.LogHandler(
+		func(w http.ResponseWriter, req *http.Request) {
+			writeUsersUpdateResponse(w, req)
+		})).Methods(http.MethodPut)
+
+	// Users - delete
+	r.HandleFunc(baseURL+"/users", logger.LogHandler(
+		func(w http.ResponseWriter, req *http.Request) {
+			writeUsersDeleteResponse(w, req)
+		})).Methods(http.MethodDelete)
+
 	// PersonInfo
 	r.HandleFunc(baseURL+"/personinfo", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
@@ -367,7 +487,7 @@ func checkUser(u, p string) bool {
 
 func main() {
 
-	logger.Logger.Printf("Players Server: 2018-01-31 12:00")
+	logger.Logger.Printf("Players Server: 2018-01-31 13:30")
 	var ok bool
 
 	username, ok = os.LookupEnv("USERNAME")

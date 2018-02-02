@@ -1,4 +1,4 @@
-package: github.com/rsmaxwell/players
+package: github.com/rsmaxwell/players-api
 import:
 - package: github.com/gorilla/mux
   version: ~1.3.0
@@ -10,5 +10,5 @@ testImport:
   subpackages:
   - assert
 - package: github.com/spf13/pflag
-  version: v1.0.0  
+  version: v1.0.0
 

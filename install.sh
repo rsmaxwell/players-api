@@ -5,13 +5,13 @@ machine=${1}
 #########################################################################################
 # Common definitions
 #########################################################################################
-. ${GITHUBPROJECTS}/rsmaxwell/deploy/common.sh
+. ${MACHINESPROJECT}/src/common
 
 
 #########################################################################################
 # Get the properties for this machine
 #########################################################################################
-properties=$(cat ${inventoryDir}/${machine})
+properties=$(cat "${inventoryDir}/${machine}/machine.json")
 tags=$(echo "$properties" | jq -r .tags)
 address=$(echo "$properties" | jq -rc .address)
 username=$(echo "$properties" | jq -r .username)

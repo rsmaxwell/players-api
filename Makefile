@@ -39,9 +39,9 @@ vet: ${GOPATH}/bin/gometalinter
 
 test: vet ${GOPATH}/bin/gocovmerge
 ifneq (${GOHOSTOS}-${GOHOSTARCH},linux-386)
-	go list -f '{{if or (len .TestGoFiles) (len .XTestGoFiles)}}go test -test.v -test.timeout=120s -coverprofile={{.Name}}_{{len .Imports}}_{{len .Deps}}.coverprofile {{.ImportPath}}{{end}}' $(GOPACKAGES) | xargs -I {} bash -c {}
-else
 	go list -f '{{if or (len .TestGoFiles) (len .XTestGoFiles)}}go test -race -test.v -test.timeout=120s -coverprofile={{.Name}}_{{len .Imports}}_{{len .Deps}}.coverprofile {{.ImportPath}}{{end}}' $(GOPACKAGES) | xargs -I {} bash -c {}
+else
+	go list -f '{{if or (len .TestGoFiles) (len .XTestGoFiles)}}go test -test.v -test.timeout=120s -coverprofile={{.Name}}_{{len .Imports}}_{{len .Deps}}.coverprofile {{.ImportPath}}{{end}}' $(GOPACKAGES) | xargs -I {} bash -c {}
 endif
 	@${GOPATH}/bin/gocovmerge `ls *.coverprofile` > cover.out
 	@rm -f *.coverprofile

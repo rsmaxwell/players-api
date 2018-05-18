@@ -22,7 +22,7 @@ ${GOPATH}/bin/gocovmerge:
 
 ${GOPATH}/bin/gometalinter:
 	go get -u github.com/alecthomas/gometalinter
-	gometalinter --install
+	${GOPATH}/bin/gometalinter --install
 
 deps: vendor
 vendor: glide.yaml

@@ -26,7 +26,7 @@ ${GOPATH}/bin/gometalinter:
 
 deps: vendor
 vendor: glide.yaml
-	glide install --strip-vendor
+	glide install --no-color --strip-vendor
 
 build: deps
 ifneq (${GOHOSTOS}-${GOHOSTARCH},linux-386)

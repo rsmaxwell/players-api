@@ -490,7 +490,7 @@ func main() {
 	logger.Logger.Printf("Players Server: 2018-01-31 13:30")
 	var ok bool
 
-	username, ok = os.LookupEnv("USERNAME")
+	username, ok = os.LookupEnv("USER")
 	if !ok {
 		username = "foo"
 	}

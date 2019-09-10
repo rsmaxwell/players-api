@@ -11,6 +11,12 @@ BUILD_DATE:="$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")"
 BUILD_ID?=unknown
 BUILD_NUMBER?=unknown
 
+ifeq (${GOHOSTOS},windows)
+EXTENSION:=.exe
+else
+EXTENSION:=
+endif
+
 .PHONY: all deps test coverage vet build
 all: deps build
 
@@ -32,7 +38,17 @@ build: deps
 ifneq (${GOHOSTOS}-${GOHOSTARCH},linux-386)
 	CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -o ${APP}-linux-386 -ldflags "-s -w" -a -installsuffix cgo .
 endif
-	CGO_ENABLED=0 go build -o ${APP}-${GOHOSTOS}-${GOHOSTARCH} -ldflags "-s -w" -a -installsuffix cgo .
+
+ifneq (${GOHOSTOS}-${GOHOSTARCH},linux-amd64)
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ${APP}-linux-amd64 -ldflags "-s -w" -a -installsuffix cgo .
+endif
+
+ifneq (${GOHOSTOS}-${GOHOSTARCH},windows-amd64)
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ${APP}-windows-amd64.exe -ldflags "-s -w" -a -installsuffix cgo .
+endif
+
+	CGO_ENABLED=0 go build -o ${APP}-${GOHOSTOS}-${GOHOSTARCH}${EXTENSION} -ldflags "-s -w" -a -installsuffix cgo .
+
 
 vet: ${GOPATH}/bin/gometalinter
 	${GOPATH}/bin/gometalinter --disable-all --enable=gofmt --enable=golint --enable=vet --enable=vetshadow --enable=ineffassign --enable=goconst --tests  --vendor -e ./...

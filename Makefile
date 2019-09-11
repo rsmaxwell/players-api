@@ -6,14 +6,16 @@ GOHOSTARCH:=$(shell go env GOHOSTARCH)
 
 GIT_COMMIT_SHA:="$(shell git rev-parse HEAD 2>/dev/null)"
 GIT_REMOTE_URL:="$(shell git config --get remote.origin.url 2>/dev/null)"
-BUILD_DATE:="$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
 # Jenkins vars. Set to `unknown` if the variable is not yet defined
 BUILD_ID?=unknown
 BUILD_NUMBER?=unknown
 
 ifeq (${GOHOSTOS},windows)
+BUILD_DATE:="$(shell cmd /C generate_timestamp)"
 EXTENSION:=.exe
 else
+BUILD_DATE:="$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")"
 EXTENSION:=
 endif
 
@@ -35,6 +37,14 @@ vendor: glide.yaml
 	glide install --strip-vendor
 
 build: deps
+ifneq (${GOHOSTOS}-${GOHOSTARCH},darwin-386)
+	CGO_ENABLED=0 GOOS=darwin GOARCH=386 go build -o ${APP}-darwin-386 -ldflags "-s -w" -a -installsuffix cgo .
+endif
+
+ifneq (${GOHOSTOS}-${GOHOSTARCH},darwin-amd64)
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ${APP}-darwin-amd64 -ldflags "-s -w" -a -installsuffix cgo .
+endif
+
 ifneq (${GOHOSTOS}-${GOHOSTARCH},linux-386)
 	CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -o ${APP}-linux-386 -ldflags "-s -w" -a -installsuffix cgo .
 endif

@@ -14,3 +14,4 @@ _test-output
 _temp
 package-lock.json
 vendor/
+players-api-*

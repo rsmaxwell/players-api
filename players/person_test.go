@@ -36,7 +36,10 @@ func TestRemovePersonDirectory(t *testing.T) {
 
 func TestReset(t *testing.T) {
 
-	err := Reset("fred", "bloggs")
+	fred = NewPerson("fred", "FRED", "fred", true)
+	bloggs = NewPerson("bloggs", "BLOGGS", "bloggs", true)
+
+	err := Reset(fred, bloggs)
 	assert.Nil(t, err)
 
 	_, err = os.Stat(peopleInfoFile)
@@ -197,18 +200,15 @@ func TestPeople(t *testing.T) {
 	}
 
 	t.Log("Create a number of new People")
-	listOfNames := [...]string{"Fred", "Bloggs", "Jane", "Alice", "Bob"}
+	listOfPeople := [...]Person{}
+	listOfPeople = append(listOfPeople, NewPerson("Fred", "FRED", "Fred", true))
+	listOfPeople = append(listOfPeople, NewPerson("Bloggs", "BLOGGS", "Bloggs", true))
+	listOfPeople = append(listOfPeople, NewPerson("Jane", "JANE", "Jane", true))
+	listOfPeople = append(listOfPeople, NewPerson("Alice", "ALICE", "Alice", true))
+	listOfPeople = append(listOfPeople, NewPerson("Bob", "BOB", "Bob", true))
 
-	for i, name := range listOfNames {
-		// Create a new  "infofile"
-		t.Logf("(%d) Create a new Player [%s]", i, name)
-
-		p, err := NewPerson(name)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = AddPerson(*p)
+	for i, person := range listOfPeople {
+		err = AddPerson(*person)
 		if err != nil {
 			t.Fatal(err)
 		}

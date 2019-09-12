@@ -2,13 +2,11 @@ package players
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 
 	"github.com/rsmaxwell/players-api/logger"
@@ -16,66 +14,17 @@ import (
 
 // Person Structure
 type Person struct {
-	Name string `json:"name"`
-}
-
-// Info structure
-type Info struct {
-	CurrentID int `json:"currentID"`
+	FirstName string `json:"firstname"`
+	LastName  string `json:"lastname"`
+	UserName  string `json:"username"`
+	Player    bool   `json:"player"`
 }
 
 var (
-	rootdir             string
 	peopleDirectory     string
 	peopleDataDirectory string
 	peopleInfoFile      string
 )
-
-func homeDir() string {
-	env := "HOME"
-	if runtime.GOOS == "windows" {
-		env = "USERPROFILE"
-	} else if runtime.GOOS == "plan9" {
-		env = "home"
-	}
-	return os.Getenv(env)
-}
-
-func init() {
-
-	home := homeDir()
-
-	if flag.Lookup("test.v") == nil {
-		rootdir = home + "/players-api"
-	} else {
-		rootdir = home + "/players-api-test"
-	}
-
-	peopleDirectory = rootdir + "/people"
-	peopleDataDirectory = peopleDirectory + "/data"
-	peopleInfoFile = peopleDirectory + "/info.json"
-
-	logger.Logger.Printf("peopleDirectory = %s\n", peopleDirectory)
-}
-
-func removeContents(dir string) error {
-	d, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	names, err := d.Readdirnames(-1)
-	if err != nil {
-		return err
-	}
-	for _, name := range names {
-		err = os.RemoveAll(filepath.Join(dir, name))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 // CreatePeopleDirectory  creates the people directory
 func CreatePeopleDirectory() error {
@@ -153,8 +102,8 @@ func CreatePeopleInfoFile() (*Info, error) {
 	return &i, nil
 }
 
-// GetAndIncrementCurrentID returns the CurrentID and then increments the CurrentID on disk
-func GetAndIncrementCurrentID() (int, error) {
+// GetAndIncrementCurrentPersonID returns the CurrentID and then increments the CurrentID on disk
+func GetAndIncrementCurrentPersonID() (int, error) {
 
 	// Make sure the person directory and info file exists
 	_, err := CreatePeopleInfoFile()
@@ -192,9 +141,12 @@ func GetAndIncrementCurrentID() (int, error) {
 }
 
 // NewPerson initialises a Person object
-func NewPerson(name string) (*Person, error) {
+func NewPerson(firstname string, lastname string, username string, player bool) (*Person, error) {
 	person := new(Person)
-	person.Name = name
+	person.FirstName = firstname
+	person.LastName = lastname
+	person.UserName = username
+	person.Player = player
 	return person, nil
 }
 
@@ -207,7 +159,7 @@ func AddPerson(person Person) error {
 		return err
 	}
 
-	id, err := GetAndIncrementCurrentID()
+	id, err := GetAndIncrementCurrentPersonID()
 	if err != nil {
 		log.Println(err)
 		return err
@@ -234,8 +186,8 @@ func AddPerson(person Person) error {
 	return nil
 }
 
-// List returns a list of the person IDs
-func List() ([]int, error) {
+// ListAllPeople returns a list of the person IDs
+func ListAllPeople() ([]int, error) {
 
 	err := CreatePeopleDirectory()
 	if err != nil {
@@ -249,7 +201,7 @@ func List() ([]int, error) {
 		return nil, err
 	}
 
-	var list []int
+	list := []int{}
 	for _, filenameInfo := range files {
 		var filename = filenameInfo.Name()
 		var extension = filepath.Ext(filename)
@@ -267,8 +219,8 @@ func List() ([]int, error) {
 	return list, nil
 }
 
-// Details returns the details of the person with the matching ID
-func Details(id int) (*Person, error) {
+// GetPersonDetails returns the details of the person with the matching ID
+func GetPersonDetails(id int) (*Person, error) {
 
 	err := CreatePeopleDirectory()
 	if err != nil {
@@ -297,8 +249,8 @@ func Details(id int) (*Person, error) {
 	return &p, nil
 }
 
-// Delete the person with the matching ID
-func Delete(id int) error {
+// DeletePerson the person with the matching ID
+func DeletePerson(id int) error {
 
 	err := CreatePeopleDirectory()
 	if err != nil {
@@ -322,8 +274,8 @@ func Delete(id int) error {
 	return nil
 }
 
-// Reset resets the list of people
-func Reset(names ...string) error {
+// ResetPeople resets the list of people
+func ResetPeople(list ...Person) error {
 
 	err := RemovePeopleDirectory()
 	if err != nil {
@@ -340,13 +292,12 @@ func Reset(names ...string) error {
 		logger.Logger.Fatal(err)
 	}
 
-	for _, element := range names {
-		person, err := NewPerson(element)
+	for _, person := range list {
 		if err != nil {
 			logger.Logger.Fatal(err)
 		}
 
-		err = AddPerson(*person)
+		err = AddPerson(person)
 		if err != nil {
 			logger.Logger.Fatal(err)
 		}

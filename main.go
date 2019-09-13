@@ -13,11 +13,12 @@ import (
 
 	"github.com/rsmaxwell/players-api/logger"
 	"github.com/rsmaxwell/players-api/players"
+	"github.com/rsmaxwell/players-api/session"
 )
 
 var (
 	port                      int
-	username                  string
+	userID                    string
 	password                  string
 	baseURL                   string
 	clientSuccess             int
@@ -26,52 +27,42 @@ var (
 	serverError               int
 )
 
-// Authenticate Response JSON object
-type authenticateResponseJSON struct {
+// Authenticate Response
+type authenticateResponse struct {
 	Token string `json:"token"`
 }
 
-// Error Response JSON object
-type messageResponseJSON struct {
+// Error Response
+type messageResponse struct {
 	Message string `json:"message"`
 }
 
-// metrics Response JSON object
-type metricsResponseJSON struct {
+// metrics Response
+type metricsResponse struct {
 	ClientSuccess             int `json:"clientSuccess"`
 	ClientError               int `json:"clientError"`
 	ClientAuthenticationError int `json:"clientAuthenticationError"`
 	ServerError               int `json:"serverError"`
 }
 
-// Court details Response JSON object
-type courtDetailsResponseJSON struct {
+// Court details Response
+type courtDetailsResponse struct {
 	Court players.Court `json:"court"`
 }
 
-// List courts Response JSON object
-type listCourtsResponseJSON struct {
+// List courts Response
+type listCourtsResponse struct {
 	Courts []int `json:"courts"`
 }
 
-// Number of courts Response JSON object
-type numberOfCourtsResponseJSON struct {
-	NumberOfCourts int `json:"numberOfCourts"`
-}
-
-// People details Response JSON object
-type personDetailsResponseJSON struct {
+// People details Response
+type personDetailsResponse struct {
 	Person players.Person `json:"person"`
 }
 
-// List people Response JSON object
-type listPeopleResponseJSON struct {
+// List people Response
+type listPeopleResponse struct {
 	People []int `json:"people"`
-}
-
-// Number of people Response JSON object
-type numberOfPeopleResponseJSON struct {
-	NumberOfPeople int `json:"numberOfPeople"`
 }
 
 // Handle writing error messager response.
@@ -80,7 +71,7 @@ func writeMessageResponse(w http.ResponseWriter, httpStatus int, message string)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatus)
 
-	json.NewEncoder(w).Encode(messageResponseJSON{
+	json.NewEncoder(w).Encode(messageResponse{
 		Message: message,
 	})
 }
@@ -99,25 +90,62 @@ func setHeaders(rw http.ResponseWriter, req *http.Request) {
 		"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Authorization")
 }
 
-// Handle authenticate response
-func writeAuthenticateResponse(rw http.ResponseWriter, req *http.Request) {
+// writeRegisterResponse
+func writeRegisterResponse(rw http.ResponseWriter, req *http.Request) {
 
-	logger.Logger.Printf("writeAuthenticateResponse")
+	var r players.RegisterRequest
+
+	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	b, err := ioutil.ReadAll(limitedReader)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
+		clientError++
+		return
+	}
+
+	err = json.Unmarshal(b, &r)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse Person data"))
+		clientError++
+		return
+	}
+
+	err = players.RegisterPerson(r)
+	if err != nil {
+		logger.Logger.Printf("writeRegisterResponse: %s", err)
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("%s", err))
+		serverError++
+		return
+	}
+
+	setHeaders(rw, req)
+	writeMessageResponse(rw, http.StatusOK, "ok")
+}
+
+// writeLoginResponse
+func writeLoginResponse(rw http.ResponseWriter, req *http.Request) {
+
+	logger.Logger.Printf("writeLoginResponse")
 
 	// Check the user calling the service
 	user, pass, _ := req.BasicAuth()
 
 	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
 	}
 
-	token := "qwerty"
+	token, err := session.New(user)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusInternalServerError, "Error creating session")
+		serverError++
+		return
+	}
 
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(authenticateResponseJSON{
+	json.NewEncoder(rw).Encode(authenticateResponse{
 		Token: token,
 	})
 }
@@ -131,7 +159,7 @@ func writeGetListOfCourtsResponse(rw http.ResponseWriter, req *http.Request) {
 	user, pass, _ := req.BasicAuth()
 
 	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
@@ -145,39 +173,61 @@ func writeGetListOfCourtsResponse(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(listCourtsResponseJSON{
+	json.NewEncoder(rw).Encode(listCourtsResponse{
 		Courts: listOfCourts,
 	})
 }
 
 // Handle Court - get by Id
-func writeCourtGetByIDResponse(rw http.ResponseWriter, req *http.Request, id string) {
+func writeGetCourtByIDResponse(rw http.ResponseWriter, req *http.Request, idString string) {
 
-	logger.Logger.Printf("writeCourtGetByIdResponse")
+	logger.Logger.Printf("writeGetCourtByIDResponse")
 
 	// Check the user calling the service
 	user, pass, _ := req.BasicAuth()
 
 	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
 	}
 
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusNotFound, "Not Found")
+		clientError++
+		return
+	}
+
+	court, err := players.GetCourtDetails(id)
+
+	if err != nil {
+		writeMessageResponse(rw, http.StatusNotFound, "Not Found")
+		clientError++
+		return
+	}
+
+	setHeaders(rw, req)
+
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(courtDetailsResponse{
+		Court: *court,
+	})
+
 	rw.WriteHeader(http.StatusOK)
 }
 
 // Handle Court - create
-func writeCourtCreateResponse(rw http.ResponseWriter, req *http.Request) {
+func writeCreateCourtResponse(rw http.ResponseWriter, req *http.Request) {
 
-	logger.Logger.Printf("writeCourtCreateResponse")
+	logger.Logger.Printf("writeCreateCourtResponse")
 
 	// Check the user calling the service
 	user, pass, _ := req.BasicAuth()
 
 	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
@@ -212,177 +262,15 @@ func writeCourtCreateResponse(rw http.ResponseWriter, req *http.Request) {
 }
 
 // Handle Court - update
-func writeCourtUpdateResponse(rw http.ResponseWriter, req *http.Request) {
+func writeUpdateCourtResponse(rw http.ResponseWriter, req *http.Request, idString string) {
 
-	logger.Logger.Printf("writeCourtUpdateResponse")
-
-	// Check the user calling the service
-	user, pass, _ := req.BasicAuth()
-
-	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
-		clientError++
-		clientAuthenticationError++
-		return
-	}
-
-	rw.WriteHeader(http.StatusOK)
-}
-
-// Handle Court - delete
-func writeCourtDeleteResponse(rw http.ResponseWriter, req *http.Request) {
-
-	logger.Logger.Printf("writeCourtDeleteResponse")
+	logger.Logger.Printf("writeUpdateCourtResponse")
 
 	// Check the user calling the service
 	user, pass, _ := req.BasicAuth()
 
 	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
-		clientError++
-		clientAuthenticationError++
-		return
-	}
-
-	rw.WriteHeader(http.StatusOK)
-}
-
-// Handle writing person info response
-func writePersonInfoResponse(rw http.ResponseWriter, req *http.Request) {
-	// Check the user calling the service
-	user, pass, _ := req.BasicAuth()
-
-	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
-		clientError++
-		clientAuthenticationError++
-		return
-	}
-
-	listOfPeople, err := players.ListAllPeople()
-	if err != nil {
-		writeMessageResponse(rw, http.StatusInternalServerError, "Error getting list of people")
-		serverError++
-		return
-	}
-
-	numberOfPeople := len(listOfPeople)
-
-	setHeaders(rw, req)
-
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(numberOfPeopleResponseJSON{
-		NumberOfPeople: numberOfPeople,
-	})
-}
-
-// Handle writing the GET list of People response
-func writeGetListOfPeopleResponse(rw http.ResponseWriter, req *http.Request) {
-
-	setHeaders(rw, req)
-
-	user, pass, _ := req.BasicAuth()
-
-	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
-		clientError++
-		clientAuthenticationError++
-		return
-	}
-
-	listOfPeople, err := players.ListAllPeople()
-	if err != nil {
-		writeMessageResponse(rw, http.StatusInternalServerError, "Error getting list of people")
-		serverError++
-		return
-	}
-
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(listPeopleResponseJSON{
-		People: listOfPeople,
-	})
-}
-
-// Write the GET person response
-func writeGetPersonDetailsResponse(rw http.ResponseWriter, req *http.Request, idString string) {
-	// Check the user calling the service
-	user, pass, _ := req.BasicAuth()
-	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
-		clientError++
-		clientAuthenticationError++
-		return
-	}
-
-	id, err := strconv.Atoi(idString)
-	if err != nil {
-		writeMessageResponse(rw, http.StatusNotFound, "Not Found")
-		clientError++
-		return
-	}
-
-	person, err := players.GetPersonDetails(id)
-
-	if err != nil {
-		writeMessageResponse(rw, http.StatusNotFound, "Not Found")
-		clientError++
-		return
-	}
-
-	setHeaders(rw, req)
-
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(personDetailsResponseJSON{
-		Person: *person,
-	})
-}
-
-// Write the POST Add Person response
-func writePostAddPersonResponse(rw http.ResponseWriter, req *http.Request) {
-	// Check the user calling the service
-	user, pass, _ := req.BasicAuth()
-	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
-		clientError++
-		clientAuthenticationError++
-		return
-	}
-
-	var p players.Person
-
-	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
-	b, err := ioutil.ReadAll(limitedReader)
-	if err != nil {
-		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted in Add Person request"))
-		clientError++
-		return
-	}
-
-	err = json.Unmarshal(b, &p)
-	if err != nil {
-		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse person data for Add Person request"))
-		clientError++
-		return
-	}
-
-	err = players.AddPerson(p)
-	if err != nil {
-		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not create a new person. err:%s", err))
-		serverError++
-		return
-	}
-
-	setHeaders(rw, req)
-
-	writeMessageResponse(rw, http.StatusOK, "ok")
-}
-
-// Write the DELETE person response
-func writeDeletePersonResponse(rw http.ResponseWriter, req *http.Request, idString string) {
-	// Check the user calling the service
-	user, pass, _ := req.BasicAuth()
-	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
@@ -397,10 +285,180 @@ func writeDeletePersonResponse(rw http.ResponseWriter, req *http.Request, idStri
 		return
 	}
 
-	players.DeletePerson(id)
+	var c players.JSONCourt
+
+	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	b, err := ioutil.ReadAll(limitedReader)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
+		clientError++
+		return
+	}
+
+	err = json.Unmarshal(b, &c)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse court data for id:%s", idString))
+		clientError++
+		return
+	}
+
+	_, err = players.UpdateCourt(id, c)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not update court:%s", idString))
+		clientError++
+		return
+	}
+
+	setHeaders(rw, req)
+	writeMessageResponse(rw, http.StatusOK, "ok")
+}
+
+// Handle Court - delete
+func writeDeleteCourtResponse(rw http.ResponseWriter, req *http.Request, idString string) {
+
+	logger.Logger.Printf("writeDeleteCourtResponse")
+
+	// Check the user calling the service
+	user, pass, _ := req.BasicAuth()
+
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	// Convert the ID into a number
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		logger.Logger.Printf(err.Error())
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("The ID:%s is not a number", idString))
+		clientError++
+		return
+	}
+
+	err = players.DeleteCourt(id)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not delete court:%s", idString))
+		clientError++
+		return
+	}
+
+	setHeaders(rw, req)
+	writeMessageResponse(rw, http.StatusOK, "ok")
+}
+
+// Handle writing the GET list of People response
+func writeGetListOfPeopleResponse(rw http.ResponseWriter, req *http.Request) {
 
 	setHeaders(rw, req)
 
+	user, pass, _ := req.BasicAuth()
+
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	listOfPeople, err := players.ListAllPeople()
+	if err != nil {
+		writeMessageResponse(rw, http.StatusInternalServerError, "Error getting list of people")
+		serverError++
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(listPeopleResponse{
+		People: listOfPeople,
+	})
+}
+
+// Write the GET person response
+func writeGetPersonByIDResponse(rw http.ResponseWriter, req *http.Request, id string) {
+	// Check the user calling the service
+	user, pass, _ := req.BasicAuth()
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	person, err := players.GetPersonDetails(id)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusNotFound, "Not Found")
+		clientError++
+		return
+	}
+
+	setHeaders(rw, req)
+
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(personDetailsResponse{
+		Person: *person,
+	})
+}
+
+// Update person
+func writeUpdatePersonResponse(rw http.ResponseWriter, req *http.Request, id string) {
+	// Check the user calling the service
+	user, pass, _ := req.BasicAuth()
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	var p players.JSONPerson
+
+	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	b, err := ioutil.ReadAll(limitedReader)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
+		clientError++
+		return
+	}
+
+	err = json.Unmarshal(b, &p)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse person data for person:%s", id))
+		clientError++
+		return
+	}
+
+	_, err = players.UpdatePerson(id, p)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not update person:%s", id))
+		clientError++
+		return
+	}
+
+	setHeaders(rw, req)
+	writeMessageResponse(rw, http.StatusOK, "ok")
+}
+
+// Write the DELETE person response
+func writeDeletePersonResponse(rw http.ResponseWriter, req *http.Request, id string) {
+	// Check the user calling the service
+	user, pass, _ := req.BasicAuth()
+	if !checkUser(user, pass) {
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
+		clientError++
+		clientAuthenticationError++
+		return
+	}
+
+	err := players.DeletePerson(id)
+	if err != nil {
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not delete person:%s", id))
+		clientError++
+		return
+	}
+
+	setHeaders(rw, req)
 	writeMessageResponse(rw, http.StatusOK, "ok")
 }
 
@@ -409,7 +467,7 @@ func writeGetMetricsResponse(rw http.ResponseWriter, req *http.Request) {
 	// Check the user calling the service
 	user, pass, _ := req.BasicAuth()
 	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid username and/or password")
+		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
@@ -418,7 +476,7 @@ func writeGetMetricsResponse(rw http.ResponseWriter, req *http.Request) {
 	setHeaders(rw, req)
 
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(metricsResponseJSON{
+	json.NewEncoder(rw).Encode(metricsResponse{
 		ClientSuccess:             clientSuccess,
 		ClientError:               clientError,
 		ClientAuthenticationError: clientAuthenticationError,
@@ -429,11 +487,19 @@ func writeGetMetricsResponse(rw http.ResponseWriter, req *http.Request) {
 // Handlers for REST API routes
 func setupHandlers(r *mux.Router) {
 
-	// Authenticate
-	r.HandleFunc(baseURL+"/authenticate", logger.LogHandler(
+	// Register
+	r.HandleFunc(baseURL+"/register", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
-			writeAuthenticateResponse(w, req)
+			writeRegisterResponse(w, req)
 		})).Methods(http.MethodPost)
+
+	// Login
+	r.HandleFunc(baseURL+"/login", logger.LogHandler(
+		func(w http.ResponseWriter, req *http.Request) {
+			writeLoginResponse(w, req)
+		})).Methods(http.MethodPost)
+
+	// -----[ Court ]---------------------------------------------
 
 	// Court - getAll
 	r.HandleFunc(baseURL+"/court", logger.LogHandler(
@@ -444,56 +510,54 @@ func setupHandlers(r *mux.Router) {
 	// Court - getById
 	r.HandleFunc(baseURL+"/court/{id}", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
-			writeCourtGetByIDResponse(w, req, mux.Vars(req)["id"])
+			writeGetCourtByIDResponse(w, req, mux.Vars(req)["id"])
 		})).Methods(http.MethodGet)
 
 	// Court - create
 	r.HandleFunc(baseURL+"/court", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
-			writeCourtCreateResponse(w, req)
+			writeCreateCourtResponse(w, req)
 		})).Methods(http.MethodPost)
 
 	// Court - update
-	r.HandleFunc(baseURL+"/court", logger.LogHandler(
+	r.HandleFunc(baseURL+"/court/{id}", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
-			writeCourtUpdateResponse(w, req)
+			writeUpdateCourtResponse(w, req, mux.Vars(req)["id"])
 		})).Methods(http.MethodPut)
 
 	// Court - delete
-	r.HandleFunc(baseURL+"/court", logger.LogHandler(
+	r.HandleFunc(baseURL+"/court/{id}", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
-			writeCourtDeleteResponse(w, req)
+			writeDeleteCourtResponse(w, req, mux.Vars(req)["id"])
 		})).Methods(http.MethodDelete)
 
-	// PersonInfo
-	r.HandleFunc(baseURL+"/personinfo", logger.LogHandler(
-		func(w http.ResponseWriter, req *http.Request) {
-			writePersonInfoResponse(w, req)
-		})).Methods(http.MethodGet)
+	// -----[ People ]---------------------------------------------
 
-	// ListPeople
+	// People - GetAll
 	r.HandleFunc(baseURL+"/person", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeGetListOfPeopleResponse(w, req)
 		})).Methods(http.MethodGet)
 
-	// Get Person
+	// Person - getById
 	r.HandleFunc(baseURL+"/person/{id}", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
-			writeGetPersonDetailsResponse(w, req, mux.Vars(req)["id"])
+			writeGetPersonByIDResponse(w, req, mux.Vars(req)["id"])
 		})).Methods(http.MethodGet)
 
-	// Add Person
+	// Person - update
 	r.HandleFunc(baseURL+"/person", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
-			writePostAddPersonResponse(w, req)
+			writeUpdatePersonResponse(w, req, mux.Vars(req)["id"])
 		})).Methods(http.MethodPost)
 
-	// Delete Person
+	// Person - delete
 	r.HandleFunc(baseURL+"/person/{id}", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeDeletePersonResponse(w, req, mux.Vars(req)["id"])
 		})).Methods(http.MethodDelete)
+
+	// -----[  ]---------------------------------------------
 
 	// Metrics
 	r.HandleFunc(baseURL+"/metrics", logger.LogHandler(
@@ -512,8 +576,8 @@ func setupHandlers(r *mux.Router) {
 // Simple check on the user calling the service
 func checkUser(u, p string) bool {
 
-	if u != username {
-		logger.Logger.Printf("checkUser: FAIL: username = %s, u = %s\n", username, u)
+	if u != userID {
+		logger.Logger.Printf("checkUser: FAIL: userID = %s, u = %s\n", userID, u)
 		return false
 	} else if p != password {
 		logger.Logger.Printf("checkUser: FAIL: password = %s %s\n", password, p)
@@ -529,9 +593,9 @@ func main() {
 	logger.Logger.Printf("Players Server: 2018-01-31 13:30")
 	var ok bool
 
-	username, ok = os.LookupEnv("USER")
+	userID, ok = os.LookupEnv("USER")
 	if !ok {
-		username = "foo"
+		userID = "foo"
 	}
 
 	password, ok = os.LookupEnv("PASSWORD")
@@ -557,7 +621,7 @@ func main() {
 	router := mux.NewRouter()
 	setupHandlers(router)
 
-	logger.Logger.Printf("Username = %s, Password = %s", username, password)
+	logger.Logger.Printf("UserID = %s, Password = %s", userID, password)
 	logger.Logger.Printf("Listening to base URL: '%s' port: %d", baseURL, port)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 	if err != nil {

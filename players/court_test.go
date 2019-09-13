@@ -2,7 +2,6 @@ package players
 
 import (
 	"bytes"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -10,20 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
-
-func writefile(filepath string, contents string) error {
-
-	data := []byte(contents)
-	err := ioutil.WriteFile(filepath, data, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func writefileInDirectory(directory string, filename string, contents string) error {
-	return writefile(directory+"/"+filename, contents)
-}
 
 func TestRemoveCourtDirectory(t *testing.T) {
 
@@ -34,7 +19,7 @@ func TestRemoveCourtDirectory(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestReset(t *testing.T) {
+func TestResetCourt(t *testing.T) {
 
 	fred = NewCourt("fred")
 	bloggs = NewCourt("bloggs")
@@ -75,7 +60,7 @@ func TestAddCourt(t *testing.T) {
 	assert.Equal(t, 3, len(list))
 }
 
-func TestNewInfoJunk(t *testing.T) {
+func TestNewInfoJunkCourt(t *testing.T) {
 
 	err := RemoveCourtDirectory()
 	if err != nil {
@@ -100,7 +85,7 @@ func TestNewInfoJunk(t *testing.T) {
 	})
 }
 
-func TestNewInfoUnreadableInfofile(t *testing.T) {
+func TestNewInfoUnreadableInfofileCourt(t *testing.T) {
 
 	// Remove all the contents of the court application directory
 	t.Logf("Remove all the contents of the court application directory")
@@ -127,7 +112,7 @@ func TestNewInfoUnreadableInfofile(t *testing.T) {
 	})
 }
 
-func TestGetAndIncrementCurrentID(t *testing.T) {
+func TestGetAndIncrementCurrentIDCourt(t *testing.T) {
 
 	// Remove all the contents of the court application directory
 	t.Logf("Remove all the contents of the court application directory")
@@ -149,7 +134,7 @@ func TestGetAndIncrementCurrentID(t *testing.T) {
 	}
 }
 
-func TestGetAndIncrementCurrentIDNoInfofile(t *testing.T) {
+func TestGetAndIncrementCurrentIDNoInfofileCourt(t *testing.T) {
 
 	// Remove all the contents of the court application directory
 	t.Logf("Remove all the contents of the court application directory")
@@ -163,7 +148,7 @@ func TestGetAndIncrementCurrentIDNoInfofile(t *testing.T) {
 	})
 }
 
-func TestGetAndIncrementCurrentIDJunkContents(t *testing.T) {
+func TestGetAndIncrementCurrentIDJunkContentsCourt(t *testing.T) {
 
 	t.Logf("Remove all the contents of the court application directory")
 	err := RemoveCourtDirectory()

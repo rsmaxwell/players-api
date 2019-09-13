@@ -9,12 +9,18 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/rsmaxwell/players-api/jsonTypes"
 	"github.com/rsmaxwell/players-api/logger"
 )
 
 // Court Structure
 type Court struct {
 	Name string `json:"name"`
+}
+
+// JSONCourt Structure
+type JSONCourt struct {
+	Name jsonTypes.JSONString `json:"name"`
 }
 
 var (
@@ -141,6 +147,22 @@ func GetAndIncrementCurrentCourtID() (int, error) {
 func NewCourt(name string) (*Court, error) {
 	court := new(Court)
 	court.Name = name
+	return court, nil
+}
+
+// UpdateCourt update fields
+func UpdateCourt(id int, court2 JSONCourt) (*Court, error) {
+
+	court, err := GetCourtDetails(id)
+	if err != nil {
+		logger.Logger.Print(err)
+		return nil, fmt.Errorf("court [%d] not found", id)
+	}
+
+	if court2.Name.Set {
+		court.Name = court2.Name.Value
+	}
+
 	return court, nil
 }
 

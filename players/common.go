@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"unicode"
 
 	"github.com/rsmaxwell/players-api/logger"
 )
@@ -40,12 +41,10 @@ func init() {
 
 	peopleDirectory = rootdir + "/people"
 	peopleDataDirectory = peopleDirectory + "/data"
-	peopleInfoFile = peopleDirectory + "/info.json"
 	logger.Logger.Printf("peopleDirectory = %s\n", peopleDirectory)
 
 	courtDirectory = rootdir + "/court"
 	courtDataDirectory = courtDirectory + "/data"
-	courtInfoFile = courtDirectory + "/info.json"
 	logger.Logger.Printf("courtDirectory = %s\n", courtDirectory)
 }
 
@@ -66,4 +65,21 @@ func removeContents(dir string) error {
 		}
 	}
 	return nil
+}
+
+func checkID(s string) bool {
+	for _, r := range s {
+
+		ok := false
+		if unicode.IsLetter(r) {
+			ok = true
+		} else if unicode.IsDigit(r) {
+			ok = true
+		}
+
+		if !ok {
+			return false
+		}
+	}
+	return true
 }

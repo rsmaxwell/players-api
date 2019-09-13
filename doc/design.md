@@ -29,15 +29,14 @@ This is an example of how the data might be stored on disk by the server
         "players_per_court": 4,
         "version": 123456,
         "private": {
-            "next_person_id": 124,
             "next_court_id": 35,
         },
     },
     "people": {
-        "123": {
-            "first_name": "James",
-            "last_name": "Bond",
-            "username": "james",
+        "007": {
+            "firstname": "James",
+            "lastname": "Bond",
+            "userID": "james",
             "player": true,
             "private": {
                 "email": "james@mi6.co.uk",
@@ -58,6 +57,11 @@ This is an example of how the data might be stored on disk by the server
 }
 ```
 
+
+
+
+
+
 ## REST API
 
 API requests are secured during transmission by sending them over HTTPS.
@@ -65,7 +69,7 @@ API requests are secured during transmission by sending them over HTTPS.
 The following shell variables are examples of variables which are assumed by the REST API examples 
 
 ``` bash
-USERNAME="007"
+USER="007"
 PASSWORD="topsecret"
 ENDPOINT="https://api.example.com"
 ```
@@ -85,50 +89,48 @@ ENDPOINT="https://api.example.com"
 }
 ```
 
-
-
-
-
-
-
-
-
-
-
+[//]: # (************************************************************)
+[//]: # (*)
+[//]: # (* Registration)
+[//]: # (*)
+[//]: # (************************************************************)
 
 ### Register
+
 ``` bash
 COMMAND="/register"
 
-curl -X POST ${ENDPOINT}${COMMAND} \
---header "Content-Type: application/json" \
--d @- << EOF
-{
-    "username": "007",
+cat <<EOT > data.json
+{  
+    "userID": "007",
     "first_name": "James",
     "last_name": "Bond",
     "email": "james@mi6.co.uk",
     "password": "topsecret"
-} 
-EOF
+}
+EOT
+
+curl -X POST ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--data-binary @data.json
 ```
 
 ### Login
 
-The returned token is used on subsequent calls to authentication 
+The login call requires the userID/password to be supplied for basic http authentication. A token is returned which must be used to authenticate subsequent calls
 
 ``` bash
 COMMAND="/login"
 
-curl -X GET -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
---header "Accept: application/json" \
+curl -X GET -u "${userID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json"
+--header "Accept: application/json" \
 ```
 
-#### Response
 ``` json
+httpStatus: 200
+response:
 {
-    "code": 0,
     "token": "4acRtD1Bai5Gr83gAAEl"
 }
 ```
@@ -138,49 +140,50 @@ curl -X GET -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
 The logout call invalidates the token 
 
 ``` bash
-COMMAND="/login"
+COMMAND="/logout"
 
-curl -X DELETE -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
---header "Content-Type: application/json" \
--d @- << EOF
+cat <<EOT > data.json
 {
     "token": "4acRtD1Bai5Gr83gAAEl"
-} 
-EOF
+}
+EOT
+
+curl -X DELETE ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--data-binary @data.json
 ```
 
+``` json
+httpStatus: 200
+```
 
+[//]: # (************************************************************)
+[//]: # (*)
+[//]: # (* General)
+[//]: # (*)
+[//]: # (************************************************************)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Read
+### Read All
 
 ``` bash
 COMMAND=""
 
-curl -X GET -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
---header "Accept: application/json"
+cat <<EOT > data.json
+{
+    "token": "4acRtD1Bai5Gr83gAAEl"
+}
+EOT
+
+curl -X GET ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--data-binary @data.json
 ```
 
-#### Response
 ``` json
+httpStatus: 200
+response:
 {
-    "code": 0,
     "general": {
         "title": "Badminton Club",
         "players_per_court": 4,
@@ -190,7 +193,7 @@ curl -X GET -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
         "123": {
             "first_name": "James",
             "last_name": "Bond",
-            "username": "james",
+            "userID": "james",
             "player": true
         },
         "another": { "..." }
@@ -212,9 +215,7 @@ The list of fields supplied in the data may be incomplete. Only the given fields
 ``` bash
 COMMAND="/general"
 
-curl -X PUT -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
---header "Content-Type: application/json" \
--d @- << EOF
+cat <<EOT > data.json
 {
     "token": "4acRtD1Bai5Gr83gAAEl",
     "general": {   
@@ -222,20 +223,18 @@ curl -X PUT -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
         "players_per_court": 4
     }
 }
+EOT
+
+curl -X PUT -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--data-binary @data.json
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
+[//]: # (************************************************************)
+[//]: # (*)
+[//]: # (* Person)
+[//]: # (*)
+[//]: # (************************************************************)
 
 ### Update Person
 
@@ -244,54 +243,62 @@ The list of fields supplied in the data may be incomplete. Only the given fields
 ``` bash
 COMMAND="/person/${ID}"
 
-curl -X PUT -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
---header "Content-Type: application/json" \
--d @- << EOF
+cat <<EOT > data.json
 {
     "token": "4acRtD1Bai5Gr83gAAEl",
-    "person": {   
-        "username": "007",
+    "person": {
+        "userID": "007",
         "first_name": "James",
         "last_name": "Bond",
-        "player": true 
-    }
+        "email": "james@mi6.co.uk",
+        "password": "topsecret"
+    }    
 }
+EOT
+
+curl -X PUT ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--data-binary @data.json
 ```
 
 ### Delete Person
 ``` bash
 COMMAND="/person/${ID}"
 
-curl -X DELETE -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND}
+cat <<EOT > data.json
+{
+    "token": "4acRtD1Bai5Gr83gAAEl"   
+}
+EOT
+
+curl -X DELETE -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--data-binary @data.json
 ```
 
-
-
-
-
-
-
-
-
-
-
-
+[//]: # (************************************************************)
+[//]: # (*)
+[//]: # (* Court)
+[//]: # (*)
+[//]: # (************************************************************)
 
 ### Create court
 ``` bash
-COMMAND="/login"
+COMMAND="/court"
 
-curl -X POST -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
---header "Content-Type: application/json" \
--d @- << EOF
+cat <<EOT > data.json
 {
     "token": "4acRtD1Bai5Gr83gAAEl",
     "court": {
         "name": "Court 1",
         "players": [ 123, 77, 23, 87 ] 
     }    
-} 
-EOF
+}
+EOT
+
+curl -X POST ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--data-binary @data.json
 ```
 
 ### Update Court
@@ -301,9 +308,7 @@ The list of fields supplied in the data may be incomplete. Only the given fields
 ``` bash
 COMMAND="/court/${ID}"
 
-curl -X PUT -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
---header "Content-Type: application/json" \
--d @- << EOF
+cat <<EOT > data.json
 {
     "token": "4acRtD1Bai5Gr83gAAEl",
     "court": {   
@@ -311,13 +316,26 @@ curl -X PUT -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
         "players": [ 123, 77, 23, 87 ]  
     }
 }
+EOT
+
+curl -X PUT ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--data-binary @data.json
 ```
 
 ### Delete Court
 ``` bash
 COMMAND="/court/${ID}"
 
-curl -X DELETE -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} 
+cat <<EOT > data.json
+{
+    "token": "4acRtD1Bai5Gr83gAAEl",
+}
+EOT
+
+curl -X DELETE ${ENDPOINT}${COMMAND}  \
+--header "Content-Type: application/json" \
+--data-binary @data.json
 ```
 
 

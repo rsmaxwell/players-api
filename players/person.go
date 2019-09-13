@@ -25,10 +25,10 @@ type RegisterRequest struct {
 
 // Person Structure
 type Person struct {
-	FirstName string `json:"firstname"`
-	LastName  string `json:"lastname"`
-	Hash      string `json:"hash"`
-	Player    bool   `json:"player"`
+	FirstName      string `json:"firstname"`
+	LastName       string `json:"lastname"`
+	HashedPassword []byte `json:"hashedpassword"`
+	Player         bool   `json:"player"`
 }
 
 // JSONPerson Structure
@@ -84,11 +84,11 @@ func RemovePeopleDirectory() error {
 }
 
 // NewPerson initialises a Person object
-func NewPerson(firstname string, lastname string, hash string, player bool) (*Person, error) {
+func NewPerson(firstname string, lastname string, hashedPassword []byte, player bool) (*Person, error) {
 	person := new(Person)
 	person.FirstName = firstname
 	person.LastName = lastname
-	person.Hash = hash
+	person.HashedPassword = hashedPassword
 	person.Player = player
 	return person, nil
 }
@@ -120,13 +120,13 @@ func UpdatePerson(id string, person2 JSONPerson) (*Person, error) {
 // RegisterPerson adds a person to the list of people
 func RegisterPerson(reg RegisterRequest) error {
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(reg.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(reg.Password), bcrypt.DefaultCost)
 	if err != nil {
 		logger.Logger.Printf("%s", err)
 		return err
 	}
 
-	p, err := NewPerson(reg.FirstName, reg.LastName, string(hash), false)
+	p, err := NewPerson(reg.FirstName, reg.LastName, hashedPassword, false)
 	if err != nil {
 		log.Println(err)
 		return err

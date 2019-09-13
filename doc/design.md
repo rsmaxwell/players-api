@@ -122,9 +122,9 @@ The login call requires the userID/password to be supplied for basic http authen
 ``` bash
 COMMAND="/login"
 
-curl -X GET -u "${userID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
---header "Content-Type: application/json"
---header "Accept: application/json" \
+curl -X GET -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--header "Accept: application/json"
 ```
 
 ``` json
@@ -151,10 +151,6 @@ EOT
 curl -X DELETE ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --data-binary @data.json
-```
-
-``` json
-httpStatus: 200
 ```
 
 [//]: # (************************************************************)

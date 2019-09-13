@@ -45,6 +45,7 @@ func init() {
 
 	courtDirectory = rootdir + "/court"
 	courtDataDirectory = courtDirectory + "/data"
+	courtInfoFile = courtDirectory + "info.json"
 	logger.Logger.Printf("courtDirectory = %s\n", courtDirectory)
 }
 

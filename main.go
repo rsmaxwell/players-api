@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/rsmaxwell/players-api/logger"
 	"github.com/rsmaxwell/players-api/players"
@@ -18,8 +19,6 @@ import (
 
 var (
 	port                      int
-	userID                    string
-	password                  string
 	baseURL                   string
 	clientSuccess             int
 	clientError               int
@@ -130,12 +129,19 @@ func writeLoginResponse(rw http.ResponseWriter, req *http.Request) {
 	// Check the user calling the service
 	user, pass, _ := req.BasicAuth()
 
+	logger.Logger.Printf("writeLoginResponse(0): user:%s, password:%s", user, pass)
+
 	if !checkUser(user, pass) {
+
+		logger.Logger.Printf("writeLoginResponse(1)")
+
 		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
 		clientError++
 		clientAuthenticationError++
 		return
 	}
+
+	logger.Logger.Printf("writeLoginResponse(2)")
 
 	token, err := session.New(user)
 	if err != nil {
@@ -223,17 +229,7 @@ func writeCreateCourtResponse(rw http.ResponseWriter, req *http.Request) {
 
 	logger.Logger.Printf("writeCreateCourtResponse")
 
-	// Check the user calling the service
-	user, pass, _ := req.BasicAuth()
-
-	if !checkUser(user, pass) {
-		writeMessageResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
-		clientError++
-		clientAuthenticationError++
-		return
-	}
-
-	var c players.Court
+	var r players.CreateCourtRequest
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -243,14 +239,20 @@ func writeCreateCourtResponse(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = json.Unmarshal(b, &c)
+	err = json.Unmarshal(b, &r)
 	if err != nil {
-		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse person data for Add Court request"))
+		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data for CreateCourtRequest"))
 		clientError++
 		return
 	}
 
-	err = players.AddCourt(c)
+	ok := session.CheckToken(r.Token)
+	if !ok {
+		writeMessageResponse(rw, http.StatusBadRequest, "Not Authorized")
+		return
+	}
+
+	err = players.AddCourt(r.Court)
 	if err != nil {
 		writeMessageResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not create a new court. err:%s", err))
 		serverError++
@@ -497,7 +499,7 @@ func setupHandlers(r *mux.Router) {
 	r.HandleFunc(baseURL+"/login", logger.LogHandler(
 		func(w http.ResponseWriter, req *http.Request) {
 			writeLoginResponse(w, req)
-		})).Methods(http.MethodPost)
+		})).Methods(http.MethodGet)
 
 	// -----[ Court ]---------------------------------------------
 
@@ -574,13 +576,17 @@ func setupHandlers(r *mux.Router) {
 }
 
 // Simple check on the user calling the service
-func checkUser(u, p string) bool {
+func checkUser(userID, password string) bool {
 
-	if u != userID {
-		logger.Logger.Printf("checkUser: FAIL: userID = %s, u = %s\n", userID, u)
+	person, err := players.GetPersonDetails(userID)
+	if err != nil {
+		logger.Logger.Printf("checkUser(0): userID or password do not match")
 		return false
-	} else if p != password {
-		logger.Logger.Printf("checkUser: FAIL: password = %s %s\n", password, p)
+	}
+
+	err = bcrypt.CompareHashAndPassword(person.HashedPassword, []byte(password))
+	if err != nil {
+		logger.Logger.Printf("checkUser(1): userID or password do not match")
 		return false
 	}
 
@@ -592,21 +598,6 @@ func main() {
 
 	logger.Logger.Printf("Players Server: 2018-01-31 13:30")
 	var ok bool
-
-	userID, ok = os.LookupEnv("USER")
-	if !ok {
-		userID = "foo"
-	}
-
-	password, ok = os.LookupEnv("PASSWORD")
-	if !ok {
-		password = "bar"
-	}
-
-	baseURL, ok = os.LookupEnv("BASEURL")
-	if !ok {
-		baseURL = ""
-	}
 
 	portstring, ok := os.LookupEnv("PORT")
 	if !ok {
@@ -621,8 +612,7 @@ func main() {
 	router := mux.NewRouter()
 	setupHandlers(router)
 
-	logger.Logger.Printf("UserID = %s, Password = %s", userID, password)
-	logger.Logger.Printf("Listening to base URL: '%s' port: %d", baseURL, port)
+	logger.Logger.Printf("Listening on port: %d", port)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 	if err != nil {
 		logger.Logger.Fatalf(err.Error())

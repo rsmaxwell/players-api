@@ -36,3 +36,13 @@ func New(username string) (string, error) {
 
 	return token, nil
 }
+
+// CheckToken function
+func CheckToken(token string) bool {
+
+	if _, ok := sessions[token]; ok {
+		return true
+	}
+
+	return false
+}

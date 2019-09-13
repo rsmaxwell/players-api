@@ -13,6 +13,12 @@ import (
 	"github.com/rsmaxwell/players-api/logger"
 )
 
+// CreateCourtRequest structure
+type CreateCourtRequest struct {
+	Token string `json:"token"`
+	Court Court  `json:"court"`
+}
+
 // Court Structure
 type Court struct {
 	Name string `json:"name"`

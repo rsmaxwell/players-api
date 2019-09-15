@@ -1,4 +1,4 @@
-package players
+package person
 
 import (
 	"encoding/json"
@@ -9,55 +9,63 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"golang.org/x/crypto/bcrypt"
-
+	"github.com/rsmaxwell/players-api/common"
 	"github.com/rsmaxwell/players-api/jsonTypes"
 	"github.com/rsmaxwell/players-api/logger"
+	"github.com/rsmaxwell/players-api/session"
 )
-
-// RegisterRequest structure
-type RegisterRequest struct {
-	UserID    string `json:"userID"`
-	Password  string `json:"password"`
-	FirstName string `json:"firstname"`
-	LastName  string `json:"lastname"`
-}
 
 // Person Structure
 type Person struct {
 	FirstName      string `json:"firstname"`
 	LastName       string `json:"lastname"`
 	HashedPassword []byte `json:"hashedpassword"`
+	Status         string `json:"status"`
 	Player         bool   `json:"player"`
+}
+
+// UpdatePersonRequest structure
+type UpdatePersonRequest struct {
+	Token  string     `json:"token"`
+	Person JSONPerson `json:"person"`
 }
 
 // JSONPerson Structure
 type JSONPerson struct {
+	UserID    jsonTypes.JSONString `json:"userID"`
 	FirstName jsonTypes.JSONString `json:"firstname"`
 	LastName  jsonTypes.JSONString `json:"lastname"`
-	UserID    jsonTypes.JSONString `json:"userID"`
+	Password  jsonTypes.JSONString `json:"password"`
+	Status    jsonTypes.JSONString `json:"status"`
 	Player    jsonTypes.JSONBool   `json:"player"`
 }
 
 var (
-	peopleDirectory     string
-	peopleDataDirectory string
+	peopleDir     string
+	peopleListDir string
 )
 
-// CreatePeopleDirectory  creates the people directory
-func CreatePeopleDirectory() error {
+func init() {
 
-	_, err := os.Stat(peopleDirectory)
+	peopleDir = common.RootDir + "/people"
+	peopleListDir = peopleDir + "/list"
+	logger.Logger.Printf("peopleDirectory = %s\n", peopleDir)
+}
+
+// CreatePeopleDirs  creates the people directory
+func CreatePeopleDirs() error {
+
+	_, err := os.Stat(peopleDir)
 	if err != nil {
-		err := os.MkdirAll(peopleDirectory, 0755)
+		err := os.MkdirAll(peopleDir, 0755)
 		if err != nil {
 			return err
 		}
 	}
 
-	_, err = os.Stat(peopleDataDirectory)
+	_, err = os.Stat(peopleListDir)
 	if err != nil {
-		err := os.MkdirAll(peopleDataDirectory, 0755)
+		err := os.MkdirAll(peopleListDir, 0755)
 		if err != nil {
 			return err
 		}
@@ -70,14 +78,14 @@ func CreatePeopleDirectory() error {
 func RemovePeopleDirectory() error {
 	logger.Logger.Printf("Remove person directory")
 
-	_, err := os.Stat(peopleDirectory)
+	_, err := os.Stat(peopleDir)
 	if err == nil {
-		err := removeContents(peopleDirectory)
+		err := common.RemoveContents(peopleDir)
 		if err != nil {
 			logger.Logger.Panic(err.Error())
 		}
 
-		os.Remove(peopleDirectory)
+		os.Remove(peopleDir)
 	}
 
 	return nil
@@ -90,11 +98,14 @@ func NewPerson(firstname string, lastname string, hashedPassword []byte, player 
 	person.LastName = lastname
 	person.HashedPassword = hashedPassword
 	person.Player = player
+	person.Status = "normal"
 	return person, nil
 }
 
 // UpdatePerson update fields
-func UpdatePerson(id string, person2 JSONPerson) (*Person, error) {
+func UpdatePerson(id string, session *session.Session, person2 JSONPerson) (*Person, error) {
+
+	logger.Logger.Printf("UpdatePerson")
 
 	person, err := GetPersonDetails(id)
 	if err != nil {
@@ -114,61 +125,78 @@ func UpdatePerson(id string, person2 JSONPerson) (*Person, error) {
 		person.Player = person2.Player.Value
 	}
 
+	if person2.Status.Set {
+		// Check we have the authority to perform this update
+		myself, err := GetPersonDetails(session.UserID)
+		if err != nil {
+			logger.Logger.Print(err)
+			return nil, fmt.Errorf("person [%d] not found", id)
+		}
+
+		// Only 'admin' users can update the 'Status' field
+		if myself.Status != "admin" {
+			logger.Logger.Print(err)
+			return nil, fmt.Errorf("Not authorised")
+		}
+		person.Status = person2.Status.Value
+	}
+
+	// Convert the 'person' object into a JSON string
+	personJSON, err := json.Marshal(person)
+	if err != nil {
+		logger.Logger.Print(err)
+		return nil, err
+	}
+
+	// Save the updated person to disk
+	filename := peopleListDir + "/" + id + ".json"
+	err = ioutil.WriteFile(filename, personJSON, 0644)
+	if err != nil {
+		logger.Logger.Print(err)
+		return nil, fmt.Errorf("internal error")
+	}
+
 	return person, nil
-}
-
-// RegisterPerson adds a person to the list of people
-func RegisterPerson(reg RegisterRequest) error {
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(reg.Password), bcrypt.DefaultCost)
-	if err != nil {
-		logger.Logger.Printf("%s", err)
-		return err
-	}
-
-	p, err := NewPerson(reg.FirstName, reg.LastName, hashedPassword, false)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	err = AddPerson(reg.UserID, *p)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	return nil
 }
 
 // AddPerson adds a person to the list of people
 func AddPerson(userID string, person Person) error {
 
-	logger.Logger.Printf("AddPerson")
+	filename := peopleListDir + "/" + userID + ".json"
+	_, err := os.Stat(filename)
+	if err == nil {
+		return fmt.Errorf("UserId [%s] already exists", userID)
+	}
 
-	err := CreatePeopleDirectory()
+	// Check the chearacters in the userid are sensible
+	ok := common.CheckID(userID)
+	if !ok {
+		return fmt.Errorf("The UserID [%s] is not valid", userID)
+	}
+
+	// Make sure the people dirs exist
+	err = CreatePeopleDirs()
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	personJSON, err := json.Marshal(person)
+	// The first user must be made an 'admin' user
+	files, err := ioutil.ReadDir(peopleListDir)
 	if err != nil {
 		logger.Logger.Print(err)
 		return err
 	}
 
-	logger.Logger.Printf("AddPerson: %s", personJSON)
-
-	ok := checkID(userID)
-	if !ok {
-		return fmt.Errorf("The UserID [%s] is not valid", userID)
+	if len(files) == 0 {
+		person.Status = "admin"
 	}
 
-	filename := peopleDataDirectory + "/" + userID + ".json"
-	_, err = os.Stat(filename)
-	if err == nil {
-		return fmt.Errorf("UserId [%s] already exists", userID)
+	// Convert the 'person' object into a JSON string
+	personJSON, err := json.Marshal(person)
+	if err != nil {
+		logger.Logger.Print(err)
+		return err
 	}
 
 	err = ioutil.WriteFile(filename, personJSON, 0644)
@@ -183,13 +211,13 @@ func AddPerson(userID string, person Person) error {
 // ListAllPeople returns a list of the person IDs
 func ListAllPeople() ([]int, error) {
 
-	err := CreatePeopleDirectory()
+	err := CreatePeopleDirs()
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	files, err := ioutil.ReadDir(peopleDataDirectory)
+	files, err := ioutil.ReadDir(peopleListDir)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -213,19 +241,30 @@ func ListAllPeople() ([]int, error) {
 	return list, nil
 }
 
+// PersonExists returns 'true' if the person exists
+func PersonExists(id string) bool {
+
+	personfile := peopleListDir + "/" + id + ".json"
+	if _, err := os.Stat(personfile); os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
 // GetPersonDetails returns the details of the person with the matching ID
 func GetPersonDetails(id string) (*Person, error) {
 
-	err := CreatePeopleDirectory()
+	err := CreatePeopleDirs()
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	personfile := peopleDataDirectory + "/" + id + ".json"
+	personfile := peopleListDir + "/" + id + ".json"
 	if _, err := os.Stat(personfile); os.IsNotExist(err) {
 		logger.Logger.Printf("The person file was not found. err = %s\n", err)
-		return nil, err
+		return nil, nil
 	}
 
 	data, err := ioutil.ReadFile(personfile)
@@ -246,13 +285,13 @@ func GetPersonDetails(id string) (*Person, error) {
 // DeletePerson the person with the matching ID
 func DeletePerson(id string) error {
 
-	err := CreatePeopleDirectory()
+	err := CreatePeopleDirs()
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	personfile := peopleDataDirectory + "/" + id + ".json"
+	personfile := peopleListDir + "/" + id + ".json"
 	_, err = os.Stat(personfile)
 	if err != nil {
 		logger.Logger.Print(err)
@@ -276,7 +315,7 @@ func ClearPeople() error {
 		logger.Logger.Fatal(err)
 	}
 
-	err = CreatePeopleDirectory()
+	err = CreatePeopleDirs()
 	if err != nil {
 		logger.Logger.Fatal(err)
 	}

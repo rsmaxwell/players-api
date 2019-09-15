@@ -1,4 +1,4 @@
-package players
+package common
 
 import (
 	"flag"
@@ -6,18 +6,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"unicode"
-
-	"github.com/rsmaxwell/players-api/logger"
 )
 
 var (
-	rootdir string
+	// RootDir directory
+	RootDir string
 )
-
-// Info structure
-type Info struct {
-	CurrentID int `json:"currentID"`
-}
 
 func homeDir() string {
 	env := "HOME"
@@ -34,22 +28,14 @@ func init() {
 	home := homeDir()
 
 	if flag.Lookup("test.v") == nil {
-		rootdir = home + "/players-api"
+		RootDir = home + "/players-api"
 	} else {
-		rootdir = home + "/players-api-test"
+		RootDir = home + "/players-api-test"
 	}
-
-	peopleDirectory = rootdir + "/people"
-	peopleDataDirectory = peopleDirectory + "/data"
-	logger.Logger.Printf("peopleDirectory = %s\n", peopleDirectory)
-
-	courtDirectory = rootdir + "/court"
-	courtDataDirectory = courtDirectory + "/data"
-	courtInfoFile = courtDirectory + "info.json"
-	logger.Logger.Printf("courtDirectory = %s\n", courtDirectory)
 }
 
-func removeContents(dir string) error {
+// RemoveContents empties the contents of a directory
+func RemoveContents(dir string) error {
 	d, err := os.Open(dir)
 	if err != nil {
 		return err
@@ -68,7 +54,8 @@ func removeContents(dir string) error {
 	return nil
 }
 
-func checkID(s string) bool {
+// CheckID checks the characters are valid for an ID
+func CheckID(s string) bool {
 	for _, r := range s {
 
 		ok := false

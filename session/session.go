@@ -8,8 +8,8 @@ import (
 
 // Session structure
 type Session struct {
-	Username string    `json:"username"`
-	Start    time.Time `json:"start"`
+	UserID string    `json:"userID"`
+	Start  time.Time `json:"start"`
 }
 
 var (
@@ -21,9 +21,9 @@ func init() {
 }
 
 // New creates a new session
-func New(username string) (string, error) {
+func New(userID string) (string, error) {
 	s := new(Session)
-	s.Username = username
+	s.UserID = userID
 	s.Start = time.Now()
 
 	id, err := uuid.NewV4()
@@ -37,12 +37,12 @@ func New(username string) (string, error) {
 	return token, nil
 }
 
-// CheckToken function
-func CheckToken(token string) bool {
+// LookupToken function
+func LookupToken(token string) *Session {
 
-	if _, ok := sessions[token]; ok {
-		return true
+	if s, ok := sessions[token]; ok {
+		return s
 	}
 
-	return false
+	return nil
 }

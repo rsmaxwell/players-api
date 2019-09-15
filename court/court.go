@@ -1,4 +1,4 @@
-package players
+package court
 
 import (
 	"encoding/json"
@@ -9,9 +9,17 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/rsmaxwell/players-api/common"
+
 	"github.com/rsmaxwell/players-api/jsonTypes"
 	"github.com/rsmaxwell/players-api/logger"
 )
+
+// CourtInfo structure
+type CourtInfo struct {
+	NextID          int `json:"nextID"`
+	PlayersPerCourt int `json:"playersPerCourt"`
+}
 
 // CreateCourtRequest structure
 type CreateCourtRequest struct {
@@ -21,7 +29,8 @@ type CreateCourtRequest struct {
 
 // Court Structure
 type Court struct {
-	Name string `json:"name"`
+	Name    string   `json:"name"`
+	Players []string `json:"players"`
 }
 
 // JSONCourt Structure
@@ -30,25 +39,34 @@ type JSONCourt struct {
 }
 
 var (
-	courtDirectory     string
-	courtDataDirectory string
-	courtInfoFile      string
+	courtDir      string
+	courtListDir  string
+	courtInfoFile string
 )
+
+func init() {
+
+	courtDir = common.RootDir + "/courts"
+	courtListDir = courtDir + "/list"
+	courtInfoFile = courtDir + "/info.json"
+	logger.Logger.Printf("courtDirectory = %s\n", courtDir)
+	logger.Logger.Printf("courtInfoFile = %s\n", courtInfoFile)
+}
 
 // CreateCourtDirectory  creates the people directory
 func CreateCourtDirectory() error {
 
-	_, err := os.Stat(courtDirectory)
+	_, err := os.Stat(courtDir)
 	if err != nil {
-		err := os.MkdirAll(courtDirectory, 0755)
+		err := os.MkdirAll(courtDir, 0755)
 		if err != nil {
 			return err
 		}
 	}
 
-	_, err = os.Stat(courtDataDirectory)
+	_, err = os.Stat(courtListDir)
 	if err != nil {
-		err := os.MkdirAll(courtDataDirectory, 0755)
+		err := os.MkdirAll(courtListDir, 0755)
 		if err != nil {
 			return err
 		}
@@ -61,23 +79,23 @@ func CreateCourtDirectory() error {
 func RemoveCourtDirectory() error {
 	logger.Logger.Printf("Remove court directory")
 
-	_, err := os.Stat(courtDirectory)
+	_, err := os.Stat(courtDir)
 	if err == nil {
-		err := removeContents(courtDirectory)
+		err := common.RemoveContents(courtDir)
 		if err != nil {
 			logger.Logger.Panic(err.Error())
 		}
 
-		os.Remove(courtDirectory)
+		os.Remove(courtDir)
 	}
 
 	return nil
 }
 
 // CreateCourtInfoFile initialises the Info object from file
-func CreateCourtInfoFile() (*Info, error) {
+func CreateCourtInfoFile() (*CourtInfo, error) {
 
-	logger.Logger.Printf("Checking the infofile exists")
+	logger.Logger.Printf("Checking the courtInfoFile exists")
 	if _, err := os.Stat(courtInfoFile); os.IsNotExist(err) {
 
 		err := CreateCourtDirectory()
@@ -85,7 +103,10 @@ func CreateCourtInfoFile() (*Info, error) {
 			logger.Logger.Panicf(err.Error())
 		}
 
-		info := Info{CurrentID: 1000}
+		info := new(CourtInfo)
+		info.NextID = 1000
+		info.PlayersPerCourt = 4
+
 		infoJSON, err := json.Marshal(info)
 		if err != nil {
 			logger.Logger.Panicf(err.Error())
@@ -102,7 +123,7 @@ func CreateCourtInfoFile() (*Info, error) {
 		logger.Logger.Panicf(err.Error())
 	}
 
-	var i Info
+	var i CourtInfo
 	err = json.Unmarshal(data, &i)
 	if err != nil {
 		logger.Logger.Panicf(err.Error())
@@ -111,42 +132,63 @@ func CreateCourtInfoFile() (*Info, error) {
 	return &i, nil
 }
 
-// GetAndIncrementCurrentCourtID returns the CurrentID and then increments the CurrentID on disk
-func GetAndIncrementCurrentCourtID() (int, error) {
+// GetCourtInfo returns the Court class data
+func GetCourtInfo() (*CourtInfo, error) {
 
 	// Make sure the court directory and info file exists
 	_, err := CreateCourtInfoFile()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	// Read the court info file
 	data, err := ioutil.ReadFile(courtInfoFile)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	var i Info
+	var i CourtInfo
 	err = json.Unmarshal(data, &i)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	currentID := i.CurrentID
+	return &i, err
+}
 
-	i.CurrentID = i.CurrentID + 1
+// SaveCourtInfo save the Court class info
+func SaveCourtInfo(i CourtInfo) error {
 
 	infoJSON, err := json.Marshal(i)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	err = ioutil.WriteFile(courtInfoFile, infoJSON, 0644)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetAndIncrementCurrentCourtID returns the CurrentID and then increments the CurrentID on disk
+func GetAndIncrementCurrentCourtID() (int, error) {
+
+	i, err := GetCourtInfo()
+	if err != nil {
 		return 0, err
 	}
 
-	return currentID, nil
+	id := i.NextID
+	i.NextID = i.NextID + 1
+
+	err = SaveCourtInfo(*i)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }
 
 // NewCourt initialises a Court object
@@ -198,7 +240,7 @@ func AddCourt(court Court) error {
 		logger.Logger.Panicf(err.Error())
 	}
 
-	courtfile := courtDataDirectory + "/" + strconv.Itoa(id) + ".json"
+	courtfile := courtListDir + "/" + strconv.Itoa(id) + ".json"
 	err = ioutil.WriteFile(courtfile, courtJSON, 0644)
 	if err != nil {
 		logger.Logger.Print(err)
@@ -217,7 +259,7 @@ func ListAllCourts() ([]int, error) {
 		return nil, err
 	}
 
-	files, err := ioutil.ReadDir(courtDataDirectory)
+	files, err := ioutil.ReadDir(courtListDir)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -250,7 +292,7 @@ func GetCourtDetails(id int) (*Court, error) {
 		return nil, err
 	}
 
-	courtfile := courtDataDirectory + "/" + strconv.Itoa(id) + ".json"
+	courtfile := courtListDir + "/" + strconv.Itoa(id) + ".json"
 	if _, err := os.Stat(courtfile); os.IsNotExist(err) {
 		logger.Logger.Printf("The court file was not found. err = %s\n", err)
 		return nil, err
@@ -265,7 +307,7 @@ func GetCourtDetails(id int) (*Court, error) {
 	var c Court
 	err = json.Unmarshal(data, &c)
 	if err != nil {
-		logger.Logger.Printf("Could not parse info data. err = %s\n", err)
+		logger.Logger.Printf("Could not parse Court data. err = %s\n", err)
 		return nil, err
 	}
 	return &c, nil
@@ -280,7 +322,7 @@ func DeleteCourt(id int) error {
 		return err
 	}
 
-	courtfile := courtDataDirectory + "/" + strconv.Itoa(id) + ".json"
+	courtfile := courtListDir + "/" + strconv.Itoa(id) + ".json"
 	_, err = os.Stat(courtfile)
 	if err != nil {
 		logger.Logger.Print(err)

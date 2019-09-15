@@ -1,4 +1,4 @@
-package players
+package common
 
 import (
 	"io/ioutil"

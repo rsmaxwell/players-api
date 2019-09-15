@@ -1,4 +1,4 @@
-package players
+package court
 
 import (
 	"bytes"

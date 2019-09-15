@@ -26,33 +26,33 @@ This is an example of how the data might be stored on disk by the server
 {
     "general": {
         "title": "Badminton Club",
-        "players_per_court": 4,
         "version": 123456,
-        "private": {
-            "next_court_id": 35,
-        },
     },
     "people": {
-        "007": {
-            "firstname": "James",
-            "lastname": "Bond",
-            "userID": "james",
-            "player": true,
-            "private": {
-                "email": "james@mi6.co.uk",
-                "hash": "65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5",
-                "salt": "2VsdX6Wn0tksVbx3c2c6",
-                "algorithm": "SHR256"
-            }
-        },
-        "another": { "..." }
+        "list": {
+            "007": {
+                "firstname": "James",
+                "lastname": "Bond",
+                "userID": "james",
+                "player": true,
+                "private": {
+                    "email": "james@mi6.co.uk",
+                    "hash": "65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5"
+                }
+            },
+            "another": { "..." }
+        }
     },
     "courts": {
-        "34": { 
-            "name": "Court 1", 
-            "players": [ 123, 77, 23, 87 ] 
-        },
-        "another": { "..." }
+        "nextID": 35,  
+        "playersPerCourt": 4,      
+        "list": {
+            "34": { 
+                "name": "Court 1", 
+                "players": [ "007", "bob", "alice", "jill" ] 
+            },
+            "another": { "..." }
+        }
     }
 }
 ```
@@ -236,6 +236,13 @@ curl -X PUT -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
 
 The list of fields supplied in the data may be incomplete. Only the given fields will be updated
 
+Only an `admin` user or the logged-in user can change most person fields.
+However:
+    Any logged-in user may set any person's `player` field
+    Only an `admin` user may change the `status` field
+
+A check will be made to make sure there is always at least 1 `admin` user
+
 ``` bash
 COMMAND="/person/${ID}"
 
@@ -244,10 +251,12 @@ cat <<EOT > data.json
     "token": "4acRtD1Bai5Gr83gAAEl",
     "person": {
         "userID": "007",
-        "first_name": "James",
-        "last_name": "Bond",
+        "firstname": "James",
+        "lastname": "Bond",
         "email": "james@mi6.co.uk",
-        "password": "topsecret"
+        "password": "topsecret",
+        "status": "admin"
+        "player": true        
     }    
 }
 EOT

@@ -1,10 +1,8 @@
 package logger
 
 import (
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"strings"
 )
@@ -32,34 +30,5 @@ func formatRequest(r *http.Request) {
 		r.ParseForm()
 		Logger.Printf("  post data:\n")
 		Logger.Printf("%s\n", r.Form.Encode())
-	}
-}
-
-// LogHandler logs an http reposonse
-func LogHandler(fn http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		formatRequest(r)
-
-		recorder := httptest.NewRecorder()
-		fn(recorder, r)
-
-		resp := recorder.Result()
-		body, _ := ioutil.ReadAll(resp.Body)
-
-		Logger.Printf("Response: %d", resp.StatusCode)
-		Logger.Println("  Headers:")
-		for k, v := range recorder.HeaderMap {
-			Logger.Printf("    %s : %s", k, v)
-		}
-		Logger.Println("  Body : " + string(body))
-
-		for k, values := range recorder.HeaderMap {
-			for _, v := range values {
-				w.Header().Set(k, v)
-			}
-		}
-
-		w.WriteHeader(recorder.Code)
-		w.Write(recorder.Body.Bytes())
 	}
 }

@@ -2,6 +2,7 @@ package court
 
 import (
 	"bytes"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -10,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRemoveCourtDirectory(t *testing.T) {
+func TestClearCourts(t *testing.T) {
 
-	err := RemoveCourtDirectory()
+	err := Clear()
 	assert.Nil(t, err)
 
 	_, err = os.Stat(courtInfoFile)
@@ -21,11 +22,14 @@ func TestRemoveCourtDirectory(t *testing.T) {
 
 func TestResetCourt(t *testing.T) {
 
-	fred = NewCourt("fred")
-	bloggs = NewCourt("bloggs")
-
-	err := Reset(fred, bloggs)
+	err := Clear()
 	assert.Nil(t, err)
+
+	fred := New("fred")
+	bloggs := New("bloggs")
+
+	Add(*fred)
+	Add(*bloggs)
 
 	_, err = os.Stat(courtInfoFile)
 	assert.Nil(t, err)
@@ -36,11 +40,14 @@ func TestResetCourt(t *testing.T) {
 
 func TestAddCourt(t *testing.T) {
 
-	fred = NewCourt("fred")
-	bloggs = NewCourt("bloggs")
-
-	err := Reset(fred, bloggs)
+	err := Clear()
 	assert.Nil(t, err)
+
+	fred := New("fred")
+	bloggs := New("bloggs")
+
+	Add(*fred)
+	Add(*bloggs)
 
 	_, err = os.Stat(courtInfoFile)
 	assert.Nil(t, err)
@@ -49,11 +56,11 @@ func TestAddCourt(t *testing.T) {
 	assert.Equal(t, 2, len(list))
 	assert.Nil(t, err)
 
-	court, err := NewCourt("harry")
+	court := New("harry")
 	assert.NotNil(t, court)
 	assert.Nil(t, err)
 
-	err = AddCourt(*court)
+	err = Add(*court)
 	assert.Nil(t, err)
 
 	list, err = List()
@@ -62,50 +69,36 @@ func TestAddCourt(t *testing.T) {
 
 func TestNewInfoJunkCourt(t *testing.T) {
 
-	err := RemoveCourtDirectory()
+	err := Clear()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = CreateCourtDirectory()
+	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	err = writefile(courtInfoFile, "junk")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assert.Panics(t, func() {
-		_, err = CreateCourtInfoFile()
-		if err != nil {
-			t.Fatal(err)
-		}
-	})
 }
 
 func TestNewInfoUnreadableInfofileCourt(t *testing.T) {
 
-	// Remove all the contents of the court application directory
-	t.Logf("Remove all the contents of the court application directory")
-	err := RemoveCourtDirectory()
+	t.Logf("Clear the court directory")
+	err := Clear()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Create a new  "infofile"
-	t.Logf("Create a new \"infofile\"")
-	CreateCourtInfoFile()
-
+	// Make the court info file unreadable
 	t.Logf("Make the file \"%s\" unreadable", courtInfoFile)
 	err = os.Chmod(courtInfoFile, 0000)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	t.Log("Attemp to use the info file")
+	_, err = List()
 	assert.Panics(t, func() {
-		_, err := CreateCourtInfoFile()
+		_, err := GetInfo()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -114,107 +107,92 @@ func TestNewInfoUnreadableInfofileCourt(t *testing.T) {
 
 func TestGetAndIncrementCurrentIDCourt(t *testing.T) {
 
-	// Remove all the contents of the court application directory
-	t.Logf("Remove all the contents of the court application directory")
-	err := RemoveCourtDirectory()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create a new "infofile"
-	t.Logf("Create a new \"infofile\"")
-	_, err = CreateCourtInfoFile()
+	t.Logf("Clear the court directory")
+	err := Clear()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for i := 0; i < 10; i++ {
-		id, _ := GetAndIncrementCurrentID()
-		assert.Equal(t, id, 1000+i, "Unexpected value of ID")
+		count, _ := getAndIncrementCurrentCourtID()
+		assert.Equal(t, count, 1000+i, "Unexpected value of ID")
 	}
 }
 
 func TestGetAndIncrementCurrentIDNoInfofileCourt(t *testing.T) {
 
-	// Remove all the contents of the court application directory
-	t.Logf("Remove all the contents of the court application directory")
-	err := RemoveCourtDirectory()
+	t.Logf("Clear the court directory")
+	err := Clear()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Remove the court info file
+	t.Logf("Remove the court info file")
+	err = os.Remove(courtInfoFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	assert.NotPanics(t, func() {
-		GetAndIncrementCurrentID()
+		getAndIncrementCurrentCourtID()
 	})
 }
 
 func TestGetAndIncrementCurrentIDJunkContentsCourt(t *testing.T) {
 
-	t.Logf("Remove all the contents of the court application directory")
-	err := RemoveCourtDirectory()
+	t.Logf("Clear the court directory")
+	err := Clear()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Logf("Create the court directory")
-	err = CreateCourtDirectory()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Logf("Create a court InfoFile with junk contents")
-	err = writefile(courtInfoFile, "junk")
+	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	assert.Panics(t, func() {
-		GetAndIncrementCurrentID()
+		getAndIncrementCurrentCourtID()
 	})
 }
 
 func TestCourt(t *testing.T) {
 
-	t.Logf("Remove all the contents of the court directory")
-	err := RemoveCourtDirectory()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Logf("Create a new \"infofile\"")
-	_, err = CreateCourtInfoFile()
+	t.Logf("Clear the court directory")
+	err := Clear()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Log("Create a number of new Courts")
-	listOfCourts := [...]Court{}
-	listOfCourts = append(listOfCourts, NewCourt("Fred"))
-	listOfCourts = append(listOfCourts, NewCourt("Bloggs"))
-	listOfCourts = append(listOfCourts, NewCourt("Jane"))
-	listOfCourts = append(listOfCourts, NewCourt("Alice"))
-	listOfCourts = append(listOfCourts, NewCourt("Bob"))
+	var listOfCourts []*Court
+	listOfCourts = append(listOfCourts, New("Fred"))
+	listOfCourts = append(listOfCourts, New("Bloggs"))
+	listOfCourts = append(listOfCourts, New("Jane"))
+	listOfCourts = append(listOfCourts, New("Alice"))
+	listOfCourts = append(listOfCourts, New("Bob"))
 
-	for i, court := range listOfNames {
-		err = AddCourt(*court)
+	for _, court := range listOfCourts {
+		err = Add(*court)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	t.Log("Check the expected number of Courts have been created")
-	listOfCourts, err := List()
+	list, err := List()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, len(listOfCourts), len(listOfNames), "")
+	assert.Equal(t, len(list), len(list), "")
 
 	t.Log("Check the expected Courts have been created")
-	for _, name := range listOfNames {
+	for _, name := range list {
 		found := false
-		for _, id := range listOfCourts {
-			court, err := Details(id)
+		for _, id := range list {
+			court, err := Get(id)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -227,7 +205,7 @@ func TestCourt(t *testing.T) {
 	}
 
 	t.Log("Delete the list of courts")
-	for _, id := range listOfCourts {
+	for _, id := range list {
 		err := Delete(id)
 		if err != nil {
 			t.Fatal(err)
@@ -235,7 +213,7 @@ func TestCourt(t *testing.T) {
 	}
 
 	t.Log("Check there are no more courts")
-	listOfCourts, err = List()
+	list, err = List()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,15 +229,15 @@ func TestDeleteCourtWithDuffID(t *testing.T) {
 		log.SetOutput(os.Stderr)
 	}()
 
-	// Remove all the contents of the courts application directory
-	err := RemoveCourtDirectory()
+	// Clear the courts
+	err := Clear()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Attempt to delete a court using a duff ID
-	expected := "court [9999999] not found"
-	err = Delete(9999999)
+	expected := "court [junk] not found"
+	err = Delete("junk")
 	if err == nil {
 		t.Errorf("Error actual = (nil), and Expected = [%v].", expected)
 	}
@@ -276,20 +254,14 @@ func TestListCourtsWithDuffPlayerFile(t *testing.T) {
 		log.SetOutput(os.Stderr)
 	}()
 
-	// Remove all the contents of the courts application directory
-	err := RemoveCourtDirectory()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create a new infofile
-	_, err = CreateCourtInfoFile()
+	// Clear the courts
+	err := Clear()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create a new court file with junk contents
-	err = writefileInDirectory(courtDataDirectory, "not-a-number", "junk")
+	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,8 +282,8 @@ func TestListCourtsWithDuffPlayerFile(t *testing.T) {
 
 func TestListCourtsWithNoCourtsDirectory(t *testing.T) {
 
-	// Remove the contents of the courts directory
-	err := Reset()
+	// Clear the courts
+	err := Clear()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,15 +297,15 @@ func TestListCourtsWithNoCourtsDirectory(t *testing.T) {
 
 func TestDetailsWithNoCourtDirectory(t *testing.T) {
 
-	// Remove the contents of the court directory
-	err := Reset()
+	// Remove the court directory
+	err := removeDir()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Check that List returns an error
 	expected := "no such file or directory"
-	_, err = Details(0)
+	_, err = Get("0")
 	if err == nil {
 		t.Errorf("Error actual = (nil), and Expected = [%v].", expected)
 	}
@@ -344,21 +316,22 @@ func TestDetailsWithNoCourtDirectory(t *testing.T) {
 
 func TestDetailsWithDuffCourtFile(t *testing.T) {
 
-	// Remove the court directory
-	err := Reset()
+	// Clear the courts
+	err := Clear()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create a new court file with junk contents
-	err = writefileInDirectory(courtDataDirectory, "0.json", "junk")
+	filename := courtListDir + "/0.json"
+	err = ioutil.WriteFile(filename, []byte("junk"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Check that List returns an error
 	expected := "invalid character 'j' looking for beginning of value"
-	_, err = Details(0)
+	_, err = Get("0")
 	if err == nil {
 		t.Errorf("Error actual = (nil), and Expected = [%v].", expected)
 	}

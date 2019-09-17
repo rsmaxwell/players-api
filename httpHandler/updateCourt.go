@@ -6,37 +6,21 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 
 	"github.com/rsmaxwell/players-api/court"
-	"github.com/rsmaxwell/players-api/logger"
+	"github.com/rsmaxwell/players-api/session"
 )
 
+// UpdateCourtRequest structure
+type UpdateCourtRequest struct {
+	Token string          `json:"token"`
+	Court court.JSONCourt `json:"court"`
+}
+
 // UpdateCourt method
-func UpdateCourt(rw http.ResponseWriter, req *http.Request, idString string) {
+func UpdateCourt(rw http.ResponseWriter, req *http.Request, id string) {
 
-	logger.Logger.Printf("writeUpdateCourtResponse")
-
-	// Check the user calling the service
-	user, pass, _ := req.BasicAuth()
-
-	if !checkUser(user, pass) {
-		WriteResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
-		clientError++
-		clientAuthenticationError++
-		return
-	}
-
-	// Convert the ID into a number
-	id, err := strconv.Atoi(idString)
-	if err != nil {
-		logger.Logger.Printf(err.Error())
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("The ID:%s is not a number", idString))
-		clientError++
-		return
-	}
-
-	var c court.JSONCourt
+	var r UpdateCourtRequest
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -46,16 +30,23 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request, idString string) {
 		return
 	}
 
-	err = json.Unmarshal(b, &c)
+	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse court data for id:%s", idString))
+		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
 		clientError++
 		return
 	}
 
-	_, err = court.UpdateCourt(id, c)
+	session := session.LookupToken(r.Token)
+	if session == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		clientError++
+		return
+	}
+
+	_, err = court.Update(id, r.Court)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not update court:%s", idString))
+		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not update court:%s", id))
 		clientError++
 		return
 	}

@@ -12,77 +12,76 @@ import (
 )
 
 var (
-	port    int
-	baseURL string
+	port int
 )
 
 // Handlers for REST API routes
 func setupHandlers(r *mux.Router) {
 
-	r.HandleFunc(baseURL+"/register", logger.LogHandler(
+	r.HandleFunc("/register",
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.Register(w, req)
-		})).Methods(http.MethodPost)
+		}).Methods(http.MethodPost)
 
-	r.HandleFunc(baseURL+"/login", logger.LogHandler(
+	r.HandleFunc("/login",
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.Login(w, req)
-		})).Methods(http.MethodGet)
+		}).Methods(http.MethodGet)
 
-	r.HandleFunc(baseURL+"/court", logger.LogHandler(
+	r.HandleFunc("/court",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.GetAllCourts(w, req)
-		})).Methods(http.MethodGet)
+			httpHandler.ListCourts(w, req)
+		}).Methods(http.MethodGet)
 
-	r.HandleFunc(baseURL+"/court/{id}", logger.LogHandler(
+	r.HandleFunc("/court/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.GetCourt(w, req, mux.Vars(req)["id"])
-		})).Methods(http.MethodGet)
+		}).Methods(http.MethodGet)
 
-	r.HandleFunc(baseURL+"/court", logger.LogHandler(
+	r.HandleFunc("/court",
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.CreateCourt(w, req)
-		})).Methods(http.MethodPost)
+		}).Methods(http.MethodPost)
 
-	r.HandleFunc(baseURL+"/court/{id}", logger.LogHandler(
+	r.HandleFunc("/court/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.UpdateCourt(w, req, mux.Vars(req)["id"])
-		})).Methods(http.MethodPut)
+		}).Methods(http.MethodPut)
 
-	r.HandleFunc(baseURL+"/court/{id}", logger.LogHandler(
+	r.HandleFunc("/court/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.DeleteCourt(w, req, mux.Vars(req)["id"])
-		})).Methods(http.MethodDelete)
+		}).Methods(http.MethodDelete)
 
-	r.HandleFunc(baseURL+"/person", logger.LogHandler(
+	r.HandleFunc("/person",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.GetAllPeople(w, req)
-		})).Methods(http.MethodGet)
+			httpHandler.ListPeople(w, req)
+		}).Methods(http.MethodGet)
 
-	r.HandleFunc(baseURL+"/person/{id}", logger.LogHandler(
+	r.HandleFunc("/person/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.GetPerson(w, req, mux.Vars(req)["id"])
-		})).Methods(http.MethodGet)
+		}).Methods(http.MethodGet)
 
-	r.HandleFunc(baseURL+"/person/{id}", logger.LogHandler(
+	r.HandleFunc("/person/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.UpdatePerson(w, req, mux.Vars(req)["id"])
-		})).Methods(http.MethodPut)
+		}).Methods(http.MethodPut)
 
-	r.HandleFunc(baseURL+"/person/{id}", logger.LogHandler(
+	r.HandleFunc("/person/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.DeletePerson(w, req, mux.Vars(req)["id"])
-		})).Methods(http.MethodDelete)
+		}).Methods(http.MethodDelete)
 
-	r.HandleFunc(baseURL+"/metrics", logger.LogHandler(
+	r.HandleFunc("/metrics",
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.GetMetrics(w, req)
-		})).Methods(http.MethodGet)
+		}).Methods(http.MethodGet)
 
-	r.NotFoundHandler = http.HandlerFunc(logger.LogHandler(
+	r.NotFoundHandler = http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
 			httpHandler.NotFound(w, req)
-		}))
+		})
 }
 
 func main() {

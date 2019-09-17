@@ -17,6 +17,7 @@ type RegisterRequest struct {
 	Password  string `json:"password"`
 	FirstName string `json:"firstname"`
 	LastName  string `json:"lastname"`
+	Email     string `json:"email"`
 }
 
 // Register method
@@ -45,13 +46,13 @@ func Register(rw http.ResponseWriter, req *http.Request) {
 		serverError++
 	}
 
-	p, err := person.NewPerson(r.FirstName, r.LastName, hashedPassword, false)
+	p, err := person.New(r.FirstName, r.LastName, r.Email, hashedPassword, false)
 	if err != nil {
 		WriteResponse(rw, http.StatusInternalServerError, fmt.Sprintf("Could not create new Person"))
 		serverError++
 	}
 
-	err = person.AddPerson(r.UserID, *p)
+	err = person.Add(r.UserID, *p)
 	if err != nil {
 		WriteResponse(rw, http.StatusInternalServerError, fmt.Sprintf("Could not add Person"))
 		serverError++

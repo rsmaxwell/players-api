@@ -4,27 +4,20 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/logger"
-
 	"github.com/rsmaxwell/players-api/session"
 )
 
-// Authenticate Response
-type authenticateResponse struct {
+// AuthenticateResponse structure
+type AuthenticateResponse struct {
 	Token string `json:"token"`
 }
 
 // Login method
 func Login(rw http.ResponseWriter, req *http.Request) {
 
-	logger.Logger.Printf("writeLoginResponse")
-
 	// Check the user calling the service
 	user, pass, _ := req.BasicAuth()
-
-	logger.Logger.Printf("writeLoginResponse(0): user:%s, password:%s", user, pass)
-
-	if !checkUser(user, pass) {
+	if !CheckUser(user, pass) {
 		WriteResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
 		clientError++
 		clientAuthenticationError++
@@ -38,8 +31,9 @@ func Login(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(authenticateResponse{
+	json.NewEncoder(rw).Encode(AuthenticateResponse{
 		Token: token,
 	})
 }

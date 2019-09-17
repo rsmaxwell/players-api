@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/logger"
 	"github.com/rsmaxwell/players-api/person"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,7 +22,7 @@ type messageResponse struct {
 
 // WriteResponse method
 func WriteResponse(w http.ResponseWriter, httpStatus int, message string) {
-	logger.Logger.Printf("Response: %d %s - %s", httpStatus, http.StatusText(httpStatus), message)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatus)
 
@@ -46,21 +45,21 @@ func setHeaders(rw http.ResponseWriter, req *http.Request) {
 		"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Authorization")
 }
 
-// Simple check on the user calling the service
-func checkUser(userID, password string) bool {
+// CheckUser - Basic check on the user calling the service
+func CheckUser(id, password string) bool {
 
-	person, err := person.GetPersonDetails(userID)
+	person, err := person.Get(id)
 	if err != nil {
-		logger.Logger.Printf("checkUser(0): userID or password do not match")
+		return false
+	}
+	if person == nil {
 		return false
 	}
 
 	err = bcrypt.CompareHashAndPassword(person.HashedPassword, []byte(password))
 	if err != nil {
-		logger.Logger.Printf("checkUser(1): userID or password do not match")
 		return false
 	}
 
-	logger.Logger.Printf("checkUser: OK\n")
 	return true
 }

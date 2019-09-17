@@ -1,41 +1,51 @@
 package httpHandler
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
-	"strconv"
 
 	"github.com/rsmaxwell/players-api/court"
-	"github.com/rsmaxwell/players-api/logger"
+	"github.com/rsmaxwell/players-api/session"
 )
 
+// DeleteCourtRequest structure
+type DeleteCourtRequest struct {
+	Token string `json:"token"`
+}
+
 // DeleteCourt method
-func DeleteCourt(rw http.ResponseWriter, req *http.Request, idString string) {
+func DeleteCourt(rw http.ResponseWriter, req *http.Request, id string) {
 
-	logger.Logger.Printf("writeDeleteCourtResponse")
+	var r DeleteCourtRequest
 
-	// Check the user calling the service
-	user, pass, _ := req.BasicAuth()
-
-	if !checkUser(user, pass) {
-		WriteResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
-		clientError++
-		clientAuthenticationError++
-		return
-	}
-
-	// Convert the ID into a number
-	id, err := strconv.Atoi(idString)
+	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		logger.Logger.Printf(err.Error())
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("The ID:%s is not a number", idString))
+		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
 		clientError++
 		return
 	}
 
-	err = court.DeleteCourt(id)
+	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not delete court:%s", idString))
+		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
+		clientError++
+		return
+	}
+
+	session := session.LookupToken(r.Token)
+	if session == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		clientError++
+		return
+	}
+
+	err = court.Delete(id)
+	if err != nil {
+		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not delete court[%s]", id))
 		clientError++
 		return
 	}

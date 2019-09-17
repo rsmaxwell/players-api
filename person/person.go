@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
-	"strconv"
+	"path"
+	"strings"
 
 	"github.com/rsmaxwell/players-api/common"
 	"github.com/rsmaxwell/players-api/jsonTypes"
@@ -19,15 +19,10 @@ import (
 type Person struct {
 	FirstName      string `json:"firstname"`
 	LastName       string `json:"lastname"`
+	Email          string `json:"email"`
 	HashedPassword []byte `json:"hashedpassword"`
 	Status         string `json:"status"`
 	Player         bool   `json:"player"`
-}
-
-// UpdatePersonRequest structure
-type UpdatePersonRequest struct {
-	Token  string     `json:"token"`
-	Person JSONPerson `json:"person"`
 }
 
 // JSONPerson Structure
@@ -35,6 +30,7 @@ type JSONPerson struct {
 	UserID    jsonTypes.JSONString `json:"userID"`
 	FirstName jsonTypes.JSONString `json:"firstname"`
 	LastName  jsonTypes.JSONString `json:"lastname"`
+	Email     jsonTypes.JSONString `json:"email"`
 	Password  jsonTypes.JSONString `json:"password"`
 	Status    jsonTypes.JSONString `json:"status"`
 	Player    jsonTypes.JSONBool   `json:"player"`
@@ -49,11 +45,10 @@ func init() {
 
 	peopleDir = common.RootDir + "/people"
 	peopleListDir = peopleDir + "/list"
-	logger.Logger.Printf("peopleDirectory = %s\n", peopleDir)
 }
 
-// CreatePeopleDirs  creates the people directory
-func CreatePeopleDirs() error {
+// createDirs  creates the people directory
+func createDirs() error {
 
 	_, err := os.Stat(peopleDir)
 	if err != nil {
@@ -74,9 +69,8 @@ func CreatePeopleDirs() error {
 	return nil
 }
 
-// RemovePeopleDirectory removes ALL the person files
-func RemovePeopleDirectory() error {
-	logger.Logger.Printf("Remove person directory")
+// removeDir removes ALL the person files
+func removeAllDirs() error {
 
 	_, err := os.Stat(peopleDir)
 	if err == nil {
@@ -91,23 +85,70 @@ func RemovePeopleDirectory() error {
 	return nil
 }
 
-// NewPerson initialises a Person object
-func NewPerson(firstname string, lastname string, hashedPassword []byte, player bool) (*Person, error) {
+// removeDir removes ALL the person files
+func removeListDir() error {
+
+	_, err := os.Stat(peopleListDir)
+	if err == nil {
+		err := common.RemoveContents(peopleListDir)
+		if err != nil {
+			logger.Logger.Panic(err.Error())
+		}
+
+		os.Remove(peopleDir)
+	}
+
+	return nil
+}
+
+// ClearAll - clears ALL the people directories
+func ClearAll() error {
+
+	err := removeAllDirs()
+	if err != nil {
+		logger.Logger.Fatal(err)
+	}
+
+	err = createDirs()
+	if err != nil {
+		logger.Logger.Fatal(err)
+	}
+
+	return nil
+}
+
+// Clear - Just the list of people
+func Clear() error {
+
+	err := removeListDir()
+	if err != nil {
+		logger.Logger.Fatal(err)
+	}
+
+	err = createDirs()
+	if err != nil {
+		logger.Logger.Fatal(err)
+	}
+
+	return nil
+}
+
+// New initialises a Person
+func New(firstname string, lastname string, email string, hashedPassword []byte, player bool) (*Person, error) {
 	person := new(Person)
 	person.FirstName = firstname
 	person.LastName = lastname
+	person.Email = email
 	person.HashedPassword = hashedPassword
 	person.Player = player
 	person.Status = "normal"
 	return person, nil
 }
 
-// UpdatePerson update fields
-func UpdatePerson(id string, session *session.Session, person2 JSONPerson) (*Person, error) {
+// Update method
+func Update(id string, session *session.Session, person2 JSONPerson) (*Person, error) {
 
-	logger.Logger.Printf("UpdatePerson")
-
-	person, err := GetPersonDetails(id)
+	person, err := Get(id)
 	if err != nil {
 		logger.Logger.Print(err)
 		return nil, fmt.Errorf("person [%d] not found", id)
@@ -127,7 +168,7 @@ func UpdatePerson(id string, session *session.Session, person2 JSONPerson) (*Per
 
 	if person2.Status.Set {
 		// Check we have the authority to perform this update
-		myself, err := GetPersonDetails(session.UserID)
+		myself, err := Get(session.UserID)
 		if err != nil {
 			logger.Logger.Print(err)
 			return nil, fmt.Errorf("person [%d] not found", id)
@@ -159,26 +200,18 @@ func UpdatePerson(id string, session *session.Session, person2 JSONPerson) (*Per
 	return person, nil
 }
 
-// AddPerson adds a person to the list of people
-func AddPerson(userID string, person Person) error {
+// Add adds a person to the list of people
+func Add(id string, person Person) error {
 
-	filename := peopleListDir + "/" + userID + ".json"
-	_, err := os.Stat(filename)
-	if err == nil {
-		return fmt.Errorf("UserId [%s] already exists", userID)
-	}
-
-	// Check the chearacters in the userid are sensible
-	ok := common.CheckID(userID)
+	// Check the characters in the id are sensible
+	ok := common.CheckID(id)
 	if !ok {
-		return fmt.Errorf("The UserID [%s] is not valid", userID)
+		return fmt.Errorf("The id [%s] is not valid", id)
 	}
 
-	// Make sure the people dirs exist
-	err = CreatePeopleDirs()
-	if err != nil {
-		log.Println(err)
-		return err
+	// Check the person does not already exist
+	if Exists(id) {
+		return fmt.Errorf("Person[%s] already exists", id)
 	}
 
 	// The first user must be made an 'admin' user
@@ -187,7 +220,6 @@ func AddPerson(userID string, person Person) error {
 		logger.Logger.Print(err)
 		return err
 	}
-
 	if len(files) == 0 {
 		person.Status = "admin"
 	}
@@ -199,6 +231,7 @@ func AddPerson(userID string, person Person) error {
 		return err
 	}
 
+	filename := peopleListDir + "/" + id + ".json"
 	err = ioutil.WriteFile(filename, personJSON, 0644)
 	if err != nil {
 		logger.Logger.Print(err)
@@ -208,14 +241,8 @@ func AddPerson(userID string, person Person) error {
 	return nil
 }
 
-// ListAllPeople returns a list of the person IDs
-func ListAllPeople() ([]int, error) {
-
-	err := CreatePeopleDirs()
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
+// List returns a list of the person IDs
+func List() ([]string, error) {
 
 	files, err := ioutil.ReadDir(peopleListDir)
 	if err != nil {
@@ -223,101 +250,68 @@ func ListAllPeople() ([]int, error) {
 		return nil, err
 	}
 
-	list := []int{}
+	list := []string{}
 	for _, filenameInfo := range files {
-		var filename = filenameInfo.Name()
-		var extension = filepath.Ext(filename)
-		var name = filename[0 : len(filename)-len(extension)]
-
-		id, err := strconv.Atoi(name)
-
-		if err != nil {
-			logger.Logger.Printf("Skipping unexpected person filename \"%s\". err = %s\n", filename, err)
-		}
-
+		filename := filenameInfo.Name()
+		id := strings.TrimSuffix(filename, path.Ext(filename))
 		list = append(list, id)
 	}
 
 	return list, nil
 }
 
-// PersonExists returns 'true' if the person exists
-func PersonExists(id string) bool {
+// Exists returns 'true' if the person exists
+func Exists(id string) bool {
 
-	personfile := peopleListDir + "/" + id + ".json"
-	if _, err := os.Stat(personfile); os.IsNotExist(err) {
+	filename := peopleListDir + "/" + id + ".json"
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return false
 	}
 
 	return true
 }
 
-// GetPersonDetails returns the details of the person with the matching ID
-func GetPersonDetails(id string) (*Person, error) {
+// Get returns the details of the person with the given ID
+func Get(id string) (*Person, error) {
 
-	err := CreatePeopleDirs()
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	personfile := peopleListDir + "/" + id + ".json"
-	if _, err := os.Stat(personfile); os.IsNotExist(err) {
-		logger.Logger.Printf("The person file was not found. err = %s\n", err)
+	filename := peopleListDir + "/" + id + ".json"
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		logger.Logger.Printf("File not found. %s", filename)
 		return nil, nil
 	}
 
-	data, err := ioutil.ReadFile(personfile)
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		logger.Logger.Printf("Could not read file. err = %s\n", err)
+		logger.Logger.Printf("Could not read file. err = %s", err)
 		return nil, err
 	}
 
 	var p Person
 	err = json.Unmarshal(data, &p)
 	if err != nil {
-		logger.Logger.Printf("Could not parse info data. err = %s\n", err)
+		logger.Logger.Printf("Could not parse file. err = %s", err)
 		return nil, err
 	}
 	return &p, nil
 }
 
-// DeletePerson the person with the matching ID
-func DeletePerson(id string) error {
+// Delete the person with the given ID
+func Delete(id string) error {
 
-	err := CreatePeopleDirs()
-	if err != nil {
-		log.Println(err)
+	filename := peopleListDir + "/" + id + ".json"
+	_, err := os.Stat(filename)
+
+	if err == nil { // File exists
+		err = os.Remove(filename)
+		if err != nil {
+			logger.Logger.Print(err)
+			return err
+		}
+	} else if os.IsNotExist(err) { // File does not exist
+		return nil
+	} else {
+		logger.Logger.Print(err)
 		return err
-	}
-
-	personfile := peopleListDir + "/" + id + ".json"
-	_, err = os.Stat(personfile)
-	if err != nil {
-		logger.Logger.Print(err)
-		return fmt.Errorf("person [%d] not found", id)
-	}
-
-	err = os.Remove(personfile)
-	if err != nil {
-		logger.Logger.Print(err)
-		return fmt.Errorf("could not delete person [%d]", id)
-	}
-
-	return nil
-}
-
-// ClearPeople resets the list of people
-func ClearPeople() error {
-
-	err := RemovePeopleDirectory()
-	if err != nil {
-		logger.Logger.Fatal(err)
-	}
-
-	err = CreatePeopleDirs()
-	if err != nil {
-		logger.Logger.Fatal(err)
 	}
 
 	return nil

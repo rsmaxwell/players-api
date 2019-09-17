@@ -2,8 +2,18 @@ package httpHandler
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
+
+	"github.com/rsmaxwell/players-api/session"
 )
+
+// GetMetricsRequest structure
+type GetMetricsRequest struct {
+	Token string `json:"token"`
+}
 
 // metrics Response
 type metricsResponse struct {
@@ -15,17 +25,35 @@ type metricsResponse struct {
 
 // GetMetrics method
 func GetMetrics(rw http.ResponseWriter, req *http.Request) {
-	// Check the user calling the service
-	user, pass, _ := req.BasicAuth()
-	if !checkUser(user, pass) {
-		WriteResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
+
+	var r GetMetricsRequest
+
+	// limitedReader := &io.LimitedReader{R: req.Body, N: 100 * 1024}
+
+	limitedReader := io.LimitReader(req.Body, 100*1024)
+	b, err := ioutil.ReadAll(limitedReader)
+
+	if err != nil {
+		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
 		clientError++
-		clientAuthenticationError++
+		return
+	}
+
+	err = json.Unmarshal(b, &r)
+	if err != nil {
+		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
+		clientError++
+		return
+	}
+
+	session := session.LookupToken(r.Token)
+	if session == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		clientError++
 		return
 	}
 
 	setHeaders(rw, req)
-
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(metricsResponse{
 		ClientSuccess:             clientSuccess,

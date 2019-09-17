@@ -7,17 +7,26 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/logger"
 	"github.com/rsmaxwell/players-api/person"
 	"github.com/rsmaxwell/players-api/session"
 )
 
+// UpdateJSONPersonRequest structure
+type UpdateJSONPersonRequest struct {
+	Token  string            `json:"token"`
+	Person person.JSONPerson `json:"person"`
+}
+
+// UpdatePersonRequest structure
+type UpdatePersonRequest struct {
+	Token  string        `json:"token"`
+	Person person.Person `json:"person"`
+}
+
 // UpdatePerson method
 func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
 
-	logger.Logger.Printf("writeUpdatePersonResponse")
-
-	var r person.UpdatePersonRequest
+	var r UpdateJSONPersonRequest
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -41,7 +50,7 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	_, err = person.UpdatePerson(id, session, r.Person)
+	_, err = person.Update(id, session, r.Person)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not update person"))
 		clientError++

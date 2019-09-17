@@ -2,12 +2,19 @@ package httpHandler
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
-	"strconv"
 
 	"github.com/rsmaxwell/players-api/court"
-	"github.com/rsmaxwell/players-api/logger"
+	"github.com/rsmaxwell/players-api/session"
 )
+
+// GetCourtRequest structure
+type GetCourtRequest struct {
+	Token string `json:"token"`
+}
 
 // Court details Response
 type courtDetailsResponse struct {
@@ -15,28 +22,33 @@ type courtDetailsResponse struct {
 }
 
 // GetCourt method
-func GetCourt(rw http.ResponseWriter, req *http.Request, idString string) {
+func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 
-	logger.Logger.Printf("writeGetCourtByIDResponse")
+	var r GetCourtRequest
 
-	// Check the user calling the service
-	user, pass, _ := req.BasicAuth()
-
-	if !checkUser(user, pass) {
-		WriteResponse(rw, http.StatusUnauthorized, "Invalid userID and/or password")
-		clientError++
-		clientAuthenticationError++
-		return
-	}
-
-	id, err := strconv.Atoi(idString)
+	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusNotFound, "Not Found")
+		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
 		clientError++
 		return
 	}
 
-	court, err := court.GetCourtDetails(id)
+	err = json.Unmarshal(b, &r)
+	if err != nil {
+		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
+		clientError++
+		return
+	}
+
+	session := session.LookupToken(r.Token)
+	if session == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		clientError++
+		return
+	}
+
+	court, err := court.Get(id)
 
 	if err != nil {
 		WriteResponse(rw, http.StatusNotFound, "Not Found")

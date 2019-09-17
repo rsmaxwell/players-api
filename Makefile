@@ -63,15 +63,8 @@ build: deps
 vet: ${GOPATH}/bin/gometalinter
 	${GOPATH}/bin/gometalinter --disable-all --enable=gofmt --enable=golint --enable=vet --enable=vetshadow --enable=ineffassign --enable=goconst --tests  --vendor -e ./...
 
-test: vet ${GOPATH}/bin/gocovmerge
-ifneq (${GOHOSTOS}-${GOHOSTARCH},linux-386)
-	go list -f '{{if or (len .TestGoFiles) (len .XTestGoFiles)}}go test -race -test.v -test.timeout=120s -coverprofile={{.Name}}_{{len .Imports}}_{{len .Deps}}.coverprofile {{.ImportPath}}{{end}}' $(GOPACKAGES) | xargs -I {} bash -c {}
-else
-	go list -f '{{if or (len .TestGoFiles) (len .XTestGoFiles)}}go test -test.v -test.timeout=120s -coverprofile={{.Name}}_{{len .Imports}}_{{len .Deps}}.coverprofile {{.ImportPath}}{{end}}' $(GOPACKAGES) | xargs -I {} bash -c {}
-endif
-	@${GOPATH}/bin/gocovmerge `ls *.coverprofile` > cover.out
-	@rm -f *.coverprofile
-	go tool cover -func=cover.out
+test: 
+	go test -timeout 30s github.com\rsmaxwell\players-api\court -run ^(TestClearCourts|TestResetCourt|TestAddCourt|TestNewInfoJunkCourt|TestNewInfoUnreadableInfofileCourt|TestGetAndIncrementCurrentIDCourt|TestGetAndIncrementCurrentIDNoInfofileCourt|TestGetAndIncrementCurrentIDJunkContentsCourt|TestCourt|TestDeleteCourtWithDuffID|TestListCourtsWithDuffPlayerFile|TestListCourtsWithNoCourtsDirectory|TestDetailsWithNoCourtDirectory|TestDetailsWithDuffCourtFile)$
 
 coverage: cover.html
 cover.html: cover.out

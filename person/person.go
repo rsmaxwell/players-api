@@ -42,7 +42,6 @@ var (
 )
 
 func init() {
-
 	peopleDir = common.RootDir + "/people"
 	peopleListDir = peopleDir + "/list"
 }
@@ -276,7 +275,6 @@ func Get(id string) (*Person, error) {
 
 	filename := peopleListDir + "/" + id + ".json"
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		logger.Logger.Printf("File not found. %s", filename)
 		return nil, nil
 	}
 
@@ -296,7 +294,7 @@ func Get(id string) (*Person, error) {
 }
 
 // Delete the person with the given ID
-func Delete(id string) error {
+func Delete(id string) (bool, error) {
 
 	filename := peopleListDir + "/" + id + ".json"
 	_, err := os.Stat(filename)
@@ -304,15 +302,25 @@ func Delete(id string) error {
 	if err == nil { // File exists
 		err = os.Remove(filename)
 		if err != nil {
-			logger.Logger.Print(err)
-			return err
+			return false, err
 		}
+		return true, err
+
 	} else if os.IsNotExist(err) { // File does not exist
-		return nil
-	} else {
-		logger.Logger.Print(err)
-		return err
+		return false, nil
 	}
 
-	return nil
+	return false, err
+}
+
+// Size returns the number of people
+func Size() (int, error) {
+
+	files, err := ioutil.ReadDir(peopleListDir)
+	if err != nil {
+		logger.Logger.Print(err)
+		return 0, err
+	}
+
+	return len(files), nil
 }

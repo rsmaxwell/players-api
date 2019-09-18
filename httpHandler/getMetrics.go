@@ -15,8 +15,8 @@ type GetMetricsRequest struct {
 	Token string `json:"token"`
 }
 
-// metrics Response
-type metricsResponse struct {
+// GetMetricsResponse structure
+type GetMetricsResponse struct {
 	ClientSuccess             int `json:"clientSuccess"`
 	ClientError               int `json:"clientError"`
 	ClientAuthenticationError int `json:"clientAuthenticationError"`
@@ -26,10 +26,6 @@ type metricsResponse struct {
 // GetMetrics method
 func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 
-	var r GetMetricsRequest
-
-	// limitedReader := &io.LimitedReader{R: req.Body, N: 100 * 1024}
-
 	limitedReader := io.LimitReader(req.Body, 100*1024)
 	b, err := ioutil.ReadAll(limitedReader)
 
@@ -38,6 +34,8 @@ func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 		clientError++
 		return
 	}
+
+	var r GetMetricsRequest
 
 	err = json.Unmarshal(b, &r)
 	if err != nil {
@@ -55,7 +53,7 @@ func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 
 	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(metricsResponse{
+	json.NewEncoder(rw).Encode(GetMetricsResponse{
 		ClientSuccess:             clientSuccess,
 		ClientError:               clientError,
 		ClientAuthenticationError: clientAuthenticationError,

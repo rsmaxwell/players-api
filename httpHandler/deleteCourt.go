@@ -43,7 +43,7 @@ func DeleteCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	err = court.Delete(id)
+	ok, err := court.Delete(id)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not delete court[%s]", id))
 		clientError++
@@ -51,5 +51,9 @@ func DeleteCourt(rw http.ResponseWriter, req *http.Request, id string) {
 	}
 
 	setHeaders(rw, req)
-	WriteResponse(rw, http.StatusOK, "ok")
+	if ok {
+		WriteResponse(rw, http.StatusOK, "ok")
+	} else {
+		WriteResponse(rw, http.StatusNotFound, "ok")
+	}
 }

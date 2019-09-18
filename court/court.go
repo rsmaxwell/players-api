@@ -166,18 +166,18 @@ func Update(id string, court2 JSONCourt) (*Court, error) {
 }
 
 // Add adds a court to the list of courts
-func Add(court Court) error {
+func Add(court Court) (string, error) {
 
 	count, err := getAndIncrementCurrentCourtID()
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 
 	courtJSON, err := json.Marshal(court)
 	if err != nil {
 		logger.Logger.Print(err)
-		return fmt.Errorf("internal error")
+		return "", fmt.Errorf("internal error")
 	}
 
 	id := strconv.Itoa(count)
@@ -185,10 +185,10 @@ func Add(court Court) error {
 	err = ioutil.WriteFile(filename, courtJSON, 0644)
 	if err != nil {
 		logger.Logger.Print(err)
-		return fmt.Errorf("internal error")
+		return "", fmt.Errorf("internal error")
 	}
 
-	return nil
+	return id, nil
 }
 
 // List returns a list of the court IDs
@@ -226,7 +226,6 @@ func Get(id string) (*Court, error) {
 
 	filename := courtListDir + "/" + id + ".json"
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		logger.Logger.Printf("File not found. %s", filename)
 		return nil, err
 	}
 
@@ -246,7 +245,7 @@ func Get(id string) (*Court, error) {
 }
 
 // Delete the court with the given ID
-func Delete(id string) error {
+func Delete(id string) (bool, error) {
 
 	filename := courtListDir + "/" + id + ".json"
 	_, err := os.Stat(filename)
@@ -254,17 +253,15 @@ func Delete(id string) error {
 	if err == nil { // File exists
 		err = os.Remove(filename)
 		if err != nil {
-			logger.Logger.Print(err)
-			return err
+			return false, err
 		}
+		return true, nil
+
 	} else if os.IsNotExist(err) { // File does not exist
-		return nil
-	} else {
-		logger.Logger.Print(err)
-		return err
+		return false, nil
 	}
 
-	return nil
+	return false, err
 }
 
 // createInfo initialises the Info objects
@@ -358,4 +355,16 @@ func getAndIncrementCurrentCourtID() (int, error) {
 	}
 
 	return id, nil
+}
+
+// Size returns the number of courts
+func Size() (int, error) {
+
+	files, err := ioutil.ReadDir(courtListDir)
+	if err != nil {
+		logger.Logger.Print(err)
+		return 0, err
+	}
+
+	return len(files), nil
 }

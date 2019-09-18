@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/rsmaxwell/players-api/person"
 	"github.com/rsmaxwell/players-api/session"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthenticateResponse structure
@@ -36,4 +38,23 @@ func Login(rw http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(rw).Encode(AuthenticateResponse{
 		Token: token,
 	})
+}
+
+// CheckUser - Basic check on the user calling the service
+func CheckUser(id, password string) bool {
+
+	person, err := person.Get(id)
+	if err != nil {
+		return false
+	}
+	if person == nil {
+		return false
+	}
+
+	err = bcrypt.CompareHashAndPassword(person.HashedPassword, []byte(password))
+	if err != nil {
+		return false
+	}
+
+	return true
 }

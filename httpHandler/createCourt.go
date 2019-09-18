@@ -18,6 +18,11 @@ type CreateCourtRequest struct {
 	Court court.Court `json:"court"`
 }
 
+// CreateCourtResponse structure
+type CreateCourtResponse struct {
+	ID string `json:"id"`
+}
+
 // CreateCourt method
 func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 
@@ -81,7 +86,7 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	err = court.Add(r.Court)
+	id, err := court.Add(r.Court)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not add the court"))
 		serverError++
@@ -90,4 +95,7 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 
 	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(CreateCourtResponse{
+		ID: id,
+	})
 }

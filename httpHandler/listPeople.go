@@ -16,8 +16,8 @@ type ListPeopleRequest struct {
 	Token string `json:"token"`
 }
 
-// List people Response
-type listPeopleResponse struct {
+// ListPeopleResponse structure
+type ListPeopleResponse struct {
 	People []string `json:"people"`
 }
 
@@ -57,7 +57,7 @@ func ListPeople(rw http.ResponseWriter, req *http.Request) {
 
 	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(listPeopleResponse{
+	json.NewEncoder(rw).Encode(ListPeopleResponse{
 		People: listOfPeople,
 	})
 }

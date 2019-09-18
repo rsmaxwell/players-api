@@ -16,8 +16,8 @@ type GetPersonRequest struct {
 	Token string `json:"token"`
 }
 
-// People details Response
-type personDetailsResponse struct {
+// GetPersonResponse structure
+type GetPersonResponse struct {
 	Person person.Person `json:"person"`
 }
 
@@ -50,15 +50,19 @@ func GetPerson(rw http.ResponseWriter, req *http.Request, id string) {
 
 	person, err := person.Get(id)
 	if err != nil {
+		WriteResponse(rw, http.StatusInternalServerError, "Internal Server Error")
+		clientError++
+		return
+	}
+	if person == nil {
 		WriteResponse(rw, http.StatusNotFound, "Not Found")
 		clientError++
 		return
 	}
 
 	setHeaders(rw, req)
-
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(personDetailsResponse{
+	json.NewEncoder(rw).Encode(GetPersonResponse{
 		Person: *person,
 	})
 }

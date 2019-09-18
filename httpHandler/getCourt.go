@@ -16,8 +16,8 @@ type GetCourtRequest struct {
 	Token string `json:"token"`
 }
 
-// Court details Response
-type courtDetailsResponse struct {
+// GetCourtResponse structure
+type GetCourtResponse struct {
 	Court court.Court `json:"court"`
 }
 
@@ -59,7 +59,7 @@ func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 	setHeaders(rw, req)
 
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(courtDetailsResponse{
+	json.NewEncoder(rw).Encode(GetCourtResponse{
 		Court: *court,
 	})
 

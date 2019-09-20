@@ -9,8 +9,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// AuthenticateResponse structure
-type AuthenticateResponse struct {
+// LogonResponse structure
+type LogonResponse struct {
 	Token string `json:"token"`
 }
 
@@ -35,7 +35,7 @@ func Login(rw http.ResponseWriter, req *http.Request) {
 
 	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(AuthenticateResponse{
+	json.NewEncoder(rw).Encode(LogonResponse{
 		Token: token,
 	})
 }

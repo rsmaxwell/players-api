@@ -2,7 +2,6 @@ package httpHandler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -19,19 +18,18 @@ type DeleteCourtRequest struct {
 // DeleteCourt method
 func DeleteCourt(rw http.ResponseWriter, req *http.Request, id string) {
 
-	var r DeleteCourtRequest
-
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
 
+	var r DeleteCourtRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
@@ -43,17 +41,12 @@ func DeleteCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	ok, err := court.Delete(id)
+	err = court.Remove(id)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not delete court[%s]", id))
-		clientError++
+		errorHandler(rw, req, err)
 		return
 	}
 
 	setHeaders(rw, req)
-	if ok {
-		WriteResponse(rw, http.StatusOK, "ok")
-	} else {
-		WriteResponse(rw, http.StatusNotFound, "ok")
-	}
+	rw.WriteHeader(http.StatusOK)
 }

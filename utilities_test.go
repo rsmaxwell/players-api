@@ -72,7 +72,7 @@ func Login(userID, password string) string {
 		log.Fatalln(err)
 	}
 
-	var response httpHandler.AuthenticateResponse
+	var response httpHandler.LogonResponse
 
 	err = json.Unmarshal(bytes, &response)
 	if err != nil {
@@ -82,9 +82,13 @@ func Login(userID, password string) string {
 	return response.Token
 }
 
-func UpdatePerson(token, userID, json string) {
+func UpdatePerson(token, userID string, person2 map[string]interface{}) {
 
-	requestBody := []byte("{ \"token\": \"" + token + "\", \"person\":" + json + "}")
+	request := httpHandler.UpdatePersonRequest{Token: token, Person: person2}
+	requestBody, err := json.Marshal(request)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	req, err := http.NewRequest("POST", "http://example.com", bytes.NewBuffer(requestBody))
 	if err != nil {
@@ -94,6 +98,10 @@ func UpdatePerson(token, userID, json string) {
 	rw := httptest.NewRecorder()
 
 	httpHandler.UpdatePerson(rw, req, userID)
+
+	if rw.Code != http.StatusOK {
+		log.Fatalln(err)
+	}
 }
 
 func CreateCourt(token, name string, players []string) {
@@ -137,6 +145,38 @@ func setupEmpty(t *testing.T) func(t *testing.T) {
 	}
 }
 
+func setupOne(t *testing.T) func(t *testing.T) {
+	person.Clear()
+	court.Clear()
+
+	Register("007", "topsecret", "James", "Bond", "james@mi6.co.uk")
+
+	AllPeopleIDs = []string{}
+	AllCourtIDs = []string{}
+
+	return func(t *testing.T) {
+		person.Clear()
+		court.Clear()
+	}
+}
+
+func setupLoggedin(t *testing.T) func(t *testing.T) {
+	person.Clear()
+	court.Clear()
+
+	Register("007", "topsecret", "James", "Bond", "james@mi6.co.uk")
+
+	AllPeopleIDs = []string{"007"}
+	AllCourtIDs = []string{}
+
+	CurrentToken = Login(CurrentUserID, CurrentPassword)
+
+	return func(t *testing.T) {
+		person.Clear()
+		court.Clear()
+	}
+}
+
 func setupFull(t *testing.T) func(t *testing.T) {
 
 	person.Clear()
@@ -157,10 +197,13 @@ func setupFull(t *testing.T) func(t *testing.T) {
 
 	CurrentToken = Login(CurrentUserID, CurrentPassword)
 
-	json := "{\"player\":true}"
+	// Make all the people a 'player'
+	person2 := make(map[string]interface{})
+	person2["Player"] = true
+
 	AllPeopleIDs = []string{"007", "bob", "alice", "jill", "david", "mary", "john", "judith", "paul", "nigel", "jeremy", "joanna"}
 	for _, id := range AllPeopleIDs {
-		UpdatePerson(CurrentToken, id, json)
+		UpdatePerson(CurrentToken, id, person2)
 	}
 
 	CreateCourt(CurrentToken, "Court 1", []string{})

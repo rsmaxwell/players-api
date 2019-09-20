@@ -2,7 +2,6 @@ package httpHandler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -24,19 +23,18 @@ type GetCourtResponse struct {
 // GetCourt method
 func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 
-	var r GetCourtRequest
-
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
 
+	var r GetCourtRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
@@ -49,19 +47,14 @@ func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 	}
 
 	court, err := court.Get(id)
-
 	if err != nil {
-		WriteResponse(rw, http.StatusNotFound, "Not Found")
-		clientError++
+		errorHandler(rw, req, err)
 		return
 	}
 
 	setHeaders(rw, req)
-
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(GetCourtResponse{
 		Court: *court,
 	})
-
-	rw.WriteHeader(http.StatusOK)
 }

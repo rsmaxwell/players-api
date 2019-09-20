@@ -23,39 +23,39 @@ type RegisterRequest struct {
 // Register method
 func Register(rw http.ResponseWriter, req *http.Request) {
 
-	var r RegisterRequest
-
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
 
+	var r RegisterRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse Person data"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
+		clientError++
+		return
+	}
+
+	if person.Exists(r.UserID) {
+		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Person [%s] already exists", r.UserID))
 		clientError++
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(r.Password), bcrypt.DefaultCost)
 	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, fmt.Sprintf("Could not generate hash"))
-		serverError++
+		errorHandler(rw, req, err)
+		return
 	}
 
-	p, err := person.New(r.FirstName, r.LastName, r.Email, hashedPassword, false)
-	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, fmt.Sprintf("Could not create new Person"))
-		serverError++
-	}
-
+	p := person.New(r.FirstName, r.LastName, r.Email, hashedPassword, false)
 	err = person.Add(r.UserID, *p)
 	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, fmt.Sprintf("Could not add Person"))
-		serverError++
+		errorHandler(rw, req, err)
+		return
 	}
 
 	setHeaders(rw, req)

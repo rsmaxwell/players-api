@@ -3,6 +3,8 @@ package httpHandler
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/rsmaxwell/players-api/codeError"
 )
 
 var (
@@ -12,7 +14,7 @@ var (
 	serverError               int
 )
 
-// Error Response
+// messageResponse structure
 type messageResponse struct {
 	Message string `json:"message"`
 }
@@ -40,4 +42,20 @@ func setHeaders(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 	rw.Header().Set("Access-Control-Allow-Headers",
 		"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Authorization")
+}
+
+// errorHandler function
+func errorHandler(rw http.ResponseWriter, req *http.Request, err error) {
+	if err != nil {
+		setHeaders(rw, req)
+		if serr, ok := err.(*codeError.CodeError); ok {
+			WriteResponse(rw, serr.Code(), serr.Error())
+			clientError++
+			return
+		}
+
+		WriteResponse(rw, http.StatusInternalServerError, "InternalServerError")
+		clientError++
+		return
+	}
 }

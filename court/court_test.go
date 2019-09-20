@@ -4,12 +4,34 @@ import (
 	"bytes"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/rsmaxwell/players-api/codeError"
+	"github.com/rsmaxwell/players-api/common"
 	"github.com/stretchr/testify/assert"
 )
+
+// removeDir - Remove the court directory
+func removeDir() error {
+
+	_, err := os.Stat(courtDir)
+	if err == nil {
+		err = common.RemoveContents(courtDir)
+		if err != nil {
+			return codeError.NewInternalServerError(err.Error())
+		}
+
+		err = os.Remove(courtDir)
+		if err != nil {
+			return codeError.NewInternalServerError(err.Error())
+		}
+	}
+
+	return nil
+}
 
 func TestClearCourts(t *testing.T) {
 
@@ -60,8 +82,9 @@ func TestAddCourt(t *testing.T) {
 	assert.NotNil(t, court)
 	assert.Nil(t, err)
 
-	err = Add(*court)
+	id, err := Add(*court)
 	assert.Nil(t, err)
+	assert.NotEmpty(t, id)
 
 	list, err = List()
 	assert.Equal(t, 3, len(list))
@@ -174,7 +197,7 @@ func TestCourt(t *testing.T) {
 	listOfCourts = append(listOfCourts, New("Bob"))
 
 	for _, court := range listOfCourts {
-		err = Add(*court)
+		_, err = Add(*court)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -206,7 +229,7 @@ func TestCourt(t *testing.T) {
 
 	t.Log("Delete the list of courts")
 	for _, id := range list {
-		err := Delete(id)
+		err := Remove(id)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -237,7 +260,7 @@ func TestDeleteCourtWithDuffID(t *testing.T) {
 
 	// Attempt to delete a court using a duff ID
 	expected := "court [junk] not found"
-	err = Delete("junk")
+	err = Remove("junk")
 	if err == nil {
 		t.Errorf("Error actual = (nil), and Expected = [%v].", expected)
 	}
@@ -298,7 +321,7 @@ func TestListCourtsWithNoCourtsDirectory(t *testing.T) {
 func TestDetailsWithNoCourtDirectory(t *testing.T) {
 
 	// Remove the court directory
-	err := removeDir()
+	err := RemoveDir()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,8 +332,12 @@ func TestDetailsWithNoCourtDirectory(t *testing.T) {
 	if err == nil {
 		t.Errorf("Error actual = (nil), and Expected = [%v].", expected)
 	}
-	if !strings.HasSuffix(err.Error(), expected) {
-		t.Errorf("Error actual = [%v], and Expected = [%v].", err, expected)
+	if cerr, ok := err.(*codeError.CodeError); ok {
+		if cerr.Code() != http.StatusInternalServerError {
+			t.Errorf("Unexpected error code: %d", cerr.Code())
+		}
+	} else {
+		t.Errorf("Unexpected error type")
 	}
 }
 

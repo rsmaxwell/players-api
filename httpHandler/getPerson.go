@@ -2,7 +2,6 @@ package httpHandler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -24,19 +23,18 @@ type GetPersonResponse struct {
 // GetPerson method
 func GetPerson(rw http.ResponseWriter, req *http.Request, id string) {
 
-	var r GetPersonRequest
-
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
 
+	var r GetPersonRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
@@ -50,8 +48,7 @@ func GetPerson(rw http.ResponseWriter, req *http.Request, id string) {
 
 	person, err := person.Get(id)
 	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, "Internal Server Error")
-		clientError++
+		errorHandler(rw, req, err)
 		return
 	}
 	if person == nil {

@@ -2,7 +2,6 @@ package httpHandler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -24,19 +23,18 @@ type ListPeopleResponse struct {
 // ListPeople method
 func ListPeople(rw http.ResponseWriter, req *http.Request) {
 
-	var r ListCourtsRequest
-
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
 
+	var r ListCourtsRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
@@ -50,8 +48,7 @@ func ListPeople(rw http.ResponseWriter, req *http.Request) {
 
 	listOfPeople, err := person.List()
 	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, "Error getting list of people")
-		serverError++
+		errorHandler(rw, req, err)
 		return
 	}
 

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"unicode"
+
+	"github.com/rsmaxwell/players-api/codeError"
 )
 
 var (
@@ -38,24 +40,24 @@ func init() {
 func RemoveContents(dir string) error {
 	d, err := os.Open(dir)
 	if err != nil {
-		return err
+		return codeError.NewInternalServerError(err.Error())
 	}
 	defer d.Close()
 	names, err := d.Readdirnames(-1)
 	if err != nil {
-		return err
+		return codeError.NewInternalServerError(err.Error())
 	}
 	for _, name := range names {
 		err = os.RemoveAll(filepath.Join(dir, name))
 		if err != nil {
-			return err
+			return codeError.NewInternalServerError(err.Error())
 		}
 	}
 	return nil
 }
 
-// CheckID checks the characters are valid for an ID
-func CheckID(s string) bool {
+// CheckCharactersInID checks the characters are valid for an ID
+func CheckCharactersInID(s string) error {
 	for _, r := range s {
 
 		ok := false
@@ -66,8 +68,8 @@ func CheckID(s string) bool {
 		}
 
 		if !ok {
-			return false
+			return codeError.NewBadRequest("Invalid ID")
 		}
 	}
-	return true
+	return nil
 }

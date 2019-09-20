@@ -26,19 +26,18 @@ type CreateCourtResponse struct {
 // CreateCourt method
 func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 
-	var r CreateCourtRequest
-
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
 
+	var r CreateCourtRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
@@ -53,8 +52,7 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 	// Check there are not too many players on the court
 	info, err := court.GetInfo()
 	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, "CourtInfo error")
-		serverError++
+		errorHandler(rw, req, err)
 		return
 	}
 
@@ -68,8 +66,7 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 	for _, id := range r.Court.Players {
 		p, err := person.Get(id)
 		if err != nil {
-			WriteResponse(rw, http.StatusInternalServerError, fmt.Sprintf("Could not get the person"))
-			serverError++
+			errorHandler(rw, req, err)
 			return
 		}
 
@@ -88,8 +85,7 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 
 	id, err := court.Add(r.Court)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not add the court"))
-		serverError++
+		errorHandler(rw, req, err)
 		return
 	}
 

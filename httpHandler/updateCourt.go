@@ -2,7 +2,6 @@ package httpHandler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -13,26 +12,25 @@ import (
 
 // UpdateCourtRequest structure
 type UpdateCourtRequest struct {
-	Token string          `json:"token"`
-	Court court.JSONCourt `json:"court"`
+	Token string                 `json:"token"`
+	Court map[string]interface{} `json:"court"`
 }
 
 // UpdateCourt method
 func UpdateCourt(rw http.ResponseWriter, req *http.Request, id string) {
 
-	var r UpdateCourtRequest
-
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
 
+	var r UpdateCourtRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
+		WriteResponse(rw, http.StatusBadRequest, err.Error())
 		clientError++
 		return
 	}
@@ -46,8 +44,7 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request, id string) {
 
 	_, err = court.Update(id, r.Court)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not update court:%s", id))
-		clientError++
+		errorHandler(rw, req, err)
 		return
 	}
 

@@ -28,7 +28,6 @@ func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 
 	limitedReader := io.LimitReader(req.Body, 100*1024)
 	b, err := ioutil.ReadAll(limitedReader)
-
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
 		clientError++
@@ -36,11 +35,9 @@ func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	var r GetMetricsRequest
-
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Could not parse data"))
-		clientError++
+		errorHandler(rw, req, err)
 		return
 	}
 

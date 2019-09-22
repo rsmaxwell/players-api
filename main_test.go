@@ -696,7 +696,7 @@ func TestUpdateCourt(t *testing.T) {
 
 			// Check the court was actually updated
 			if rr.Code == http.StatusOK {
-				court, err := court.Get(test.id)
+				court, err := court.Load(test.id)
 				if err != nil {
 					t.Fatal(err)
 				}

@@ -52,7 +52,7 @@ func Register(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	p := person.New(r.FirstName, r.LastName, r.Email, hashedPassword, false)
-	err = person.Add(r.UserID, *p)
+	err = person.Save(r.UserID, p)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

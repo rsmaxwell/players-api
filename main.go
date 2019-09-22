@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/httpHandler"
-	"github.com/rsmaxwell/players-api/logger"
 )
 
 var (
@@ -86,7 +86,7 @@ func setupHandlers(r *mux.Router) {
 
 func main() {
 
-	logger.Logger.Printf("Players Server: 2018-01-31 13:30")
+	log.Printf("Players Server: 2018-01-31 13:30")
 	var ok bool
 
 	portstring, ok := os.LookupEnv("PORT")
@@ -95,18 +95,18 @@ func main() {
 	}
 	port, err := strconv.Atoi(portstring)
 	if err != nil {
-		logger.Logger.Fatalf(err.Error())
+		log.Fatalf(err.Error())
 	}
 
-	logger.Logger.Printf("Registering Router and setting Handlers")
+	log.Printf("Registering Router and setting Handlers")
 	router := mux.NewRouter()
 	setupHandlers(router)
 
-	logger.Logger.Printf("Listening on port: %d", port)
+	log.Printf("Listening on port: %d", port)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 	if err != nil {
-		logger.Logger.Fatalf(err.Error())
+		log.Fatalf(err.Error())
 	}
 
-	logger.Logger.Printf("Success")
+	log.Printf("Success")
 }

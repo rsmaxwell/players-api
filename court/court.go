@@ -118,7 +118,7 @@ func New(name string) *Court {
 // Update method
 func Update(id string, court2 map[string]interface{}) (*Court, error) {
 
-	court, err := Get(id)
+	court, err := Load(id)
 	if err != nil {
 		return nil, codeError.NewNotFound(fmt.Sprintf("Court [%s] not found", id))
 	}
@@ -174,8 +174,8 @@ func Update(id string, court2 map[string]interface{}) (*Court, error) {
 	return court, nil
 }
 
-// Add adds a court to the list of courts
-func Add(court Court) (string, error) {
+// Save adds a court to the list of courts
+func Save(court *Court) (string, error) {
 
 	count, err := getAndIncrementCurrentCourtID()
 	if err != nil {
@@ -232,7 +232,7 @@ func Exists(id string) bool {
 }
 
 // Get returns the details of the court with the given ID
-func Get(id string) (*Court, error) {
+func Load(id string) (*Court, error) {
 
 	filename, err := makeFilename(id)
 	if err != nil {

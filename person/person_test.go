@@ -2,16 +2,17 @@ package person
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/rsmaxwell/players-api/codeError"
 	"github.com/rsmaxwell/players-api/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -35,17 +36,18 @@ func removeDir() error {
 }
 
 func ResetPeople(t *testing.T) {
+	r := require.New(t)
 
 	err := Clear()
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("topsecret"), bcrypt.DefaultCost)
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 
 	p := New("James", "Bond", "james@mi6.uk.gov", hashedPassword, false)
 
-	err = Add("007", *p)
-	assert.Nil(t, err)
+	err = Save("007", p)
+	r.Nil(err, "err should be nothing")
 
 	list, err := List()
 	assert.Equal(t, 1, len(list))
@@ -57,115 +59,135 @@ func TestNewInfoJunkPerson(t *testing.T) {
 }
 
 func TestClearPeople(t *testing.T) {
+	r := require.New(t)
 
 	err := Clear()
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 }
 
 func TestResetPeople(t *testing.T) {
+	r := require.New(t)
 
 	err := Clear()
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 
-	fred := New("fred", "smith", "123@aol.com", []byte("xxxxxxx"), false)
-	bloggs := New("bloggs", "grey", "456@aol.com", []byte("yyyyyyyyy"), true)
+	err = Save("fred", New("fred", "smith", "123@aol.com", []byte("xxxxxxx"), false))
+	r.Nil(err, "err should be nothing")
 
-	Add("fred", *fred)
-	Add("bloggs", *bloggs)
+	err = Save("bloggs", New("bloggs", "grey", "456@aol.com", []byte("yyyyyyyyy"), true))
+	r.Nil(err, "err should be nothing")
 
 	list, err := List()
 	assert.Equal(t, 2, len(list))
 }
 
 func TestAddPerson(t *testing.T) {
+	r := require.New(t)
 
 	err := Clear()
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 
-	fred := New("fred", "smith", "123@aol.com", []byte("xxxxxxx"), false)
-	bloggs := New("bloggs", "grey", "456@aol.com", []byte("yyyyyyyyy"), true)
+	err = Save("fred", New("fred", "smith", "123@aol.com", []byte("xxxxxxx"), false))
+	r.Nil(err, "err should be nothing")
 
-	Add("fred", *fred)
-	Add("bloggs", *bloggs)
+	err = Save("bloggs", New("bloggs", "grey", "456@aol.com", []byte("yyyyyyyyy"), true))
+	r.Nil(err, "err should be nothing")
 
 	list, err := List()
 	assert.Equal(t, 2, len(list))
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 
-	person := New("harry", "silver", "789@aol.com", []byte("zzzzzzzzz"), true)
-	assert.NotNil(t, person)
-	assert.Nil(t, err)
-
-	err = Add("harry", *person)
-	assert.Nil(t, err)
+	err = Save("harry", New("harry", "silver", "789@aol.com", []byte("zzzzzzzzz"), true))
+	r.Nil(err, "err should be nothing")
 
 	list, err = List()
 	assert.Equal(t, 3, len(list))
 }
 
 func TestPerson(t *testing.T) {
+	r := require.New(t)
 
+	// Clear all people
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
-	var listOfPeople []*Person
-	listOfPeople = append(listOfPeople, New("Fred", "x", "z", []byte("123@aol.com"), false))
-	listOfPeople = append(listOfPeople, New("Bloggs", "x", "z", []byte("123@aol.com"), false))
-	listOfPeople = append(listOfPeople, New("Jane", "x", "z", []byte("123@aol.com"), false))
-	listOfPeople = append(listOfPeople, New("Alice", "x", "z", []byte("123@aol.com"), false))
-	listOfPeople = append(listOfPeople, New("Bob", "x", "z", []byte("123@aol.com"), false))
+	// Add a couple of people
+	count := 0
+	count = count + 1
+	err = Save("1", New("Fred", "x", "z", []byte("123@aol.com"), false))
+	r.Nil(err, "err should be nothing")
 
-	for index, person := range listOfPeople {
-		err = Add(string(index), *person)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
+	count = count + 1
+	err = Save("2", New("Bloggs", "x", "z", []byte("123@aol.com"), false))
+	r.Nil(err, "err should be nothing")
 
-	t.Log("Check the expected number of People have been created")
+	count = count + 1
+	err = Save("3", New("Jane", "x", "z", []byte("123@aol.com"), false))
+	r.Nil(err, "err should be nothing")
+
+	count = count + 1
+	err = Save("4", New("Alice", "x", "z", []byte("123@aol.com"), false))
+	r.Nil(err, "err should be nothing")
+
+	count = count + 1
+	err = Save("5", New("Bob", "x", "z", []byte("123@aol.com"), false))
+	r.Nil(err, "err should be nothing")
+
+	// Check the expected number of People have been created
 	list, err := List()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
+	r.Equal(count, len(list), fmt.Sprintf("Unexpected number of people created. expected:%d actual:%d", count, len(list)))
 
-	assert.Equal(t, len(list), len(list), "")
+	// Check the expected People have been created
+	for _, id := range list {
+		p, err := Load(id)
+		r.Nil(err, "err should be nothing")
 
-	t.Log("Check the expected People have been created")
-	for _, name := range list {
 		found := false
-		for _, id := range list {
-			person, err := Get(id)
-			if err != nil {
-				t.Fatal(err)
+		for _, id2 := range list {
+			p2, err := Load(id2)
+			r.Nil(err, "err should be nothing")
+
+			equal := true
+			if p.FirstName != p2.FirstName {
+				equal = false
+			}
+			if p.LastName != p2.LastName {
+				equal = false
+			}
+			if p.Email != p2.Email {
+				equal = false
+			}
+			if p.Status != p2.Status {
+				equal = false
+			}
+			if p.Player != p2.Player {
+				equal = false
 			}
 
-			if name == person.FirstName {
+			// Have we found the person?
+			if equal {
 				found = true
+				break
 			}
 		}
-		assert.Equal(t, found, true, "")
+		assert.Equal(t, found, true, fmt.Sprintf("Person [%s] not found", id))
 	}
 
-	t.Log("Delete the list of people")
+	// Delete the list of people
 	for _, id := range list {
 		err := Remove(id)
-		if err != nil {
-			t.Fatal(err)
-		}
+		r.Nil(err, "err should be nothing")
 	}
 
-	t.Log("Check there are no more people")
+	// Check there are no more people
 	list, err = List()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assert.Equal(t, len(listOfPeople), 0, "")
+	r.Nil(err, "err should be nothing")
+	r.Equal(0, len(list), fmt.Sprintf("Unexpected number of people. Expected:%d, actual:%d", 0, len(list)))
 }
 
 func TestDeletePersonWithDuffID(t *testing.T) {
+	r := require.New(t)
 
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
@@ -175,128 +197,122 @@ func TestDeletePersonWithDuffID(t *testing.T) {
 
 	// Clear the people
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Attempt to delete a person using a duff ID
 	err = Remove("junk")
 	if err == nil {
-		t.Errorf("Expected an error. actually got: [%v].", err)
+		r.Fail(fmt.Sprintf("Expected an error. actually got: [%v].", err))
 	} else {
 		if cerr, ok := err.(*codeError.CodeError); ok {
 			if cerr.Code() != http.StatusNotFound {
-				t.Errorf("Unexpected error: [%v]", err)
+				r.Fail(fmt.Sprintf("Unexpected error: [%v]", err))
 			}
 		} else {
-			t.Errorf("Unexpected error: [%v]", err)
+			r.Fail(fmt.Sprintf("Unexpected error: [%v]", err))
 		}
 	}
 }
 
 func TestListPeopleWithDuffPlayerFile(t *testing.T) {
-
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
+	r := require.New(t)
 
 	// Clear the people
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	filename, err := makeFilename("x")
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Create a new person file with junk contents
 	err = ioutil.WriteFile(filename, []byte("junk"), 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Check the expected number of People have been created
-	_, err = List()
-	if err != nil {
-		t.Fatal(err)
-	}
+	list, err := List()
+	r.Nil(err, "err should be nothing")
+	r.Equal(len(list), 1, "Unexpected number of people")
 
-	// Check the duff file was skipped
-	_, err = List()
-	t.Log(buf.String())
-	if strings.HasPrefix("buf.String()", "Skipping unexpected person filename") {
-		t.Fatal(err)
+	// Attempt to use the 'junk' person!
+	_, err = Load("junk")
+	if err != nil {
+		if cerr, ok := err.(*codeError.CodeError); ok {
+			if cerr.Code() != http.StatusNotFound {
+				r.Fail(fmt.Sprintf("Unexpected error type: expected: %d, Actual: %d", http.StatusNotFound, cerr.Code()))
+			}
+		} else {
+			r.Fail(fmt.Sprintf("%s", err))
+		}
+	} else {
+		r.Fail("Unexpected success")
 	}
 }
 
 func TestListPersonWithNoPeopleDirectory(t *testing.T) {
+	r := require.New(t)
 
 	// Clear the people directory
 	err := removeDir()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
-	// Check that List returns an error
+	// Attempt to use the people directory
 	_, err = List()
 	if err != nil {
-		t.Fatalf(err.Error())
+		if cerr, ok := err.(*codeError.CodeError); ok {
+			if cerr.Code() != http.StatusInternalServerError {
+				r.Fail(fmt.Sprintf("Unexpected error type: expected: %d, Actual: %d", http.StatusNotFound, cerr.Code()))
+			}
+		} else {
+			r.Fail(fmt.Sprintf("%s", err))
+		}
+	} else {
+		r.Fail("Unexpected success")
 	}
 }
 
-func TestDetailsWithNoPeopleDirectory(t *testing.T) {
+func TestLoadWithNoPeopleDirectory(t *testing.T) {
+	r := require.New(t)
 
 	// Remove the people directory
 	err := removeDir()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
-	// Check that List returns an error
-	expected := "no such file or directory"
-	_, err = Get("0")
-	if err == nil {
-		t.Errorf("Error actual = (nil), and Expected = [%v].", expected)
-	}
-	if cerr, ok := err.(*codeError.CodeError); ok {
-		if cerr.Code() != http.StatusInternalServerError {
-			t.Errorf("Unexpected error code: %d", cerr.Code())
+	// Attempt to use the people directory
+	_, err = Load("0")
+	if err != nil {
+		if cerr, ok := err.(*codeError.CodeError); ok {
+			if cerr.Code() != http.StatusNotFound {
+				r.Fail(fmt.Sprintf("Unexpected error type: expected: %d, Actual: %d", http.StatusNotFound, cerr.Code()))
+			}
+		} else {
+			r.Fail(fmt.Sprintf("Unexpected error type: expected: %s, Actual: %T", "*codeError.CodeError", err))
 		}
 	} else {
-		t.Errorf("Unexpected error type")
+		r.Fail("Unexpected success")
 	}
 }
 
 func TestDetailsWithDuffPersonFile(t *testing.T) {
+	r := require.New(t)
 
 	// Clear the people
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Create a new person file with junk contents
 	filename, err := makeFilename("0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	err = ioutil.WriteFile(filename, []byte("junk"), 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Check that List returns an error
 	expected := "invalid character 'j' looking for beginning of value"
-	_, err = Get("0")
+	_, err = Load("0")
 	if err == nil {
-		t.Errorf("Error actual = (nil), and Expected = [%v].", expected)
+		r.Fail(fmt.Sprintf("Error actual = (nil), and Expected = [%v].", expected))
 	}
 	if err.Error() != expected {
-		t.Errorf("Error actual = [%v], and Expected = [%v].", err, expected)
+		r.Fail(fmt.Sprintf("Error actual = [%v], and Expected = [%v].", err, expected))
 	}
 }

@@ -13,7 +13,6 @@ import (
 
 	"github.com/rsmaxwell/players-api/court"
 	"github.com/rsmaxwell/players-api/httpHandler"
-	"github.com/rsmaxwell/players-api/logger"
 	"github.com/rsmaxwell/players-api/person"
 )
 
@@ -131,7 +130,7 @@ func CreateCourt(token, name string, players []string) {
 			log.Fatalln(err)
 		}
 		response := string(bytes)
-		logger.Logger.Fatalln(fmt.Printf("Code: %d, Response: %s", rw.Code, response))
+		log.Fatalln(fmt.Printf("Code: %d, Response: %s", rw.Code, response))
 	}
 }
 

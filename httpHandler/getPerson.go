@@ -46,7 +46,7 @@ func GetPerson(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	person, err := person.Get(id)
+	person, err := person.Load(id)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

@@ -43,7 +43,7 @@ func Login(rw http.ResponseWriter, req *http.Request) {
 // CheckUser - Basic check on the user calling the service
 func CheckUser(id, password string) bool {
 
-	person, err := person.Get(id)
+	person, err := person.Load(id)
 	if err != nil {
 		return false
 	}

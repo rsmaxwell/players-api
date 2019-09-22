@@ -106,7 +106,7 @@ func Update(id string, session *session.Session, person2 map[string]interface{})
 
 	var err error
 
-	person, err := Get(id)
+	person, err := Load(id)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func Update(id string, session *session.Session, person2 map[string]interface{})
 	if v, ok := person2["Status"]; ok {
 
 		// Check we have the authority to perform this update
-		myself, err := Get(session.UserID)
+		myself, err := Load(session.UserID)
 		if err != nil {
 			return nil, err
 		}
@@ -175,8 +175,8 @@ func Update(id string, session *session.Session, person2 map[string]interface{})
 	return person, nil
 }
 
-// Add adds a person to the list of people
-func Add(id string, person Person) error {
+// Save adds a person to the list of people
+func Save(id string, person *Person) error {
 
 	// The first user must be made an 'admin' user
 	files, err := ioutil.ReadDir(peopleListDir)
@@ -199,6 +199,13 @@ func Add(id string, person Person) error {
 		return err
 	}
 
+	// Check the user does not already exist
+	found := Exists(id)
+	if found {
+		return codeError.NewInternalServerError(fmt.Sprintf("Person [%s] already exists", filename))
+	}
+
+	// Save the person to disk
 	err = ioutil.WriteFile(filename, personJSON, 0644)
 	if err != nil {
 		return codeError.NewInternalServerError(err.Error())
@@ -244,7 +251,7 @@ func Exists(id string) bool {
 // IsPlayer returns 'true' if the person exists and is a player
 func IsPlayer(id string) bool {
 
-	person, err := Get(id)
+	person, err := Load(id)
 	if err != nil {
 		return false
 	}
@@ -255,8 +262,8 @@ func IsPlayer(id string) bool {
 	return person.Player
 }
 
-// Get returns the details of the person with the given ID
-func Get(id string) (*Person, error) {
+// Load returns the details of the person with the given ID
+func Load(id string) (*Person, error) {
 
 	filename, err := makeFilename(id)
 	if err != nil {

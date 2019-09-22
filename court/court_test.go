@@ -2,20 +2,21 @@ package court
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/rsmaxwell/players-api/codeError"
 	"github.com/rsmaxwell/players-api/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// removeDir - Remove the court directory
-func removeDir() error {
+// RemoveDir - Remove the court directory
+func RemoveDir() error {
 
 	_, err := os.Stat(courtDir)
 	if err == nil {
@@ -34,107 +35,103 @@ func removeDir() error {
 }
 
 func TestClearCourts(t *testing.T) {
+	r := require.New(t)
 
 	err := Clear()
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 
 	_, err = os.Stat(courtInfoFile)
-	assert.NotNil(t, err)
+	r.Nil(err, "err should be nothing")
 }
 
 func TestResetCourt(t *testing.T) {
+	r := require.New(t)
 
 	err := Clear()
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 
-	fred := New("fred")
-	bloggs := New("bloggs")
+	_, err = Save(New("fred"))
+	r.Nil(err, "err should be nothing")
 
-	Add(*fred)
-	Add(*bloggs)
+	_, err = Save(New("bloggs"))
+	r.Nil(err, "err should be nothing")
 
 	_, err = os.Stat(courtInfoFile)
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 
 	list, err := List()
-	assert.Equal(t, 2, len(list))
+	r.Equal(2, len(list), fmt.Sprintf("Unexpected size of List: expected: %d, Actual: %d", 2, len(list)))
 }
 
 func TestAddCourt(t *testing.T) {
+	r := require.New(t)
 
 	err := Clear()
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 
-	fred := New("fred")
-	bloggs := New("bloggs")
+	_, err = Save(New("fred"))
+	r.Nil(err, "err should be nothing")
 
-	Add(*fred)
-	Add(*bloggs)
+	_, err = Save(New("bloggs"))
+	r.Nil(err, "err should be nothing")
 
 	_, err = os.Stat(courtInfoFile)
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
 
 	list, err := List()
-	assert.Equal(t, 2, len(list))
-	assert.Nil(t, err)
+	r.Nil(err, "err should be nothing")
+	r.Equal(2, len(list), fmt.Sprintf("Unexpected size of List: expected: %d, Actual: %d", 2, len(list)))
 
-	court := New("harry")
-	assert.NotNil(t, court)
-	assert.Nil(t, err)
-
-	id, err := Add(*court)
-	assert.Nil(t, err)
-	assert.NotEmpty(t, id)
+	_, err = Save(New("harry"))
+	r.Nil(err, "err should be nothing")
 
 	list, err = List()
-	assert.Equal(t, 3, len(list))
+	r.Equal(3, len(list), fmt.Sprintf("Unexpected size of List: expected: %d, Actual: %d", 3, len(list)))
 }
 
 func TestNewInfoJunkCourt(t *testing.T) {
+	r := require.New(t)
 
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 }
 
 func TestNewInfoUnreadableInfofileCourt(t *testing.T) {
+	r := require.New(t)
 
-	t.Logf("Clear the court directory")
+	// Clear the court directory
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Make the court info file unreadable
 	t.Logf("Make the file \"%s\" unreadable", courtInfoFile)
 	err = os.Chmod(courtInfoFile, 0000)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
-	t.Log("Attemp to use the info file")
-	_, err = List()
-	assert.Panics(t, func() {
-		_, err := GetInfo()
-		if err != nil {
-			t.Fatal(err)
+	// Attempt to use the info file
+	_, err = Save(New("fred"))
+	if err != nil {
+		if cerr, ok := err.(*codeError.CodeError); ok {
+			if cerr.Code() != http.StatusInternalServerError {
+				r.Fail(fmt.Sprintf("Unexpected error code: %d", cerr.Code()))
+			}
+		} else {
+			r.Fail(fmt.Sprintf("Unexpected error: Expected = [*codeError.CodeError], Got = [%v}].", err))
 		}
-	})
+	} else {
+		t.Errorf("Unexpected success")
+	}
 }
 
 func TestGetAndIncrementCurrentIDCourt(t *testing.T) {
+	r := require.New(t)
 
 	t.Logf("Clear the court directory")
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	for i := 0; i < 10; i++ {
 		count, _ := getAndIncrementCurrentCourtID()
@@ -143,19 +140,16 @@ func TestGetAndIncrementCurrentIDCourt(t *testing.T) {
 }
 
 func TestGetAndIncrementCurrentIDNoInfofileCourt(t *testing.T) {
+	r := require.New(t)
 
 	t.Logf("Clear the court directory")
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Remove the court info file
 	t.Logf("Remove the court info file")
 	err = os.Remove(courtInfoFile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	assert.NotPanics(t, func() {
 		getAndIncrementCurrentCourtID()
@@ -163,88 +157,94 @@ func TestGetAndIncrementCurrentIDNoInfofileCourt(t *testing.T) {
 }
 
 func TestGetAndIncrementCurrentIDJunkContentsCourt(t *testing.T) {
+	r := require.New(t)
 
 	t.Logf("Clear the court directory")
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
-	assert.Panics(t, func() {
-		getAndIncrementCurrentCourtID()
-	})
+	_, err = getAndIncrementCurrentCourtID()
+	if err != nil {
+		if cerr, ok := err.(*codeError.CodeError); ok {
+			if cerr.Code() != http.StatusInternalServerError {
+				r.Fail(fmt.Sprintf("Unexpected error code: %d", cerr.Code()))
+			}
+		} else {
+			r.Fail(fmt.Sprintf("Unexpected error: Expected = [*codeError.CodeError], Got = [%v}].", err))
+		}
+	} else {
+		r.Fail("Unexpected success")
+	}
 }
 
 func TestCourt(t *testing.T) {
+	r := require.New(t)
 
-	t.Logf("Clear the court directory")
+	// Clear the court directory
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
-	t.Log("Create a number of new Courts")
-	var listOfCourts []*Court
-	listOfCourts = append(listOfCourts, New("Fred"))
-	listOfCourts = append(listOfCourts, New("Bloggs"))
-	listOfCourts = append(listOfCourts, New("Jane"))
-	listOfCourts = append(listOfCourts, New("Alice"))
-	listOfCourts = append(listOfCourts, New("Bob"))
+	// Create a number of new Courts
+	_, err = Save(New("Fred"))
+	r.Nil(err, "err should be nothing")
 
-	for _, court := range listOfCourts {
-		_, err = Add(*court)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
+	_, err = Save(New("Bloggs"))
+	r.Nil(err, "err should be nothing")
 
-	t.Log("Check the expected number of Courts have been created")
+	_, err = Save(New("Jane"))
+	r.Nil(err, "err should be nothing")
+
+	_, err = Save(New("Alice"))
+	r.Nil(err, "err should be nothing")
+
+	_, err = Save(New("Bob"))
+	r.Nil(err, "err should be nothing")
+
+	// Check the expected number of Courts have been created
 	list, err := List()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	r.Nil(err, "err should be nothing")
 	assert.Equal(t, len(list), len(list), "")
 
-	t.Log("Check the expected Courts have been created")
-	for _, name := range list {
+	// Check the expected Courts have been created
+	for _, id := range list {
+		c, err := Load(id)
+		r.Nil(err, "err should be nothing")
+
 		found := false
-		for _, id := range list {
-			court, err := Get(id)
-			if err != nil {
-				t.Fatal(err)
+		for _, id2 := range list {
+			c2, err := Load(id2)
+			r.Nil(err, "err should be nothing")
+
+			equal := true
+			if c.Name != c2.Name {
+				equal = false
 			}
 
-			if name == court.Name {
+			if equal {
 				found = true
+				break
 			}
 		}
-		assert.Equal(t, found, true, "")
+		assert.Equal(t, found, true, fmt.Sprintf("Court [%s] not found", id))
 	}
 
-	t.Log("Delete the list of courts")
+	// Delete the list of courts
 	for _, id := range list {
 		err := Remove(id)
-		if err != nil {
-			t.Fatal(err)
-		}
+		r.Nil(err, "err should be nothing")
 	}
 
-	t.Log("Check there are no more courts")
+	// Check there are no more courts
 	list, err = List()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assert.Equal(t, len(listOfCourts), 0, "")
+	r.Nil(err, "err should be nothing")
+	r.Equal(len(list), 0, "Unexpected number of courts")
 }
 
 func TestDeleteCourtWithDuffID(t *testing.T) {
+	r := require.New(t)
 
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
@@ -254,22 +254,25 @@ func TestDeleteCourtWithDuffID(t *testing.T) {
 
 	// Clear the courts
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Attempt to delete a court using a duff ID
-	expected := "court [junk] not found"
 	err = Remove("junk")
 	if err == nil {
-		t.Errorf("Error actual = (nil), and Expected = [%v].", expected)
-	}
-	if err.Error() != expected {
-		t.Errorf("Error actual = [%v], and Expected = [%v.]", err, expected)
+		r.Fail(fmt.Sprintf("Expected an error. actually got: [%v].", err))
+	} else {
+		if cerr, ok := err.(*codeError.CodeError); ok {
+			if cerr.Code() != http.StatusNotFound {
+				r.Fail(fmt.Sprintf("Unexpected error: [%v]", err))
+			}
+		} else {
+			r.Fail(fmt.Sprintf("Unexpected error: [%v]", err))
+		}
 	}
 }
 
 func TestListCourtsWithDuffPlayerFile(t *testing.T) {
+	r := require.New(t)
 
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
@@ -279,90 +282,94 @@ func TestListCourtsWithDuffPlayerFile(t *testing.T) {
 
 	// Clear the courts
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Create a new court file with junk contents
 	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
-	// Check the expected number of Courts have been created
-	_, err = List()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Check the duff file was skipped
-	_, err = List()
-	t.Log(buf.String())
-	if strings.HasPrefix("buf.String()", "Skipping unexpected court filename") {
-		t.Fatal(err)
+	// Attempt to use the court info file
+	_, err = Save(New("junk"))
+	if err == nil {
+		r.Fail(fmt.Sprintf("Expected an error. actually got: [%v].", err))
+	} else {
+		if cerr, ok := err.(*codeError.CodeError); ok {
+			if cerr.Code() != http.StatusInternalServerError {
+				r.Fail(fmt.Sprintf("Unexpected error: [%v]", err))
+			}
+		} else {
+			r.Fail(fmt.Sprintf("Unexpected error: [%v]", err))
+		}
 	}
 }
 
 func TestListCourtsWithNoCourtsDirectory(t *testing.T) {
+	r := require.New(t)
 
-	// Clear the courts
-	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Remove the court directory
+	err := RemoveDir()
+	r.Nil(err, "err should be nothing")
 
 	// Check that List returns an error
 	_, err = List()
 	if err != nil {
-		t.Fatalf(err.Error())
+		if cerr, ok := err.(*codeError.CodeError); ok {
+			if cerr.Code() != http.StatusInternalServerError {
+				r.Fail(fmt.Sprintf("Unexpected error code: %d", cerr.Code()))
+			}
+		} else {
+			r.Fail(fmt.Sprintf("Unexpected error: Expected = [*codeError.CodeError], Got = [%v}].", err))
+		}
+	} else {
+		t.Errorf("Unexpected success")
 	}
 }
 
-func TestDetailsWithNoCourtDirectory(t *testing.T) {
+func TestLoadWithNoCourtDirectory(t *testing.T) {
+	r := require.New(t)
 
 	// Remove the court directory
 	err := RemoveDir()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
-	// Check that List returns an error
-	expected := "no such file or directory"
-	_, err = Get("0")
-	if err == nil {
-		t.Errorf("Error actual = (nil), and Expected = [%v].", expected)
-	}
-	if cerr, ok := err.(*codeError.CodeError); ok {
-		if cerr.Code() != http.StatusInternalServerError {
-			t.Errorf("Unexpected error code: %d", cerr.Code())
+	// Attempt to use the court directory
+	_, err = Load("junk")
+	if err != nil {
+		if cerr, ok := err.(*codeError.CodeError); ok {
+			if cerr.Code() != http.StatusNotFound {
+				r.Fail(fmt.Sprintf("Unexpected error code: %d", cerr.Code()))
+			}
+		} else {
+			r.Fail(fmt.Sprintf("Unexpected error: Expected = [*codeError.CodeError], Got = [%v}].", err))
 		}
 	} else {
-		t.Errorf("Unexpected error type")
+		r.Fail("Unexpected success")
 	}
 }
 
-func TestDetailsWithDuffCourtFile(t *testing.T) {
+func TestLoadWithDuffCourtFile(t *testing.T) {
+	r := require.New(t)
 
 	// Clear the courts
 	err := Clear()
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Create a new court file with junk contents
-	filename := courtListDir + "/0.json"
+	filename := courtListDir + "/junk.json"
 	err = ioutil.WriteFile(filename, []byte("junk"), 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r.Nil(err, "err should be nothing")
 
 	// Check that List returns an error
-	expected := "invalid character 'j' looking for beginning of value"
-	_, err = Get("0")
-	if err == nil {
-		t.Errorf("Error actual = (nil), and Expected = [%v].", expected)
-	}
-	if err.Error() != expected {
-		t.Errorf("Error actual = [%v], and Expected = [%v].", err, expected)
+	_, err = Load("junk")
+	if err != nil {
+		if cerr, ok := err.(*codeError.CodeError); ok {
+			if cerr.Code() != http.StatusInternalServerError {
+				r.Fail(fmt.Sprintf("Unexpected error code: %d", cerr.Code()))
+			}
+		} else {
+			r.Fail(fmt.Sprintf("Unexpected error: Expected = [*codeError.CodeError], Got = [%v}].", err))
+		}
+	} else {
+		r.Fail("Unexpected success")
 	}
 }

@@ -64,7 +64,7 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 
 	// Check the people on the court are valid
 	for _, id := range r.Court.Players {
-		p, err := person.Get(id)
+		p, err := person.Load(id)
 		if err != nil {
 			errorHandler(rw, req, err)
 			return
@@ -83,7 +83,7 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	id, err := court.Add(r.Court)
+	id, err := court.Save(&r.Court)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

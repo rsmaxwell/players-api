@@ -9,11 +9,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rsmaxwell/players-api/container"
+	"github.com/rsmaxwell/players-api/httphandler"
 	"github.com/rsmaxwell/players-api/session"
+	"github.com/rsmaxwell/players-api/utilities"
 
 	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/court"
-	"github.com/rsmaxwell/players-api/httpHandler"
 	"github.com/rsmaxwell/players-api/person"
 	"github.com/stretchr/testify/assert"
 )
@@ -69,7 +71,7 @@ func TestRegister(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			requestBody, err := json.Marshal(httpHandler.RegisterRequest{
+			requestBody, err := json.Marshal(httphandler.RegisterRequest{
 				UserID:    test.userID,
 				Password:  test.password,
 				FirstName: test.firstName,
@@ -179,7 +181,7 @@ func TestLogin(t *testing.T) {
 					log.Fatalln(err)
 				}
 
-				var response httpHandler.LogonResponse
+				var response httphandler.LogonResponse
 
 				err = json.Unmarshal(bytes, &response)
 				if err != nil {
@@ -234,7 +236,7 @@ func TestGetPerson(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			requestBody, err := json.Marshal(httpHandler.GetPersonRequest{
+			requestBody, err := json.Marshal(httphandler.GetPersonRequest{
 				Token: test.token,
 			})
 			if err != nil {
@@ -267,7 +269,7 @@ func TestGetPerson(t *testing.T) {
 				log.Fatalln(err)
 			}
 
-			var response httpHandler.GetPersonResponse
+			var response httphandler.GetPersonResponse
 
 			err = json.Unmarshal(bytes, &response)
 			if err != nil {
@@ -313,7 +315,7 @@ func TestListPeople(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			requestBody, err := json.Marshal(httpHandler.ListPeopleRequest{
+			requestBody, err := json.Marshal(httphandler.ListPeopleRequest{
 				Token: test.token,
 			})
 			if err != nil {
@@ -347,7 +349,7 @@ func TestListPeople(t *testing.T) {
 			}
 
 			if rr.Code == http.StatusOK {
-				var response httpHandler.ListPeopleResponse
+				var response httphandler.ListPeopleResponse
 
 				err = json.Unmarshal(bytes, &response)
 				if err != nil {
@@ -355,7 +357,7 @@ func TestListPeople(t *testing.T) {
 				}
 
 				// Check the response body is what we expect.
-				if !Equal(response.People, test.expectedResult) {
+				if !utilities.Equal(response.People, test.expectedResult) {
 					t.Logf("actual:   %v", response.People)
 					t.Logf("expected: %v", test.expectedResult)
 					t.Errorf("Unexpected list of people")
@@ -404,7 +406,7 @@ func TestDeletePerson(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			requestBody, err := json.Marshal(httpHandler.ListPeopleRequest{
+			requestBody, err := json.Marshal(httphandler.ListPeopleRequest{
 				Token: test.token,
 			})
 			if err != nil {
@@ -474,7 +476,7 @@ func TestGetMetrics(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			requestBody, err := json.Marshal(httpHandler.GetMetricsRequest{
+			requestBody, err := json.Marshal(httphandler.GetMetricsRequest{
 				Token: test.token,
 			})
 			if err != nil {
@@ -508,7 +510,7 @@ func TestGetMetrics(t *testing.T) {
 			}
 
 			if rr.Code == http.StatusOK {
-				var response httpHandler.GetMetricsResponse
+				var response httphandler.GetMetricsResponse
 
 				err = json.Unmarshal(bytes, &response)
 				if err != nil {
@@ -562,11 +564,13 @@ func TestCreateCourt(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			requestBody, err := json.Marshal(httpHandler.CreateCourtRequest{
+			requestBody, err := json.Marshal(httphandler.CreateCourtRequest{
 				Token: test.token,
 				Court: court.Court{
-					Name:    test.name,
-					Players: test.players,
+					Container: container.Container{
+						Name:    test.name,
+						Players: test.players,
+					},
 				},
 			})
 			if err != nil {
@@ -625,8 +629,10 @@ func TestUpdateCourt(t *testing.T) {
 			token:    CurrentToken,
 			id:       CurrentCourtID,
 			court: map[string]interface{}{
-				"Name":    "COURT 101",
-				"Players": []string{"bob", "jill", "alice"},
+				"Container": map[string]interface{}{
+					"Name":    "COURT 101",
+					"Players": []string{"bob", "jill", "alice"},
+				},
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -635,8 +641,10 @@ func TestUpdateCourt(t *testing.T) {
 			token:    "junk",
 			id:       CurrentCourtID,
 			court: map[string]interface{}{
-				"Name":    "COURT 101",
-				"Players": []string{},
+				"Container": map[string]interface{}{
+					"Name":    "COURT 101",
+					"Players": []string{},
+				},
 			},
 			expectedStatus: http.StatusUnauthorized,
 		},
@@ -645,8 +653,10 @@ func TestUpdateCourt(t *testing.T) {
 			token:    CurrentToken,
 			id:       "junk",
 			court: map[string]interface{}{
-				"Name":    "COURT 101",
-				"Players": []string{},
+				"Container": map[string]interface{}{
+					"Name":    "COURT 101",
+					"Players": []string{},
+				},
 			},
 			expectedStatus: http.StatusNotFound,
 		},
@@ -655,8 +665,10 @@ func TestUpdateCourt(t *testing.T) {
 			token:    CurrentToken,
 			id:       CurrentCourtID,
 			court: map[string]interface{}{
-				"Name":    "COURT 101",
-				"Players": []string{"junk"},
+				"Container": map[string]interface{}{
+					"Name":    "COURT 101",
+					"Players": []string{"junk"},
+				},
 			},
 			expectedStatus: http.StatusNotFound,
 		},
@@ -665,7 +677,7 @@ func TestUpdateCourt(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			requestBody, err := json.Marshal(httpHandler.UpdateCourtRequest{
+			requestBody, err := json.Marshal(httphandler.UpdateCourtRequest{
 				Token: test.token,
 				Court: test.court,
 			})
@@ -706,8 +718,8 @@ func TestUpdateCourt(t *testing.T) {
 					if !ok {
 						t.Errorf("The type of 'test.court[\"Name\"]' should be a string")
 					}
-					court.Name = value
-					assert.Equal(t, court.Name, value, "The Court name was not updated correctly")
+					court.Container.Name = value
+					assert.Equal(t, court.Container.Name, value, "The Court name was not updated correctly")
 				}
 
 				if i, ok := test.court["Players"]; ok {
@@ -715,9 +727,9 @@ func TestUpdateCourt(t *testing.T) {
 					if !ok {
 						t.Errorf("The type of 'test.court[\"Players\"]' should be an array of strings")
 					}
-					court.Players = value
-					if !Equal(court.Players, value) {
-						t.Errorf("The Court name was not updated correctly:\n got %v\n want %v", court.Players, value)
+					court.Container.Players = value
+					if !utilities.Equal(court.Container.Players, value) {
+						t.Errorf("The Court name was not updated correctly:\n got %v\n want %v", court.Container.Players, value)
 					}
 				}
 			}
@@ -763,7 +775,7 @@ func TestGetCourt(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			requestBody, err := json.Marshal(httpHandler.GetCourtRequest{
+			requestBody, err := json.Marshal(httphandler.GetCourtRequest{
 				Token: test.token,
 			})
 			if err != nil {
@@ -796,7 +808,7 @@ func TestGetCourt(t *testing.T) {
 				log.Fatalln(err)
 			}
 
-			var response httpHandler.GetCourtResponse
+			var response httphandler.GetCourtResponse
 
 			err = json.Unmarshal(bytes, &response)
 			if err != nil {
@@ -804,7 +816,7 @@ func TestGetCourt(t *testing.T) {
 			}
 
 			// Check the response body is what we expect.
-			actual := response.Court.Name
+			actual := response.Court.Container.Name
 			if actual != test.expectedResult {
 				t.Logf("actual:   <%v>", actual)
 				t.Logf("expected: <%v>", test.expectedResult)
@@ -842,7 +854,7 @@ func TestListCourts(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			requestBody, err := json.Marshal(httpHandler.ListCourtsRequest{
+			requestBody, err := json.Marshal(httphandler.ListCourtsRequest{
 				Token: test.token,
 			})
 			if err != nil {
@@ -876,7 +888,7 @@ func TestListCourts(t *testing.T) {
 			}
 
 			if rr.Code == http.StatusOK {
-				var response httpHandler.ListCourtsResponse
+				var response httphandler.ListCourtsResponse
 
 				err = json.Unmarshal(bytes, &response)
 				if err != nil {
@@ -884,7 +896,7 @@ func TestListCourts(t *testing.T) {
 				}
 
 				// Check the response body is what we expect.
-				if !Equal(response.Courts, test.expectedResult) {
+				if !utilities.Equal(response.Courts, test.expectedResult) {
 					t.Logf("actual:   %v", response.Courts)
 					t.Logf("expected: %v", test.expectedResult)
 					t.Errorf("Unexpected list of courts")
@@ -933,7 +945,7 @@ func TestDeleteCourt(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			requestBody, err := json.Marshal(httpHandler.ListCourtsRequest{
+			requestBody, err := json.Marshal(httphandler.ListCourtsRequest{
 				Token: test.token,
 			})
 			if err != nil {

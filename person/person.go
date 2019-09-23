@@ -13,7 +13,7 @@ import (
 	"github.com/rsmaxwell/players-api/session"
 )
 
-// Person Structure
+// Person type
 type Person struct {
 	FirstName      string `json:"firstname"`
 	LastName       string `json:"lastname"`
@@ -24,21 +24,21 @@ type Person struct {
 }
 
 var (
-	peopleDir     string
-	peopleListDir string
+	baseDir string
+	listDir string
 )
 
 func init() {
-	peopleDir = common.RootDir + "/people"
-	peopleListDir = peopleDir + "/list"
+	baseDir = common.RootDir + "/people"
+	listDir = baseDir + "/list"
 }
 
-// removeAllPeople removes ALL the person files
-func removeAllPeople() error {
+// removeAll removes ALL the people
+func removeAll() error {
 
-	_, err := os.Stat(peopleListDir)
+	_, err := os.Stat(listDir)
 	if err == nil {
-		err = common.RemoveContents(peopleListDir)
+		err = common.RemoveContents(listDir)
 		if err != nil {
 			return codeError.NewInternalServerError(err.Error())
 		}
@@ -47,17 +47,17 @@ func removeAllPeople() error {
 	return nil
 }
 
-// Clear - Just the list of people
+// Clear all the people
 func Clear() error {
 
-	err := removeAllPeople()
+	err := removeAll()
 	if err != nil {
-		return codeError.NewInternalServerError(err.Error())
+		return err
 	}
 
 	err = createDirs()
 	if err != nil {
-		return codeError.NewInternalServerError(err.Error())
+		return err
 	}
 
 	return nil
@@ -71,16 +71,16 @@ func makeFilename(id string) (string, error) {
 		return "", err
 	}
 
-	filename := peopleListDir + "/" + id + ".json"
+	filename := listDir + "/" + id + ".json"
 	return filename, nil
 }
 
 // createDirs  creates the people directory
 func createDirs() error {
 
-	_, err := os.Stat(peopleListDir)
+	_, err := os.Stat(listDir)
 	if err != nil {
-		err := os.MkdirAll(peopleListDir, 0755)
+		err := os.MkdirAll(listDir, 0755)
 		if err != nil {
 			return codeError.NewInternalServerError(err.Error())
 		}
@@ -155,31 +155,20 @@ func Update(id string, session *session.Session, person2 map[string]interface{})
 		person.Status = value
 	}
 
-	// Convert the 'person' object into a JSON string
-	personJSON, err := json.Marshal(person)
-	if err != nil {
-		return nil, codeError.NewInternalServerError(err.Error())
-	}
-
 	// Save the updated person to disk
-	filename, err := makeFilename(id)
+	err = Save(id, person)
 	if err != nil {
 		return nil, err
-	}
-
-	err = ioutil.WriteFile(filename, personJSON, 0644)
-	if err != nil {
-		return nil, codeError.NewInternalServerError(err.Error())
 	}
 
 	return person, nil
 }
 
-// Save adds a person to the list of people
-func Save(id string, person *Person) error {
+// Insert adds a person to the list
+func Insert(id string, person *Person) error {
 
 	// The first user must be made an 'admin' user
-	files, err := ioutil.ReadDir(peopleListDir)
+	files, err := ioutil.ReadDir(listDir)
 	if err != nil {
 		return codeError.NewInternalServerError(err.Error())
 	}
@@ -187,25 +176,34 @@ func Save(id string, person *Person) error {
 		person.Status = "admin"
 	}
 
-	// Convert the 'person' object into a JSON string
+	// Check the user does not already exist
+	found := Exists(id)
+	if found {
+		return codeError.NewInternalServerError(fmt.Sprintf("Person [%s] already exists", id))
+	}
+
+	// Save the updated court to disk
+	err = Save(id, person)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Save writes a Person to disk
+func Save(id string, person *Person) error {
+
 	personJSON, err := json.Marshal(person)
 	if err != nil {
 		return codeError.NewInternalServerError(err.Error())
 	}
 
-	// Save the updated court to disk
 	filename, err := makeFilename(id)
 	if err != nil {
 		return err
 	}
 
-	// Check the user does not already exist
-	found := Exists(id)
-	if found {
-		return codeError.NewInternalServerError(fmt.Sprintf("Person [%s] already exists", filename))
-	}
-
-	// Save the person to disk
 	err = ioutil.WriteFile(filename, personJSON, 0644)
 	if err != nil {
 		return codeError.NewInternalServerError(err.Error())
@@ -217,7 +215,7 @@ func Save(id string, person *Person) error {
 // List returns a list of the person IDs
 func List() ([]string, error) {
 
-	files, err := ioutil.ReadDir(peopleListDir)
+	files, err := ioutil.ReadDir(listDir)
 	if err != nil {
 		return nil, codeError.NewInternalServerError(err.Error())
 	}
@@ -262,7 +260,7 @@ func IsPlayer(id string) bool {
 	return person.Player
 }
 
-// Load returns the details of the person with the given ID
+// Load Load returns the Person with the given ID
 func Load(id string) (*Person, error) {
 
 	filename, err := makeFilename(id)
@@ -289,12 +287,11 @@ func Load(id string) (*Person, error) {
 // Remove the person with the given ID
 func Remove(id string) error {
 
-	var err error
-
 	filename, err := makeFilename(id)
 	if err != nil {
 		return err
 	}
+
 	_, err = os.Stat(filename)
 
 	if err == nil { // File exists
@@ -314,10 +311,15 @@ func Remove(id string) error {
 // Size returns the number of people
 func Size() (int, error) {
 
-	files, err := ioutil.ReadDir(peopleListDir)
+	files, err := ioutil.ReadDir(listDir)
 	if err != nil {
 		return 0, codeError.NewInternalServerError(err.Error())
 	}
 
 	return len(files), nil
+}
+
+// CheckConsistency function
+func CheckConsistency() error {
+	return nil
 }

@@ -1,10 +1,13 @@
-package httpHandler
+package httphandler
 
 import (
 	"encoding/json"
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/codeError"
+	"github.com/rsmaxwell/players-api/court"
+	"github.com/rsmaxwell/players-api/person"
+	"github.com/rsmaxwell/players-api/queue"
 )
 
 var (
@@ -58,4 +61,25 @@ func errorHandler(rw http.ResponseWriter, req *http.Request, err error) {
 		clientError++
 		return
 	}
+}
+
+// CheckConsistency checks the state on disk is consistent
+func CheckConsistency() error {
+
+	err := person.CheckConsistency()
+	if err != nil {
+		return err
+	}
+
+	err = court.CheckConsistency()
+	if err != nil {
+		return err
+	}
+
+	err = queue.CheckConsistency()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

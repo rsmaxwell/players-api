@@ -11,40 +11,38 @@ import (
 
 	"github.com/rsmaxwell/players-api/codeError"
 	"github.com/rsmaxwell/players-api/common"
-	"github.com/rsmaxwell/players-api/person"
+	"github.com/rsmaxwell/players-api/container"
 )
 
-// Info structure
+// Info type
 type Info struct {
 	NextID          int `json:"nextID"`
 	PlayersPerCourt int `json:"playersPerCourt"`
 }
 
-// Court Structure
+// Court type
 type Court struct {
-	Name    string   `json:"name"`
-	Players []string `json:"players"`
+	Container container.Container `json:"container"`
 }
 
 var (
-	courtDir      string
-	courtListDir  string
-	courtInfoFile string
+	baseDir  string
+	listDir  string
+	infoFile string
 )
 
 func init() {
-
-	courtDir = common.RootDir + "/courts"
-	courtListDir = courtDir + "/list"
-	courtInfoFile = courtDir + "/info.json"
+	baseDir = common.RootDir + "/courts"
+	listDir = baseDir + "/list"
+	infoFile = baseDir + "/info.json"
 }
 
-// removeAllCourts - remove the list of courts
-func removeAllCourts() error {
+// removeAll - remove All the courts
+func removeAll() error {
 
-	_, err := os.Stat(courtListDir)
+	_, err := os.Stat(listDir)
 	if err == nil {
-		err = common.RemoveContents(courtListDir)
+		err = common.RemoveContents(listDir)
 		if err != nil {
 			return codeError.NewInternalServerError(err.Error())
 		}
@@ -53,17 +51,17 @@ func removeAllCourts() error {
 	return nil
 }
 
-// Clear - Clear the list of courts
+// Clear all the courts
 func Clear() error {
 
-	err := removeAllCourts()
+	err := removeAll()
 	if err != nil {
 		return err
 	}
 
-	_, err = os.Stat(courtInfoFile)
+	_, err = os.Stat(infoFile)
 	if err == nil {
-		err = os.Remove(courtInfoFile)
+		err = os.Remove(infoFile)
 		if err != nil {
 			return err
 		}
@@ -82,25 +80,25 @@ func makeFilename(id string) (string, error) {
 
 	err := common.CheckCharactersInID(id)
 	if err != nil {
-		return "", codeError.NewBadRequest(err.Error())
+		return "", err
 	}
 
-	filename := courtListDir + "/" + id + ".json"
+	filename := listDir + "/" + id + ".json"
 	return filename, nil
 }
 
 // createDirs creates the people directory
 func createDirs() error {
 
-	_, err := os.Stat(courtListDir)
+	_, err := os.Stat(listDir)
 	if err != nil {
-		err := os.MkdirAll(courtListDir, 0755)
+		err := os.MkdirAll(listDir, 0755)
 		if err != nil {
 			return codeError.NewInternalServerError(err.Error())
 		}
 	}
 
-	_, err = createInfo()
+	_, err = GetInfo()
 	if err != nil {
 		return codeError.NewInternalServerError(err.Error())
 	}
@@ -111,7 +109,8 @@ func createDirs() error {
 // New initialises a Court object
 func New(name string) *Court {
 	court := new(Court)
-	court.Name = name
+	court.Container.Name = name
+	court.Container.Players = []string{}
 	return court
 }
 
@@ -123,84 +122,68 @@ func Update(id string, court2 map[string]interface{}) (*Court, error) {
 		return nil, codeError.NewNotFound(fmt.Sprintf("Court [%s] not found", id))
 	}
 
-	if v, ok := court2["Name"]; ok {
-		value, ok := v.(string)
-		if !ok {
-			return nil, codeError.NewBadRequest(fmt.Sprintf("'Name' was an unexpected type. Expected: 'string'. Actual: %T", v))
+	if v, ok := court2["Container"]; ok {
+		if container2, ok := v.(map[string]interface{}); ok {
+			err = container.Update(&court.Container, container2)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, codeError.NewInternalServerError(fmt.Sprintf("Unexpected Comtainer type: %v", v))
 		}
-		court.Name = value
-	}
-
-	if v, ok := court2["Players"]; ok {
-
-		array := []string{}
-		for _, i := range v.([]interface{}) {
-
-			id2, ok := i.(string)
-			if !ok {
-				return nil, codeError.NewBadRequest(fmt.Sprintf("'Player' was an unexpected type. Expected: 'string'. Actual: %T", i))
-			}
-
-			if !person.Exists(id2) {
-				return nil, codeError.NewNotFound(fmt.Sprintf("Person [%s] not found", id2))
-			}
-
-			if !person.IsPlayer(id2) {
-				return nil, codeError.NewBadRequest(fmt.Sprintf("Person [%s] is not a player", id2))
-			}
-
-			array = append(array, id2)
-		}
-		court.Players = array
-	}
-
-	// Convert the 'court' object into a JSON string
-	courtJSON, err := json.Marshal(court)
-	if err != nil {
-		return nil, codeError.NewInternalServerError(err.Error())
 	}
 
 	// Save the updated court to disk
-	filename, err := makeFilename(id)
+	err = Save(id, court)
 	if err != nil {
 		return nil, err
-	}
-
-	err = ioutil.WriteFile(filename, courtJSON, 0644)
-	if err != nil {
-		return nil, codeError.NewInternalServerError(err.Error())
 	}
 
 	return court, nil
 }
 
-// Save adds a court to the list of courts
-func Save(court *Court) (string, error) {
+// Insert adds a new court to the list
+func Insert(court *Court) (string, error) {
 
 	count, err := getAndIncrementCurrentCourtID()
 	if err != nil {
 		return "", codeError.NewInternalServerError(err.Error())
 	}
 
-	courtJSON, err := json.Marshal(court)
-	if err != nil {
-		return "", codeError.NewInternalServerError(err.Error())
-	}
-
 	id := strconv.Itoa(count)
-	filename := courtListDir + "/" + id + ".json"
-	err = ioutil.WriteFile(filename, courtJSON, 0644)
+	err = Save(id, court)
 	if err != nil {
-		return "", codeError.NewInternalServerError(err.Error())
+		return "", err
 	}
 
 	return id, nil
 }
 
+// Save writes a Court to disk
+func Save(id string, court *Court) error {
+
+	courtJSON, err := json.Marshal(court)
+	if err != nil {
+		return codeError.NewInternalServerError(err.Error())
+	}
+
+	filename, err := makeFilename(id)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(filename, courtJSON, 0644)
+	if err != nil {
+		return codeError.NewInternalServerError(err.Error())
+	}
+
+	return nil
+}
+
 // List returns a list of the court IDs
 func List() ([]string, error) {
 
-	files, err := ioutil.ReadDir(courtListDir)
+	files, err := ioutil.ReadDir(listDir)
 	if err != nil {
 		return nil, codeError.NewInternalServerError(err.Error())
 	}
@@ -231,7 +214,7 @@ func Exists(id string) bool {
 	return true
 }
 
-// Get returns the details of the court with the given ID
+// Load returns the Court with the given ID
 func Load(id string) (*Court, error) {
 
 	filename, err := makeFilename(id)
@@ -279,10 +262,10 @@ func Remove(id string) error {
 	return codeError.NewInternalServerError(err.Error())
 }
 
-// createInfo initialises the Info objects
-func createInfo() (*Info, error) {
+// GetInfo returns the Court class data
+func GetInfo() (*Info, error) {
 
-	if _, err := os.Stat(courtInfoFile); os.IsNotExist(err) {
+	if _, err := os.Stat(infoFile); os.IsNotExist(err) {
 
 		info := new(Info)
 		info.NextID = 1000
@@ -293,13 +276,13 @@ func createInfo() (*Info, error) {
 			return nil, codeError.NewInternalServerError(err.Error())
 		}
 
-		err = ioutil.WriteFile(courtInfoFile, infoJSON, 0644)
+		err = ioutil.WriteFile(infoFile, infoJSON, 0644)
 		if err != nil {
 			return nil, codeError.NewInternalServerError(err.Error())
 		}
 	}
 
-	data, err := ioutil.ReadFile(courtInfoFile)
+	data, err := ioutil.ReadFile(infoFile)
 	if err != nil {
 		return nil, codeError.NewInternalServerError(err.Error())
 	}
@@ -313,30 +296,6 @@ func createInfo() (*Info, error) {
 	return &i, nil
 }
 
-// GetInfo returns the Court class data
-func GetInfo() (*Info, error) {
-
-	// Make sure the court directory and info file exists
-	_, err := createInfo()
-	if err != nil {
-		return nil, err
-	}
-
-	// Read the court info file
-	data, err := ioutil.ReadFile(courtInfoFile)
-	if err != nil {
-		return nil, codeError.NewInternalServerError(err.Error())
-	}
-
-	var i Info
-	err = json.Unmarshal(data, &i)
-	if err != nil {
-		return nil, codeError.NewInternalServerError(err.Error())
-	}
-
-	return &i, err
-}
-
 // saveInfo save the Court class info
 func saveInfo(i Info) error {
 
@@ -345,7 +304,7 @@ func saveInfo(i Info) error {
 		return codeError.NewInternalServerError(err.Error())
 	}
 
-	err = ioutil.WriteFile(courtInfoFile, infoJSON, 0644)
+	err = ioutil.WriteFile(infoFile, infoJSON, 0644)
 	if err != nil {
 		return codeError.NewInternalServerError(err.Error())
 	}
@@ -375,10 +334,15 @@ func getAndIncrementCurrentCourtID() (int, error) {
 // Size returns the number of courts
 func Size() (int, error) {
 
-	files, err := ioutil.ReadDir(courtListDir)
+	files, err := ioutil.ReadDir(listDir)
 	if err != nil {
 		return 0, codeError.NewInternalServerError(err.Error())
 	}
 
 	return len(files), nil
+}
+
+// CheckConsistency function
+func CheckConsistency() error {
+	return nil
 }

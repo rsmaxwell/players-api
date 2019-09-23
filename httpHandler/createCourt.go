@@ -1,4 +1,4 @@
-package httpHandler
+package httphandler
 
 import (
 	"encoding/json"
@@ -56,14 +56,14 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if len(r.Court.Players) > info.PlayersPerCourt {
+	if len(r.Court.Container.Players) > info.PlayersPerCourt {
 		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too many players on court"))
 		serverError++
 		return
 	}
 
 	// Check the people on the court are valid
-	for _, id := range r.Court.Players {
+	for _, id := range r.Court.Container.Players {
 		p, err := person.Load(id)
 		if err != nil {
 			errorHandler(rw, req, err)
@@ -83,7 +83,7 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	id, err := court.Save(&r.Court)
+	id, err := court.Insert(&r.Court)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

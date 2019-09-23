@@ -19,14 +19,14 @@ import (
 // removeDir - Remove the people directory
 func removeDir() error {
 
-	_, err := os.Stat(peopleDir)
+	_, err := os.Stat(baseDir)
 	if err == nil {
-		err = common.RemoveContents(peopleDir)
+		err = common.RemoveContents(baseDir)
 		if err != nil {
 			return codeError.NewInternalServerError(err.Error())
 		}
 
-		err = os.Remove(peopleDir)
+		err = os.Remove(baseDir)
 		if err != nil {
 			return codeError.NewInternalServerError(err.Error())
 		}

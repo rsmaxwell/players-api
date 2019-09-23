@@ -11,6 +11,7 @@ import (
 
 	"github.com/rsmaxwell/players-api/codeError"
 	"github.com/rsmaxwell/players-api/common"
+	"github.com/rsmaxwell/players-api/container"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,14 +19,14 @@ import (
 // RemoveDir - Remove the court directory
 func RemoveDir() error {
 
-	_, err := os.Stat(courtDir)
+	_, err := os.Stat(baseDir)
 	if err == nil {
-		err = common.RemoveContents(courtDir)
+		err = common.RemoveContents(baseDir)
 		if err != nil {
 			return codeError.NewInternalServerError(err.Error())
 		}
 
-		err = os.Remove(courtDir)
+		err = os.Remove(baseDir)
 		if err != nil {
 			return codeError.NewInternalServerError(err.Error())
 		}
@@ -40,7 +41,7 @@ func TestClearCourts(t *testing.T) {
 	err := Clear()
 	r.Nil(err, "err should be nothing")
 
-	_, err = os.Stat(courtInfoFile)
+	_, err = os.Stat(infoFile)
 	r.Nil(err, "err should be nothing")
 }
 
@@ -50,13 +51,13 @@ func TestResetCourt(t *testing.T) {
 	err := Clear()
 	r.Nil(err, "err should be nothing")
 
-	_, err = Save(New("fred"))
+	_, err = Insert(New("fred"))
 	r.Nil(err, "err should be nothing")
 
-	_, err = Save(New("bloggs"))
+	_, err = Insert(New("bloggs"))
 	r.Nil(err, "err should be nothing")
 
-	_, err = os.Stat(courtInfoFile)
+	_, err = os.Stat(infoFile)
 	r.Nil(err, "err should be nothing")
 
 	list, err := List()
@@ -69,20 +70,20 @@ func TestAddCourt(t *testing.T) {
 	err := Clear()
 	r.Nil(err, "err should be nothing")
 
-	_, err = Save(New("fred"))
+	_, err = Insert(New("fred"))
 	r.Nil(err, "err should be nothing")
 
-	_, err = Save(New("bloggs"))
+	_, err = Insert(New("bloggs"))
 	r.Nil(err, "err should be nothing")
 
-	_, err = os.Stat(courtInfoFile)
+	_, err = os.Stat(infoFile)
 	r.Nil(err, "err should be nothing")
 
 	list, err := List()
 	r.Nil(err, "err should be nothing")
 	r.Equal(2, len(list), fmt.Sprintf("Unexpected size of List: expected: %d, Actual: %d", 2, len(list)))
 
-	_, err = Save(New("harry"))
+	_, err = Insert(New("harry"))
 	r.Nil(err, "err should be nothing")
 
 	list, err = List()
@@ -95,7 +96,7 @@ func TestNewInfoJunkCourt(t *testing.T) {
 	err := Clear()
 	r.Nil(err, "err should be nothing")
 
-	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
+	err = ioutil.WriteFile(infoFile, []byte("junk"), 0644)
 	r.Nil(err, "err should be nothing")
 }
 
@@ -107,12 +108,12 @@ func TestNewInfoUnreadableInfofileCourt(t *testing.T) {
 	r.Nil(err, "err should be nothing")
 
 	// Make the court info file unreadable
-	t.Logf("Make the file \"%s\" unreadable", courtInfoFile)
-	err = os.Chmod(courtInfoFile, 0000)
+	t.Logf("Make the file \"%s\" unreadable", infoFile)
+	err = os.Chmod(infoFile, 0000)
 	r.Nil(err, "err should be nothing")
 
 	// Attempt to use the info file
-	_, err = Save(New("fred"))
+	_, err = Insert(New("fred"))
 	if err != nil {
 		if cerr, ok := err.(*codeError.CodeError); ok {
 			if cerr.Code() != http.StatusInternalServerError {
@@ -148,7 +149,7 @@ func TestGetAndIncrementCurrentIDNoInfofileCourt(t *testing.T) {
 
 	// Remove the court info file
 	t.Logf("Remove the court info file")
-	err = os.Remove(courtInfoFile)
+	err = os.Remove(infoFile)
 	r.Nil(err, "err should be nothing")
 
 	assert.NotPanics(t, func() {
@@ -163,7 +164,7 @@ func TestGetAndIncrementCurrentIDJunkContentsCourt(t *testing.T) {
 	err := Clear()
 	r.Nil(err, "err should be nothing")
 
-	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
+	err = ioutil.WriteFile(infoFile, []byte("junk"), 0644)
 	r.Nil(err, "err should be nothing")
 
 	_, err = getAndIncrementCurrentCourtID()
@@ -188,19 +189,19 @@ func TestCourt(t *testing.T) {
 	r.Nil(err, "err should be nothing")
 
 	// Create a number of new Courts
-	_, err = Save(New("Fred"))
+	_, err = Insert(New("Fred"))
 	r.Nil(err, "err should be nothing")
 
-	_, err = Save(New("Bloggs"))
+	_, err = Insert(New("Bloggs"))
 	r.Nil(err, "err should be nothing")
 
-	_, err = Save(New("Jane"))
+	_, err = Insert(New("Jane"))
 	r.Nil(err, "err should be nothing")
 
-	_, err = Save(New("Alice"))
+	_, err = Insert(New("Alice"))
 	r.Nil(err, "err should be nothing")
 
-	_, err = Save(New("Bob"))
+	_, err = Insert(New("Bob"))
 	r.Nil(err, "err should be nothing")
 
 	// Check the expected number of Courts have been created
@@ -219,7 +220,7 @@ func TestCourt(t *testing.T) {
 			r.Nil(err, "err should be nothing")
 
 			equal := true
-			if c.Name != c2.Name {
+			if !container.Equal(c.Container, c2.Container) {
 				equal = false
 			}
 
@@ -285,11 +286,11 @@ func TestListCourtsWithDuffPlayerFile(t *testing.T) {
 	r.Nil(err, "err should be nothing")
 
 	// Create a new court file with junk contents
-	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
+	err = ioutil.WriteFile(infoFile, []byte("junk"), 0644)
 	r.Nil(err, "err should be nothing")
 
 	// Attempt to use the court info file
-	_, err = Save(New("junk"))
+	_, err = Insert(New("junk"))
 	if err == nil {
 		r.Fail(fmt.Sprintf("Expected an error. actually got: [%v].", err))
 	} else {
@@ -355,7 +356,7 @@ func TestLoadWithDuffCourtFile(t *testing.T) {
 	r.Nil(err, "err should be nothing")
 
 	// Create a new court file with junk contents
-	filename := courtListDir + "/junk.json"
+	filename := listDir + "/junk.json"
 	err = ioutil.WriteFile(filename, []byte("junk"), 0644)
 	r.Nil(err, "err should be nothing")
 

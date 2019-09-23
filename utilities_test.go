@@ -11,8 +11,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rsmaxwell/players-api/container"
 	"github.com/rsmaxwell/players-api/court"
-	"github.com/rsmaxwell/players-api/httpHandler"
+	"github.com/rsmaxwell/players-api/httphandler"
 	"github.com/rsmaxwell/players-api/person"
 )
 
@@ -45,7 +46,7 @@ func Register(userID, password, firstName, lastName, email string) {
 		log.Fatalln(err)
 	}
 
-	httpHandler.Register(rw, req)
+	httphandler.Register(rw, req)
 }
 
 func basicAuth(username, password string) string {
@@ -64,14 +65,14 @@ func Login(userID, password string) string {
 
 	rw := httptest.NewRecorder()
 
-	httpHandler.Login(rw, req)
+	httphandler.Login(rw, req)
 
 	bytes, err := ioutil.ReadAll(rw.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	var response httpHandler.LogonResponse
+	var response httphandler.LogonResponse
 
 	err = json.Unmarshal(bytes, &response)
 	if err != nil {
@@ -83,7 +84,7 @@ func Login(userID, password string) string {
 
 func UpdatePerson(token, userID string, person2 map[string]interface{}) {
 
-	request := httpHandler.UpdatePersonRequest{Token: token, Person: person2}
+	request := httphandler.UpdatePersonRequest{Token: token, Person: person2}
 	requestBody, err := json.Marshal(request)
 	if err != nil {
 		log.Fatalln(err)
@@ -96,7 +97,7 @@ func UpdatePerson(token, userID string, person2 map[string]interface{}) {
 
 	rw := httptest.NewRecorder()
 
-	httpHandler.UpdatePerson(rw, req, userID)
+	httphandler.UpdatePerson(rw, req, userID)
 
 	if rw.Code != http.StatusOK {
 		log.Fatalln(err)
@@ -104,11 +105,13 @@ func UpdatePerson(token, userID string, person2 map[string]interface{}) {
 }
 
 func CreateCourt(token, name string, players []string) {
-	requestBody, err := json.Marshal(httpHandler.CreateCourtRequest{
+	requestBody, err := json.Marshal(httphandler.CreateCourtRequest{
 		Token: token,
 		Court: court.Court{
-			Name:    name,
-			Players: players,
+			Container: container.Container{
+				Name:    name,
+				Players: players,
+			},
 		},
 	})
 	if err != nil {
@@ -122,7 +125,7 @@ func CreateCourt(token, name string, players []string) {
 		log.Fatalln(err)
 	}
 
-	httpHandler.CreateCourt(rw, req)
+	httphandler.CreateCourt(rw, req)
 
 	if rw.Code != 200 {
 		bytes, err := ioutil.ReadAll(rw.Body)
@@ -214,38 +217,4 @@ func setupFull(t *testing.T) func(t *testing.T) {
 		person.Clear()
 		court.Clear()
 	}
-}
-
-// Equal tells whether a and b contain the same elements without order
-func Equal(x, y []string) bool {
-
-	if x == nil {
-		if y == nil {
-			return true
-		}
-		return false
-	} else if y == nil {
-		return false
-	}
-
-	if len(x) != len(y) {
-		return false
-	}
-
-	xMap := make(map[string]int)
-	yMap := make(map[string]int)
-
-	for _, xElem := range x {
-		xMap[xElem]++
-	}
-	for _, yElem := range y {
-		yMap[yElem]++
-	}
-
-	for xMapKey, xMapVal := range xMap {
-		if yMap[xMapKey] != xMapVal {
-			return false
-		}
-	}
-	return true
 }

@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/rsmaxwell/players-api/httpHandler"
+	"github.com/rsmaxwell/players-api/httphandler"
 )
 
 var (
@@ -20,67 +20,77 @@ func setupHandlers(r *mux.Router) {
 
 	r.HandleFunc("/register",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.Register(w, req)
+			httphandler.Register(w, req)
 		}).Methods(http.MethodPost)
 
 	r.HandleFunc("/login",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.Login(w, req)
+			httphandler.Login(w, req)
 		}).Methods(http.MethodGet)
 
 	r.HandleFunc("/court",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.ListCourts(w, req)
+			httphandler.ListCourts(w, req)
 		}).Methods(http.MethodGet)
 
 	r.HandleFunc("/court/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.GetCourt(w, req, mux.Vars(req)["id"])
+			httphandler.GetCourt(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodGet)
 
 	r.HandleFunc("/court",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.CreateCourt(w, req)
+			httphandler.CreateCourt(w, req)
 		}).Methods(http.MethodPost)
 
 	r.HandleFunc("/court/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.UpdateCourt(w, req, mux.Vars(req)["id"])
+			httphandler.UpdateCourt(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodPut)
 
 	r.HandleFunc("/court/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.DeleteCourt(w, req, mux.Vars(req)["id"])
+			httphandler.DeleteCourt(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodDelete)
 
 	r.HandleFunc("/person",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.ListPeople(w, req)
+			httphandler.ListPeople(w, req)
 		}).Methods(http.MethodGet)
 
 	r.HandleFunc("/person/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.GetPerson(w, req, mux.Vars(req)["id"])
+			httphandler.GetPerson(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodGet)
 
 	r.HandleFunc("/person/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.UpdatePerson(w, req, mux.Vars(req)["id"])
+			httphandler.UpdatePerson(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodPut)
 
 	r.HandleFunc("/person/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.DeletePerson(w, req, mux.Vars(req)["id"])
+			httphandler.DeletePerson(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodDelete)
 
 	r.HandleFunc("/metrics",
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.GetMetrics(w, req)
+			httphandler.GetMetrics(w, req)
+		}).Methods(http.MethodGet)
+
+	r.HandleFunc("/queue",
+		func(w http.ResponseWriter, req *http.Request) {
+			httphandler.GetQueue(w, req)
+		}).Methods(http.MethodGet)
+
+	r.HandleFunc("/move",
+		func(w http.ResponseWriter, req *http.Request) {
+			httphandler.PostMove(w, req)
 		}).Methods(http.MethodGet)
 
 	r.NotFoundHandler = http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
-			httpHandler.NotFound(w, req)
+			httphandler.NotFound(w, req)
 		})
 }
 

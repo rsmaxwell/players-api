@@ -178,8 +178,3 @@ func Load() (*Queue, error) {
 	}
 	return &q, nil
 }
-
-// CheckConsistency function
-func CheckConsistency() error {
-	return nil
-}

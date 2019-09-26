@@ -10,30 +10,10 @@ import (
 	"testing"
 
 	"github.com/rsmaxwell/players-api/codeError"
-	"github.com/rsmaxwell/players-api/common"
 	"github.com/rsmaxwell/players-api/container"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// RemoveDir - Remove the court directory
-func RemoveDir() error {
-
-	_, err := os.Stat(baseDir)
-	if err == nil {
-		err = common.RemoveContents(baseDir)
-		if err != nil {
-			return codeError.NewInternalServerError(err.Error())
-		}
-
-		err = os.Remove(baseDir)
-		if err != nil {
-			return codeError.NewInternalServerError(err.Error())
-		}
-	}
-
-	return nil
-}
 
 func TestClearCourts(t *testing.T) {
 	r := require.New(t)
@@ -301,50 +281,6 @@ func TestListCourtsWithDuffPlayerFile(t *testing.T) {
 		} else {
 			r.Fail(fmt.Sprintf("Unexpected error: [%v]", err))
 		}
-	}
-}
-
-func TestListCourtsWithNoCourtsDirectory(t *testing.T) {
-	r := require.New(t)
-
-	// Remove the court directory
-	err := RemoveDir()
-	r.Nil(err, "err should be nothing")
-
-	// Check that List returns an error
-	_, err = List()
-	if err != nil {
-		if cerr, ok := err.(*codeError.CodeError); ok {
-			if cerr.Code() != http.StatusInternalServerError {
-				r.Fail(fmt.Sprintf("Unexpected error code: %d", cerr.Code()))
-			}
-		} else {
-			r.Fail(fmt.Sprintf("Unexpected error: Expected = [*codeError.CodeError], Got = [%v}].", err))
-		}
-	} else {
-		t.Errorf("Unexpected success")
-	}
-}
-
-func TestLoadWithNoCourtDirectory(t *testing.T) {
-	r := require.New(t)
-
-	// Remove the court directory
-	err := RemoveDir()
-	r.Nil(err, "err should be nothing")
-
-	// Attempt to use the court directory
-	_, err = Load("junk")
-	if err != nil {
-		if cerr, ok := err.(*codeError.CodeError); ok {
-			if cerr.Code() != http.StatusNotFound {
-				r.Fail(fmt.Sprintf("Unexpected error code: %d", cerr.Code()))
-			}
-		} else {
-			r.Fail(fmt.Sprintf("Unexpected error: Expected = [*codeError.CodeError], Got = [%v}].", err))
-		}
-	} else {
-		r.Fail("Unexpected success")
 	}
 }
 

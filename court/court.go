@@ -341,8 +341,3 @@ func Size() (int, error) {
 
 	return len(files), nil
 }
-
-// CheckConsistency function
-func CheckConsistency() error {
-	return nil
-}

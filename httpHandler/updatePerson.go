@@ -37,7 +37,7 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
 
 	session := session.LookupToken(r.Token)
 	if session == nil {
-		WriteResponse(rw, http.StatusBadRequest, "Not Authorized")
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
 		clientError++
 		return
 	}

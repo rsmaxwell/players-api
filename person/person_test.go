@@ -10,30 +10,10 @@ import (
 	"testing"
 
 	"github.com/rsmaxwell/players-api/codeError"
-	"github.com/rsmaxwell/players-api/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// removeDir - Remove the people directory
-func removeDir() error {
-
-	_, err := os.Stat(baseDir)
-	if err == nil {
-		err = common.RemoveContents(baseDir)
-		if err != nil {
-			return codeError.NewInternalServerError(err.Error())
-		}
-
-		err = os.Remove(baseDir)
-		if err != nil {
-			return codeError.NewInternalServerError(err.Error())
-		}
-	}
-
-	return nil
-}
 
 func ResetPeople(t *testing.T) {
 	r := require.New(t)
@@ -242,50 +222,6 @@ func TestListPeopleWithDuffPlayerFile(t *testing.T) {
 			}
 		} else {
 			r.Fail(fmt.Sprintf("%s", err))
-		}
-	} else {
-		r.Fail("Unexpected success")
-	}
-}
-
-func TestListPersonWithNoPeopleDirectory(t *testing.T) {
-	r := require.New(t)
-
-	// Clear the people directory
-	err := removeDir()
-	r.Nil(err, "err should be nothing")
-
-	// Attempt to use the people directory
-	_, err = List()
-	if err != nil {
-		if cerr, ok := err.(*codeError.CodeError); ok {
-			if cerr.Code() != http.StatusInternalServerError {
-				r.Fail(fmt.Sprintf("Unexpected error type: expected: %d, Actual: %d", http.StatusNotFound, cerr.Code()))
-			}
-		} else {
-			r.Fail(fmt.Sprintf("%s", err))
-		}
-	} else {
-		r.Fail("Unexpected success")
-	}
-}
-
-func TestLoadWithNoPeopleDirectory(t *testing.T) {
-	r := require.New(t)
-
-	// Remove the people directory
-	err := removeDir()
-	r.Nil(err, "err should be nothing")
-
-	// Attempt to use the people directory
-	_, err = Load("0")
-	if err != nil {
-		if cerr, ok := err.(*codeError.CodeError); ok {
-			if cerr.Code() != http.StatusNotFound {
-				r.Fail(fmt.Sprintf("Unexpected error type: expected: %d, Actual: %d", http.StatusNotFound, cerr.Code()))
-			}
-		} else {
-			r.Fail(fmt.Sprintf("Unexpected error type: expected: %s, Actual: %T", "*codeError.CodeError", err))
 		}
 	} else {
 		r.Fail("Unexpected success")

@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/court"
+	"github.com/rsmaxwell/players-api/destination"
 	"github.com/rsmaxwell/players-api/session"
 )
 
@@ -17,7 +17,7 @@ type GetCourtRequest struct {
 
 // GetCourtResponse structure
 type GetCourtResponse struct {
-	Court court.Court `json:"court"`
+	Court destination.Court `json:"court"`
 }
 
 // GetCourt method
@@ -46,7 +46,7 @@ func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	court, err := court.Load(id)
+	court, err := destination.LoadCourt(id)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

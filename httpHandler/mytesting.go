@@ -4,9 +4,8 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/rsmaxwell/players-api/court"
+	"github.com/rsmaxwell/players-api/destination"
 	"github.com/rsmaxwell/players-api/person"
-	"github.com/rsmaxwell/players-api/queue"
 	"github.com/rsmaxwell/players-api/session"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -97,7 +96,7 @@ func createplayers(r *require.Assertions) {
 
 func createcourt(r *require.Assertions, name string) {
 
-	id, err := court.Insert(court.New(name))
+	id, err := destination.NewCourt(name).Insert()
 	r.Nil(err, "err should be nothing")
 
 	AllCourtIDs = append(AllCourtIDs, id)
@@ -114,13 +113,13 @@ func createcourts(r *require.Assertions) {
 // SetupEmpty creates a single person
 func SetupEmpty(t *testing.T) func(t *testing.T) {
 	person.Clear()
-	court.Clear()
-	queue.Clear()
+	destination.ClearCourts()
+	destination.ClearQueue()
 
 	return func(t *testing.T) {
 		person.Clear()
-		court.Clear()
-		queue.Clear()
+		destination.ClearCourts()
+		destination.ClearQueue()
 	}
 }
 
@@ -129,8 +128,8 @@ func SetupOne(t *testing.T) func(t *testing.T) {
 	r := require.New(t)
 
 	person.Clear()
-	court.Clear()
-	queue.Clear()
+	destination.ClearCourts()
+	destination.ClearQueue()
 
 	AllPeopleIDs = []string{}
 	AllCourtIDs = []string{}
@@ -139,8 +138,8 @@ func SetupOne(t *testing.T) func(t *testing.T) {
 
 	return func(t *testing.T) {
 		person.Clear()
-		court.Clear()
-		queue.Clear()
+		destination.ClearCourts()
+		destination.ClearQueue()
 	}
 }
 
@@ -149,8 +148,8 @@ func SetupLoggedin(t *testing.T) func(t *testing.T) {
 	r := require.New(t)
 
 	person.Clear()
-	court.Clear()
-	queue.Clear()
+	destination.ClearCourts()
+	destination.ClearQueue()
 
 	getSession(r, "007")
 
@@ -161,8 +160,8 @@ func SetupLoggedin(t *testing.T) func(t *testing.T) {
 
 	return func(t *testing.T) {
 		person.Clear()
-		court.Clear()
-		queue.Clear()
+		destination.ClearCourts()
+		destination.ClearQueue()
 	}
 }
 
@@ -171,8 +170,8 @@ func SetupFull(t *testing.T) func(t *testing.T) {
 	r := require.New(t)
 
 	person.Clear()
-	court.Clear()
-	queue.Clear()
+	destination.ClearCourts()
+	destination.ClearQueue()
 
 	getSession(r, "007")
 
@@ -183,7 +182,7 @@ func SetupFull(t *testing.T) func(t *testing.T) {
 
 	return func(t *testing.T) {
 		person.Clear()
-		court.Clear()
-		queue.Clear()
+		destination.ClearCourts()
+		destination.ClearQueue()
 	}
 }

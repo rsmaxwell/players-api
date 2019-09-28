@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/rsmaxwell/players-api/court"
+	"github.com/rsmaxwell/players-api/destination"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +48,7 @@ func TestDeleteCourt(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			initialNumberOfCourts, err := court.Size()
+			initialNumberOfCourts, err := destination.CourtSize()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -70,23 +70,23 @@ func TestDeleteCourt(t *testing.T) {
 			SetupHandlers(router)
 
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-			rr := httptest.NewRecorder()
+			rw := httptest.NewRecorder()
 
 			// Our router satisfies http.Handler, so we can its ServeHTTP method
 			// directly and pass in our ResponseRecorder and Request.
-			router.ServeHTTP(rr, req)
+			router.ServeHTTP(rw, req)
 
 			// Check the status code is what we expect.
-			if rr.Code != test.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, test.expectedStatus)
+			if rw.Code != test.expectedStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus)
 			}
 
-			finalNumberOfCourts, err := court.Size()
+			finalNumberOfCourts, err := destination.CourtSize()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if rr.Code == http.StatusOK {
+			if rw.Code == http.StatusOK {
 				assert.Equal(t, initialNumberOfCourts, finalNumberOfCourts+1, "Court was not deleted")
 			} else {
 				assert.Equal(t, initialNumberOfCourts, finalNumberOfCourts, "Unexpected number of courts")

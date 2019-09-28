@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/court"
+	"github.com/rsmaxwell/players-api/destination"
 	"github.com/rsmaxwell/players-api/session"
 )
 
@@ -42,7 +42,7 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	_, err = court.Update(id, r.Court)
+	err = destination.UpdateCourt(id, r.Court)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

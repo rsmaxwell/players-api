@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/court"
+	"github.com/rsmaxwell/players-api/destination"
 	"github.com/rsmaxwell/players-api/session"
 )
 
@@ -46,7 +46,7 @@ func ListCourts(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	listOfCourts, err := court.List()
+	listOfCourts, err := destination.ListCourts()
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

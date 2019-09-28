@@ -11,8 +11,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/rsmaxwell/players-api/container"
-	"github.com/rsmaxwell/players-api/court"
+	"github.com/rsmaxwell/players-api/destination"
 	"github.com/rsmaxwell/players-api/httphandler"
 	"github.com/rsmaxwell/players-api/person"
 )
@@ -107,8 +106,8 @@ func UpdatePerson(token, userID string, person2 map[string]interface{}) {
 func CreateCourt(token, name string, players []string) {
 	requestBody, err := json.Marshal(httphandler.CreateCourtRequest{
 		Token: token,
-		Court: court.Court{
-			Container: container.Container{
+		Court: destination.Court{
+			Container: destination.Container{
 				Name:    name,
 				Players: players,
 			},
@@ -139,17 +138,20 @@ func CreateCourt(token, name string, players []string) {
 
 func setupEmpty(t *testing.T) func(t *testing.T) {
 	person.Clear()
-	court.Clear()
+	destination.ClearCourts()
+	destination.ClearQueue()
 
 	return func(t *testing.T) {
 		person.Clear()
-		court.Clear()
+		destination.ClearCourts()
+		destination.ClearQueue()
 	}
 }
 
 func setupOne(t *testing.T) func(t *testing.T) {
 	person.Clear()
-	court.Clear()
+	destination.ClearCourts()
+	destination.ClearQueue()
 
 	Register("007", "topsecret", "James", "Bond", "james@mi6.co.uk")
 
@@ -158,13 +160,15 @@ func setupOne(t *testing.T) func(t *testing.T) {
 
 	return func(t *testing.T) {
 		person.Clear()
-		court.Clear()
+		destination.ClearCourts()
+		destination.ClearQueue()
 	}
 }
 
 func setupLoggedin(t *testing.T) func(t *testing.T) {
 	person.Clear()
-	court.Clear()
+	destination.ClearCourts()
+	destination.ClearQueue()
 
 	Register("007", "topsecret", "James", "Bond", "james@mi6.co.uk")
 
@@ -175,14 +179,16 @@ func setupLoggedin(t *testing.T) func(t *testing.T) {
 
 	return func(t *testing.T) {
 		person.Clear()
-		court.Clear()
+		destination.ClearCourts()
+		destination.ClearQueue()
 	}
 }
 
 func setupFull(t *testing.T) func(t *testing.T) {
 
 	person.Clear()
-	court.Clear()
+	destination.ClearCourts()
+	destination.ClearQueue()
 
 	Register("007", "topsecret", "James", "Bond", "james@mi6.co.uk")
 	Register("bob", "qwerty", "Robert", "Bruce", "bob@aol.com")
@@ -215,6 +221,7 @@ func setupFull(t *testing.T) func(t *testing.T) {
 
 	return func(t *testing.T) {
 		person.Clear()
-		court.Clear()
+		destination.ClearCourts()
+		destination.ClearQueue()
 	}
 }

@@ -7,9 +7,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/codeError"
-	"github.com/rsmaxwell/players-api/court"
+	"github.com/rsmaxwell/players-api/destination"
 	"github.com/rsmaxwell/players-api/person"
-	"github.com/rsmaxwell/players-api/queue"
 )
 
 var (
@@ -108,12 +107,12 @@ func startup() error {
 	}
 
 	// Subtract the players on courts away from the list of players
-	listOfCourts, err := court.List()
+	listOfCourts, err := destination.ListCourts()
 	if err != nil {
 		return err
 	}
 	for _, id := range listOfCourts {
-		c, err := court.Load(id)
+		c, err := destination.LoadCourt(id)
 		if err != nil {
 			return err
 		}
@@ -126,7 +125,7 @@ func startup() error {
 	}
 
 	// Subtract the players waiting in the queue away from the list of players
-	q, err := queue.Load()
+	q, err := destination.LoadQueue()
 	if err != nil {
 		return err
 	}
@@ -142,7 +141,7 @@ func startup() error {
 	}
 
 	// Save the updated queue
-	err = queue.Save(q)
+	err = q.Save()
 	if err != nil {
 		return err
 	}
@@ -221,7 +220,7 @@ func SetupHandlers(r *mux.Router) {
 	r.HandleFunc("/move",
 		func(w http.ResponseWriter, req *http.Request) {
 			PostMove(w, req)
-		}).Methods(http.MethodGet)
+		}).Methods(http.MethodPost)
 
 	r.HandleFunc("/queue",
 		func(w http.ResponseWriter, req *http.Request) {

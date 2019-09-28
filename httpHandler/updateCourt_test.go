@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/rsmaxwell/players-api/court"
+	"github.com/rsmaxwell/players-api/destination"
 	"github.com/rsmaxwell/players-api/utilities"
 
 	"github.com/gorilla/mux"
@@ -98,20 +98,20 @@ func TestUpdateCourt(t *testing.T) {
 			SetupHandlers(router)
 
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-			rr := httptest.NewRecorder()
+			rw := httptest.NewRecorder()
 
 			// Our router satisfies http.Handler, so we can call its ServeHTTP method
 			// directly and pass in our ResponseRecorder and Request.
-			router.ServeHTTP(rr, req)
+			router.ServeHTTP(rw, req)
 
 			// Check the status code is what we expect.
-			if rr.Code != test.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, test.expectedStatus)
+			if rw.Code != test.expectedStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus)
 			}
 
 			// Check the court was actually updated
-			if rr.Code == http.StatusOK {
-				court, err := court.Load(test.id)
+			if rw.Code == http.StatusOK {
+				c, err := destination.LoadCourt(test.id)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -121,8 +121,8 @@ func TestUpdateCourt(t *testing.T) {
 					if !ok {
 						t.Errorf("The type of 'test.court[\"Name\"]' should be a string")
 					}
-					court.Container.Name = value
-					assert.Equal(t, court.Container.Name, value, "The Court name was not updated correctly")
+					c.Container.Name = value
+					assert.Equal(t, c.Container.Name, value, "The Court name was not updated correctly")
 				}
 
 				if i, ok := test.court["Players"]; ok {
@@ -130,9 +130,9 @@ func TestUpdateCourt(t *testing.T) {
 					if !ok {
 						t.Errorf("The type of 'test.court[\"Players\"]' should be an array of strings")
 					}
-					court.Container.Players = value
-					if !utilities.Equal(court.Container.Players, value) {
-						t.Errorf("The Court name was not updated correctly:\n got %v\n want %v", court.Container.Players, value)
+					c.Container.Players = value
+					if !utilities.Equal(c.Container.Players, value) {
+						t.Errorf("The Court name was not updated correctly:\n got %v\n want %v", c.Container.Players, value)
 					}
 				}
 			}

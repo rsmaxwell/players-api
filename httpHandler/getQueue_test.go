@@ -63,18 +63,18 @@ func TestGetQueue(t *testing.T) {
 			SetupHandlers(router)
 
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-			rr := httptest.NewRecorder()
+			rw := httptest.NewRecorder()
 
 			// Our router satisfies http.Handler, so we can call its ServeHTTP method
 			// directly and pass in our ResponseRecorder and Request.
-			router.ServeHTTP(rr, req)
+			router.ServeHTTP(rw, req)
 
 			// Check the status code is what we expect.
-			if rr.Code != test.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, test.expectedStatus)
+			if rw.Code != test.expectedStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus)
 			}
 
-			bytes, err := ioutil.ReadAll(rr.Body)
+			bytes, err := ioutil.ReadAll(rw.Body)
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -86,7 +86,7 @@ func TestGetQueue(t *testing.T) {
 				log.Fatalln(err)
 			}
 
-			if rr.Code != http.StatusOK {
+			if rw.Code != http.StatusOK {
 
 				// Check the response body is what we expect.
 				actualName := response.Queue.Container.Name

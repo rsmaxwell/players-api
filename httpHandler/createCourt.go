@@ -7,15 +7,15 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/court"
+	"github.com/rsmaxwell/players-api/destination"
 	"github.com/rsmaxwell/players-api/person"
 	"github.com/rsmaxwell/players-api/session"
 )
 
 // CreateCourtRequest structure
 type CreateCourtRequest struct {
-	Token string      `json:"token"`
-	Court court.Court `json:"court"`
+	Token string            `json:"token"`
+	Court destination.Court `json:"court"`
 }
 
 // CreateCourtResponse structure
@@ -50,7 +50,7 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Check there are not too many players on the court
-	info, err := court.GetInfo()
+	info, err := destination.GetCourtInfo()
 	if err != nil {
 		errorHandler(rw, req, err)
 		return
@@ -83,7 +83,7 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	id, err := court.Insert(&r.Court)
+	id, err := r.Court.Insert()
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

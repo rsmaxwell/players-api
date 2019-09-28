@@ -85,15 +85,15 @@ func TestRegister(t *testing.T) {
 			SetupHandlers(router)
 
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-			rr := httptest.NewRecorder()
+			rw := httptest.NewRecorder()
 
 			// Our router satisfies http.Handler, so we can call its ServeHTTP method
 			// directly and pass in our ResponseRecorder and Request.
-			router.ServeHTTP(rr, req)
+			router.ServeHTTP(rw, req)
 
 			// Check the status code is what we expect.
-			if rr.Code != test.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, test.expectedStatus)
+			if rw.Code != test.expectedStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus)
 			}
 
 			finalNumberOfPeople, err := person.Size()
@@ -101,7 +101,7 @@ func TestRegister(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if rr.Code == http.StatusOK {
+			if rw.Code == http.StatusOK {
 				assert.Equal(t, initialNumberOfPeople+1, finalNumberOfPeople, "Person was not registered")
 			} else {
 				assert.Equal(t, initialNumberOfPeople, finalNumberOfPeople, "Unexpected number of people")

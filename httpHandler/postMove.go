@@ -6,21 +6,17 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/queue"
+	"github.com/rsmaxwell/players-api/commands"
+	"github.com/rsmaxwell/players-api/destination"
 	"github.com/rsmaxwell/players-api/session"
 )
 
 // PostMoveRequest structure
 type PostMoveRequest struct {
-	Token   string   `json:"token"`
-	Type    string   `json:"type"`
-	ID      string   `json:"id"`
-	Players []string `json:"players"`
-}
-
-// PostMoveResponse structure
-type PostMoveResponse struct {
-	Queue queue.Queue `json:"queue"`
+	Token   string                `json:"token"`
+	Source  destination.Reference `json:"source"`
+	Target  destination.Reference `json:"target"`
+	Players []string              `json:"players"`
 }
 
 // PostMove method
@@ -49,7 +45,7 @@ func PostMove(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	queue, err := queue.Load()
+	err = commands.Move(&r.Source, &r.Target, r.Players)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return
@@ -57,7 +53,4 @@ func PostMove(rw http.ResponseWriter, req *http.Request) {
 
 	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(PostMoveResponse{
-		Queue: *queue,
-	})
 }

@@ -138,7 +138,8 @@ func findPlayer(id string) (*destination.Reference, error) {
 	// Look for the player on one of the courts
 	for _, courtID := range courts {
 
-		c, err := destination.LoadCourt(courtID)
+		ref := destination.Reference{Type: "court", ID: courtID}
+		c, err := destination.LoadCourt(&ref)
 		if err != nil {
 			return nil, err
 		}
@@ -153,7 +154,8 @@ func findPlayer(id string) (*destination.Reference, error) {
 	}
 
 	// Look for the player on the queue
-	q, err := destination.LoadQueue()
+	ref := destination.Reference{Type: "queue", ID: ""}
+	q, err := destination.LoadQueue(&ref)
 	if err != nil {
 		return nil, err
 	}

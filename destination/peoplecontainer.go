@@ -8,21 +8,21 @@ import (
 	"github.com/rsmaxwell/players-api/utilities"
 )
 
-// Container Structure
-type Container struct {
+// PeopleContainer Structure
+type PeopleContainer struct {
 	Name    string   `json:"name"`
 	Players []string `json:"players"`
 }
 
-// NewContainer initialises a Container object
-func NewContainer(name string) *Container {
-	court := new(Container)
+// NewContainer initialises a PeopleContainer object
+func NewContainer(name string) *PeopleContainer {
+	court := new(PeopleContainer)
 	court.Name = name
 	return court
 }
 
 // Update method
-func (c Container) Update(container2 map[string]interface{}) error {
+func (c PeopleContainer) Update(container2 map[string]interface{}) error {
 
 	if v, ok := container2["Name"]; ok {
 		value, ok := v.(string)
@@ -59,6 +59,15 @@ func (c Container) Update(container2 map[string]interface{}) error {
 }
 
 // EqualContainer returns 'true' if the containers are equal
-func EqualContainer(c1, c2 Container) bool {
-	return utilities.Equal2(c1.Players, c2.Players)
+func EqualContainer(c1, c2 PeopleContainer) bool {
+
+	if c1.Name != c2.Name {
+		return false
+	}
+
+	if !utilities.Equal2(c1.Players, c2.Players) {
+		return false
+	}
+
+	return true
 }

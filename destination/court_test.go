@@ -190,12 +190,14 @@ func TestCourt(t *testing.T) {
 
 	// Check the expected Courts have been created
 	for _, id := range list {
-		c, err := LoadCourt(id)
+		ref := Reference{Type: "court", ID: id}
+		c, err := LoadCourt(&ref)
 		r.Nil(err, "err should be nothing")
 
 		found := false
 		for _, id2 := range list {
-			c2, err := LoadCourt(id2)
+			ref := Reference{Type: "court", ID: id2}
+			c2, err := LoadCourt(&ref)
 			r.Nil(err, "err should be nothing")
 
 			equal := true
@@ -296,7 +298,8 @@ func TestLoadWithDuffCourtFile(t *testing.T) {
 	r.Nil(err, "err should be nothing")
 
 	// Check that List returns an error
-	_, err = LoadCourt("junk")
+	ref := Reference{Type: "court", ID: "junk"}
+	_, err = LoadCourt(&ref)
 	if err != nil {
 		if cerr, ok := err.(*codeError.CodeError); ok {
 			if cerr.Code() != http.StatusInternalServerError {

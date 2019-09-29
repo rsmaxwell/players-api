@@ -111,7 +111,8 @@ func TestUpdateCourt(t *testing.T) {
 
 			// Check the court was actually updated
 			if rw.Code == http.StatusOK {
-				c, err := destination.LoadCourt(test.id)
+				ref := destination.Reference{Type: "court", ID: test.id}
+				c, err := destination.LoadCourt(&ref)
 				if err != nil {
 					t.Fatal(err)
 				}

@@ -22,7 +22,7 @@ type Info struct {
 // Court type
 type Court struct {
 	Destination
-	Container Container `json:"container"`
+	Container PeopleContainer `json:"container"`
 }
 
 var (
@@ -114,12 +114,28 @@ func NewCourt(name string) *Court {
 }
 
 // UpdateCourt method
-func UpdateCourt(id string, fields map[string]interface{}) error {
+func UpdateCourt(ref *Reference, fields map[string]interface{}) error {
 
-	c, err := LoadCourt(id)
+	c, err := LoadCourt(ref)
 	if err != nil {
 		return err
 	}
+
+	err = c.Update(fields)
+	if err != nil {
+		return err
+	}
+
+	err = c.Save(ref)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Update method
+func (c *Court) Update(fields map[string]interface{}) error {
 
 	if v, ok := fields["Container"]; ok {
 		if container2, ok := v.(map[string]interface{}); ok {
@@ -132,16 +148,11 @@ func UpdateCourt(id string, fields map[string]interface{}) error {
 		}
 	}
 
-	err = c.Save(id)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // Insert adds a new court to the list
-func (c Court) Insert() (string, error) {
+func (c *Court) Insert() (string, error) {
 
 	count, err := getAndIncrementCurrentCourtID()
 	if err != nil {
@@ -149,7 +160,8 @@ func (c Court) Insert() (string, error) {
 	}
 
 	id := strconv.Itoa(count)
-	err = c.Save(id)
+	ref := Reference{Type: "court", ID: id}
+	err = c.Save(&ref)
 	if err != nil {
 		return "", err
 	}
@@ -158,14 +170,18 @@ func (c Court) Insert() (string, error) {
 }
 
 // Save writes a Court to disk
-func (c Court) Save(id string) error {
+func (c *Court) Save(ref *Reference) error {
+
+	if ref.Type != "court" {
+		return codeError.NewInternalServerError("Unexpected Reference type")
+	}
 
 	courtJSON, err := json.Marshal(c)
 	if err != nil {
 		return codeError.NewInternalServerError(err.Error())
 	}
 
-	filename, err := makeCourtFilename(id)
+	filename, err := makeCourtFilename(ref.ID)
 	if err != nil {
 		return err
 	}
@@ -213,9 +229,13 @@ func CourtExists(id string) bool {
 }
 
 // LoadCourt returns the Court with the given ID
-func LoadCourt(id string) (*Court, error) {
+func LoadCourt(ref *Reference) (*Court, error) {
 
-	filename, err := makeCourtFilename(id)
+	if ref.Type != "court" {
+		return nil, codeError.NewInternalServerError("Unexpected Reference type")
+	}
+
+	filename, err := makeCourtFilename(ref.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -341,6 +361,45 @@ func CourtSize() (int, error) {
 }
 
 // GetContainer returns the Destination
-func (c Court) GetContainer() *Container {
+func (c *Court) GetContainer() *PeopleContainer {
 	return &c.Container
+}
+
+// Show method
+func (c *Court) Show(title string) {
+	fmt.Printf("%s: destination=%p, container=%p", title, c, &c.Container)
+}
+
+// CheckPlayersLocation checks the players are at this destination
+func (c *Court) CheckPlayersLocation(players []string) error {
+	pc := c.GetContainer()
+	return CheckPlayersInContainer(pc, players)
+}
+
+// CheckSpace checks there is space in the target for the moving players
+func (c *Court) CheckSpace(players []string) error {
+	info, err := GetCourtInfo()
+	if err != nil {
+		return codeError.NewInternalServerError(err.Error())
+	}
+	containerSize := len(c.Container.Players)
+	playersSize := len(players)
+
+	if containerSize+playersSize > info.PlayersPerCourt {
+		return codeError.NewBadRequest(fmt.Sprintf("Too many players. %d + %d > %d", containerSize, playersSize, info.PlayersPerCourt))
+	}
+
+	return nil
+}
+
+// RemovePlayers deletes players from the destination
+func (c *Court) RemovePlayers(players []string) error {
+	pc := c.GetContainer()
+	return RemovePlayersFromContainer(pc, players)
+}
+
+// AddPlayers adds players to the destination
+func (c *Court) AddPlayers(players []string) error {
+	pc := c.GetContainer()
+	return AddPlayersToContainer(pc, players)
 }

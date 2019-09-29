@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/rsmaxwell/players-api/codeError"
 	"github.com/rsmaxwell/players-api/destination"
 )
@@ -10,152 +8,59 @@ import (
 // Move method
 func Move(source, target *destination.Reference, players []string) error {
 
-	var q1, q2 *destination.Queue
-	var c1, c2 *destination.Court
-	var sc1, sc2 *destination.Container
-	var err error
-
 	// **********************************************************
-	// * De-reference the source and target
+	// * Load the source and target
 	// **********************************************************
-
-	// De-reference the source
-	if source.Type == "court" {
-		c1, err = destination.LoadCourt(source.ID)
-		if err != nil {
-			return codeError.NewInternalServerError(err.Error())
-		}
-		sc1 = &c1.Container
-	} else {
-		q1, err = destination.LoadQueue()
-		if err != nil {
-			return codeError.NewInternalServerError(err.Error())
-		}
-		sc1 = &q1.Container
+	s, err := destination.Load(source)
+	if err != nil {
+		return codeError.NewInternalServerError(err.Error())
 	}
 
-	// De-reference the target
-	if target.Type == "court" {
-		c2, err = destination.LoadCourt(target.ID)
-		if err != nil {
-			return codeError.NewInternalServerError(err.Error())
-		}
-		sc2 = &c2.Container
-	} else {
-		q2, err = destination.LoadQueue()
-		if err != nil {
-			return codeError.NewInternalServerError(err.Error())
-		}
-		sc2 = &q2.Container
+	t, err := destination.Load(target)
+	if err != nil {
+		return err
 	}
+
+	s.Show("source")
+	t.Show("target")
 
 	// **********************************************************
 	// * Checks
 	// **********************************************************
-
-	// Check all the moving players are at the source
-	for _, personID := range players {
-		found := false
-		for _, id := range sc1.Players {
-			if id == personID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return codeError.NewBadRequest(fmt.Sprintf("Player[%s] not found in source of Move command", personID))
-		}
+	err = s.CheckPlayersLocation(players)
+	if err != nil {
+		return err
 	}
 
-	// Check there is space in the target for the moving players
-	if target.Type == "court" {
-		info, err := destination.GetCourtInfo()
-		if err != nil {
-			return codeError.NewInternalServerError(err.Error())
-		}
-		containerSize := len(c2.Container.Players)
-		playersSize := len(players)
-
-		if containerSize+playersSize > info.PlayersPerCourt {
-			return codeError.NewBadRequest(fmt.Sprintf("Too many players. %d + %d > %d", containerSize, playersSize, info.PlayersPerCourt))
-		}
+	err = t.CheckSpace(players)
+	if err != nil {
+		return err
 	}
 
 	// **********************************************************
-	// * Delete the moving players from the source
+	// * Move the players from source to target
 	// **********************************************************
-	array := []string{}
-	for _, id := range sc1.Players {
-
-		found := false
-		for _, personID := range players {
-			if id == personID {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			array = append(array, id)
-		}
+	err = s.RemovePlayers(players)
+	if err != nil {
+		return err
 	}
 
-	sc1.Players = array
-
-	// **********************************************************
-	// * Add the moving players to the target
-	// **********************************************************
-
-	array = []string{}
-	for _, id := range sc2.Players {
-		array = append(array, id)
+	err = t.AddPlayers(players)
+	if err != nil {
+		return err
 	}
 
-	for _, personID := range players {
-
-		found := false
-		for _, id := range sc2.Players {
-			if id == personID {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			array = append(array, personID)
-		}
+	// **********************************************************
+	// * Save the update source and targets to disk
+	// **********************************************************
+	err = s.Save(source)
+	if err != nil {
+		return err
 	}
 
-	sc2.Players = array
-
-	// **********************************************************
-	// * Save the update source and target to disk
-	// **********************************************************
-
-	// Save the updated soure
-	if source.Type == "court" {
-		err := c1.Save(source.ID)
-		if err != nil {
-			return err
-		}
-	} else {
-		err := q1.Save()
-		if err != nil {
-			return err
-		}
-	}
-
-	// Save the updated target
-	if target.Type == "court" {
-		err := c2.Save(target.ID)
-		if err != nil {
-			return err
-		}
-	} else {
-		err := q2.Save()
-		if err != nil {
-			return err
-		}
+	err = t.Save(target)
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -46,7 +46,8 @@ func GetQueue(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	q, err := destination.LoadQueue()
+	ref := destination.Reference{Type: "queue", ID: ""}
+	q, err := destination.LoadQueue(&ref)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

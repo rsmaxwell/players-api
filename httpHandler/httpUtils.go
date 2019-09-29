@@ -112,7 +112,8 @@ func startup() error {
 		return err
 	}
 	for _, id := range listOfCourts {
-		c, err := destination.LoadCourt(id)
+		ref := destination.Reference{Type: "court", ID: id}
+		c, err := destination.LoadCourt(&ref)
 		if err != nil {
 			return err
 		}
@@ -125,7 +126,8 @@ func startup() error {
 	}
 
 	// Subtract the players waiting in the queue away from the list of players
-	q, err := destination.LoadQueue()
+	ref := destination.Reference{Type: "queue", ID: ""}
+	q, err := destination.LoadQueue(&ref)
 	if err != nil {
 		return err
 	}
@@ -141,7 +143,7 @@ func startup() error {
 	}
 
 	// Save the updated queue
-	err = q.Save()
+	err = q.Save(&ref)
 	if err != nil {
 		return err
 	}

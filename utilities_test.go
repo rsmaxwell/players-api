@@ -107,7 +107,7 @@ func CreateCourt(token, name string, players []string) {
 	requestBody, err := json.Marshal(httphandler.CreateCourtRequest{
 		Token: token,
 		Court: destination.Court{
-			Container: destination.Container{
+			Container: destination.PeopleContainer{
 				Name:    name,
 				Players: players,
 			},

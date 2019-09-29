@@ -53,7 +53,7 @@ func TestCreateCourt(t *testing.T) {
 			requestBody, err := json.Marshal(CreateCourtRequest{
 				Token: test.token,
 				Court: destination.Court{
-					Container: destination.Container{
+					Container: destination.PeopleContainer{
 						Name:    test.name,
 						Players: test.players,
 					},

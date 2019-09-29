@@ -13,7 +13,7 @@ import (
 // Queue type
 type Queue struct {
 	Destination
-	Container Container `json:"container"`
+	Container PeopleContainer `json:"container"`
 }
 
 func init() {
@@ -66,10 +66,12 @@ func createQueueFiles() error {
 		return err
 	}
 
+	ref := Reference{Type: "queue", ID: ""}
+
 	_, err = os.Stat(filename)
 	if err != nil {
 		if os.IsNotExist(err) { // File does not exist
-			err = NewQueue("Queue").Save()
+			err = NewQueue("Queue").Save(&ref)
 		} else {
 			return codeError.NewInternalServerError(err.Error())
 		}
@@ -86,8 +88,29 @@ func NewQueue(name string) *Queue {
 	return queue
 }
 
+// UpdateQueue method
+func UpdateQueue(ref *Reference, fields map[string]interface{}) error {
+
+	q, err := LoadQueue(ref)
+	if err != nil {
+		return err
+	}
+
+	err = q.Update(fields)
+	if err != nil {
+		return err
+	}
+
+	err = q.Save(ref)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Update method
-func (q Queue) Update(fields map[string]interface{}) error {
+func (q *Queue) Update(fields map[string]interface{}) error {
 
 	if v, ok := fields["Container"]; ok {
 		if container2, ok := v.(map[string]interface{}); ok {
@@ -104,7 +127,11 @@ func (q Queue) Update(fields map[string]interface{}) error {
 }
 
 // Save writes a Queue to disk
-func (q Queue) Save() error {
+func (q *Queue) Save(ref *Reference) error {
+
+	if ref.Type != "queue" {
+		return codeError.NewInternalServerError("Unexpected Reference type")
+	}
 
 	queueJSON, err := json.Marshal(q)
 	if err != nil {
@@ -141,7 +168,11 @@ func QueueExists(id string) bool {
 }
 
 // LoadQueue returns the Queue
-func LoadQueue() (*Queue, error) {
+func LoadQueue(ref *Reference) (*Queue, error) {
+
+	if ref.Type != "queue" {
+		return nil, codeError.NewInternalServerError("Unexpected Reference type")
+	}
 
 	filename, err := makeQueueFilename()
 	if err != nil {
@@ -165,10 +196,38 @@ func LoadQueue() (*Queue, error) {
 }
 
 // GetContainer returns the Destination
-func (q Queue) GetContainer() *Container {
+func (q *Queue) GetContainer() *PeopleContainer {
 
 	fmt.Printf("GetContainer: &q=%p\n", &q)
 	fmt.Printf("GetContainer: &q.Container=%p\n", &q.Container)
 
 	return &q.Container
+}
+
+// Show method
+func (q *Queue) Show(title string) {
+	fmt.Printf("%s: destination=%p, container=%p", title, q, &q.Container)
+}
+
+// CheckPlayersLocation checks the players are at this destination
+func (q *Queue) CheckPlayersLocation(players []string) error {
+	pc := q.GetContainer()
+	return CheckPlayersInContainer(pc, players)
+}
+
+// CheckSpace checks there is space in the target for the moving players
+func (q *Queue) CheckSpace(players []string) error {
+	return nil
+}
+
+// RemovePlayers deletes players from the destination
+func (q *Queue) RemovePlayers(players []string) error {
+	pc := q.GetContainer()
+	return RemovePlayersFromContainer(pc, players)
+}
+
+// AddPlayers adds players to the destination
+func (q *Queue) AddPlayers(players []string) error {
+	pc := q.GetContainer()
+	return AddPlayersToContainer(pc, players)
 }

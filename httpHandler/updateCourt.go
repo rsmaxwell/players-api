@@ -42,7 +42,8 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	err = destination.UpdateCourt(id, r.Court)
+	ref := destination.Reference{Type: "court", ID: id}
+	err = destination.UpdateCourt(&ref, r.Court)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

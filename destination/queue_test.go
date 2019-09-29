@@ -22,7 +22,8 @@ func TestNewInfoJunkQueue(t *testing.T) {
 	err = ioutil.WriteFile(queuefile, []byte("junk"), 0644)
 	r.Nil(err, "err should be nothing")
 
-	_, err = LoadQueue()
+	ref := Reference{Type: "queue", ID: ""}
+	_, err = LoadQueue(&ref)
 	if err != nil {
 		if cerr, ok := err.(*codeError.CodeError); ok {
 			if cerr.Code() == http.StatusInternalServerError {

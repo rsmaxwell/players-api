@@ -46,7 +46,8 @@ func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	court, err := destination.LoadCourt(id)
+	ref := destination.Reference{Type: "court", ID: id}
+	court, err := destination.LoadCourt(&ref)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

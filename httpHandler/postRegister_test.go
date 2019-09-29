@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/person"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRegister(t *testing.T) {
@@ -60,9 +60,7 @@ func TestRegister(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 
 			initialNumberOfPeople, err := person.Size()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.Nil(t, err)
 
 			requestBody, err := json.Marshal(RegisterRequest{
 				UserID:    test.userID,
@@ -77,9 +75,7 @@ func TestRegister(t *testing.T) {
 
 			// Create a request to pass to our handler.
 			req, err := http.NewRequest("POST", "/register", bytes.NewBuffer(requestBody))
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.Nil(t, err)
 
 			router := mux.NewRouter()
 			SetupHandlers(router)
@@ -93,19 +89,23 @@ func TestRegister(t *testing.T) {
 
 			// Check the status code is what we expect.
 			if rw.Code != test.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus)
+				require.Equal(t, test.expectedStatus, rw.Code, "Unexpected status code")
 			}
 
 			finalNumberOfPeople, err := person.Size()
-			if err != nil {
-				t.Fatal(err)
+			require.Nil(t, err)
+
+			if rw.Code != http.StatusOK {
+				require.Equal(t, initialNumberOfPeople, finalNumberOfPeople, "Unexpected number of people")
+				return
 			}
 
-			if rw.Code == http.StatusOK {
-				assert.Equal(t, initialNumberOfPeople+1, finalNumberOfPeople, "Person was not registered")
-			} else {
-				assert.Equal(t, initialNumberOfPeople, finalNumberOfPeople, "Unexpected number of people")
-			}
+			require.Equal(t, initialNumberOfPeople+1, finalNumberOfPeople, "Person was not registered")
+
+			// Check the status of the new person
+			p, err := person.Load(test.userID)
+			require.Nil(t, err)
+			require.Equal(t, "suspended", p.Status, "Unexpected status")
 		})
 	}
 }

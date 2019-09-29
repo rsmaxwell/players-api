@@ -29,7 +29,7 @@ func ResetPeople(t *testing.T) {
 	err = Save("007", p)
 	r.Nil(err, "err should be nothing")
 
-	list, err := List()
+	list, err := List([]string{"regular", "admin", "suspended"})
 	assert.Equal(t, 1, len(list))
 }
 
@@ -57,7 +57,7 @@ func TestResetPeople(t *testing.T) {
 	err = Save("bloggs", New("bloggs", "grey", "456@aol.com", []byte("yyyyyyyyy"), true))
 	r.Nil(err, "err should be nothing")
 
-	list, err := List()
+	list, err := List([]string{"regular", "admin", "suspended"})
 	assert.Equal(t, 2, len(list))
 }
 
@@ -73,14 +73,14 @@ func TestAddPerson(t *testing.T) {
 	err = Save("bloggs", New("bloggs", "grey", "456@aol.com", []byte("yyyyyyyyy"), true))
 	r.Nil(err, "err should be nothing")
 
-	list, err := List()
+	list, err := List([]string{"regular", "admin", "suspended"})
 	assert.Equal(t, 2, len(list))
 	r.Nil(err, "err should be nothing")
 
 	err = Save("harry", New("harry", "silver", "789@aol.com", []byte("zzzzzzzzz"), true))
 	r.Nil(err, "err should be nothing")
 
-	list, err = List()
+	list, err = List([]string{"regular", "admin", "suspended"})
 	assert.Equal(t, 3, len(list))
 }
 
@@ -114,7 +114,7 @@ func TestPerson(t *testing.T) {
 	r.Nil(err, "err should be nothing")
 
 	// Check the expected number of People have been created
-	list, err := List()
+	list, err := List([]string{"regular", "admin", "suspended"})
 	r.Nil(err, "err should be nothing")
 	r.Equal(count, len(list), fmt.Sprintf("Unexpected number of people created. expected:%d actual:%d", count, len(list)))
 
@@ -161,7 +161,7 @@ func TestPerson(t *testing.T) {
 	}
 
 	// Check there are no more people
-	list, err = List()
+	list, err = List([]string{"regular", "admin", "suspended"})
 	r.Nil(err, "err should be nothing")
 	r.Equal(0, len(list), fmt.Sprintf("Unexpected number of people. Expected:%d, actual:%d", 0, len(list)))
 }
@@ -208,16 +208,11 @@ func TestListPeopleWithDuffPlayerFile(t *testing.T) {
 	err = ioutil.WriteFile(filename, []byte("junk"), 0644)
 	r.Nil(err, "err should be nothing")
 
-	// Check the expected number of People have been created
-	list, err := List()
-	r.Nil(err, "err should be nothing")
-	r.Equal(len(list), 1, "Unexpected number of people")
-
 	// Attempt to use the 'junk' person!
-	_, err = Load("junk")
+	_, err = List([]string{"regular", "admin", "suspended"})
 	if err != nil {
 		if cerr, ok := err.(*codeError.CodeError); ok {
-			if cerr.Code() != http.StatusNotFound {
+			if cerr.Code() != http.StatusInternalServerError {
 				r.Fail(fmt.Sprintf("Unexpected error type: expected: %d, Actual: %d", http.StatusNotFound, cerr.Code()))
 			}
 		} else {

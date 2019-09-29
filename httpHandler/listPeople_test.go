@@ -22,18 +22,21 @@ func TestListPeople(t *testing.T) {
 	tests := []struct {
 		testName       string
 		token          string
+		filter         []string
 		expectedStatus int
 		expectedResult []string
 	}{
 		{
 			testName:       "Good request",
 			token:          MyToken,
+			filter:         []string{"regular", "admin", "suspended"},
 			expectedStatus: http.StatusOK,
 			expectedResult: AllPeopleIDs,
 		},
 		{
 			testName:       "Bad token",
 			token:          "junk",
+			filter:         []string{"regular", "admin", "suspended"},
 			expectedStatus: http.StatusUnauthorized,
 			expectedResult: []string{},
 		},
@@ -43,7 +46,8 @@ func TestListPeople(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 
 			requestBody, err := json.Marshal(ListPeopleRequest{
-				Token: test.token,
+				Token:  test.token,
+				Filter: test.filter,
 			})
 			if err != nil {
 				log.Fatalln(err)

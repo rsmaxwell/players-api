@@ -90,7 +90,7 @@ func subtractLists(listOfPlayers, players []string, text string) ([]string, erro
 func startup() error {
 
 	// Make a list of players
-	listOfPeople, err := person.List()
+	listOfPeople, err := person.List([]string{"regular", "admin", "suspended"})
 	if err != nil {
 		return err
 	}

@@ -97,7 +97,7 @@ func New(firstname string, lastname string, email string, hashedPassword []byte,
 	person.Email = email
 	person.HashedPassword = hashedPassword
 	person.Player = player
-	person.Status = "normal"
+	person.Status = "suspended"
 	return person
 }
 
@@ -143,15 +143,23 @@ func Update(id string, session *session.Session, person2 map[string]interface{})
 			return nil, err
 		}
 
-		// Only 'admin' users can update the 'Status' field
-		if myself.Status != "admin" {
+		// Only 'admin' users can change the status of a user
+		if myself.Status == "admin" {
 			return nil, codeError.NewUnauthorized("Not authorised to update 'Person.Status'")
 		}
 
+		// Check the type of the new status is a string
 		value, ok := v.(string)
 		if !ok {
 			return nil, codeError.NewBadRequest("The type of 'Person.Status' should be a string")
 		}
+
+		// Check the new value is allowed
+		allowed := []string{"suspended", "regular", "admin"}
+		if !common.Contains(allowed, value) {
+			return nil, codeError.NewBadRequest("Unexpected person status")
+		}
+
 		person.Status = value
 	}
 
@@ -212,8 +220,8 @@ func Save(id string, person *Person) error {
 	return nil
 }
 
-// List returns a list of the person IDs
-func List() ([]string, error) {
+// List returns a list of the person IDs with one of the allowed status values
+func List(filter []string) ([]string, error) {
 
 	files, err := ioutil.ReadDir(listDir)
 	if err != nil {
@@ -224,6 +232,15 @@ func List() ([]string, error) {
 	for _, filenameInfo := range files {
 		filename := filenameInfo.Name()
 		id := strings.TrimSuffix(filename, path.Ext(filename))
+
+		p, err := Load(id)
+		if err != nil {
+			return nil, err
+		}
+		if !common.Contains(filter, p.Status) {
+			continue
+		}
+
 		list = append(list, id)
 	}
 

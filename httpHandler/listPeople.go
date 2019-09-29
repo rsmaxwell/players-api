@@ -12,7 +12,8 @@ import (
 
 // ListPeopleRequest structure
 type ListPeopleRequest struct {
-	Token string `json:"token"`
+	Token  string   `json:"token"`
+	Filter []string `json:"filter"`
 }
 
 // ListPeopleResponse structure
@@ -31,7 +32,7 @@ func ListPeople(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var r ListCourtsRequest
+	var r ListPeopleRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
@@ -46,7 +47,7 @@ func ListPeople(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	listOfPeople, err := person.List()
+	listOfPeople, err := person.List(r.Filter)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

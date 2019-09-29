@@ -51,6 +51,16 @@ func Register(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	list, err := person.List(person.FilterAll)
+	if err != nil {
+		errorHandler(rw, req, err)
+		return
+	}
+	if len(list) >= 100 {
+		WriteResponse(rw, http.StatusBadRequest, "Too many people")
+		return
+	}
+
 	p := person.New(r.FirstName, r.LastName, r.Email, hashedPassword, false)
 	err = person.Save(r.UserID, p)
 	if err != nil {

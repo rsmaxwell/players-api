@@ -26,11 +26,15 @@ type Person struct {
 var (
 	baseDir string
 	listDir string
+
+	// FilterAll is the 'all' filter which returns every person
+	FilterAll []string
 )
 
 func init() {
 	baseDir = common.RootDir + "/people"
 	listDir = baseDir + "/list"
+	FilterAll = []string{"admin", "regular", "suspended"}
 }
 
 // removeAll removes ALL the people

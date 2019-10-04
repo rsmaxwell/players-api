@@ -15,4 +15,6 @@ _temp
 package-lock.json
 vendor/
 players-api-*
+generate-test-data-*
 coverage*
+backup/

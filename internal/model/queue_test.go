@@ -6,23 +6,21 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewInfoJunkQueue(t *testing.T) {
-	r := require.New(t)
-
-	err := ClearQueue()
-	r.Nil(err, "err should be nothing")
+	teardown := SetupFull(t)
+	defer teardown(t)
 
 	queuefile, err := makeQueueFilename()
-	r.Nil(err, "err should be nothing")
+	require.Nil(t, err, "err should be nothing")
 
 	err = ioutil.WriteFile(queuefile, []byte("junk"), 0644)
-	r.Nil(err, "err should be nothing")
+	require.Nil(t, err, "err should be nothing")
 
 	ref := common.Reference{Type: "queue", ID: ""}
 	_, err = LoadQueue(&ref)
@@ -31,12 +29,12 @@ func TestNewInfoJunkQueue(t *testing.T) {
 			if cerr.Code() == http.StatusInternalServerError {
 				// ok
 			} else {
-				r.Fail(fmt.Sprintf("Unexpected error: %d", cerr.Code()))
+				require.Fail(t, fmt.Sprintf("Unexpected error: %d", cerr.Code()))
 			}
 		} else {
-			r.Fail(fmt.Sprintf("Unexpected error: %s", err.Error()))
+			require.Fail(t, fmt.Sprintf("Unexpected error: %s", err.Error()))
 		}
 	} else {
-		r.Fail("Unexpected success")
+		require.Fail(t, "Unexpected success")
 	}
 }

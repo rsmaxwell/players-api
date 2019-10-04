@@ -38,44 +38,6 @@ func init() {
 	courtInfoFile = courtBaseDir + "/info.json"
 }
 
-// removeAll - remove All the courts
-func removeAllCourts() error {
-
-	_, err := os.Stat(courtListDir)
-	if err == nil {
-		err = common.RemoveContents(courtListDir)
-		if err != nil {
-			return codeerror.NewInternalServerError(err.Error())
-		}
-	}
-
-	return nil
-}
-
-// ClearCourts all the courts
-func ClearCourts() error {
-
-	err := removeAllCourts()
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(courtInfoFile)
-	if err == nil {
-		err = os.Remove(courtInfoFile)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = createCourtFiles()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // makeCourtFilename function
 func makeCourtFilename(id string) (string, error) {
 

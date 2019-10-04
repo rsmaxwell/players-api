@@ -25,8 +25,8 @@ func init() {
 	queueBaseDir = common.RootDir
 }
 
-// ClearQueue the Queue
-func ClearQueue() error {
+// xClearQueue the Queue
+func xClearQueue() error {
 
 	filename, err := makeQueueFilename()
 	if err != nil {

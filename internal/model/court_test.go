@@ -15,85 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestClearCourts(t *testing.T) {
-	teardown := SetupFull(t)
-	defer teardown(t)
-
-	err := ClearCourts()
-	require.Nil(t, err, "err should be nothing")
-
-	_, err = os.Stat(courtInfoFile)
-	require.Nil(t, err, "err should be nothing")
-}
-
-func TestResetCourt(t *testing.T) {
-	teardown := SetupFull(t)
-	defer teardown(t)
-
-	err := ClearCourts()
-	require.Nil(t, err, "err should be nothing")
-
-	_, err = NewCourt("Fred", []string{}).Add()
-	require.Nil(t, err, "err should be nothing")
-
-	_, err = NewCourt("Bloggs", []string{}).Add()
-	require.Nil(t, err, "err should be nothing")
-
-	_, err = os.Stat(courtInfoFile)
-	require.Nil(t, err, "err should be nothing")
-
-	list, err := ListCourts()
-	require.Equal(t, 2, len(list), fmt.Sprintf("Unexpected size of List: expected: %d, Actual: %d", 2, len(list)))
-}
-
-func TestAddCourt(t *testing.T) {
-	teardown := SetupFull(t)
-	defer teardown(t)
-
-	err := ClearCourts()
-	require.Nil(t, err, "err should be nothing")
-
-	_, err = NewCourt("Fred", []string{}).Add()
-	require.Nil(t, err, "err should be nothing")
-
-	_, err = NewCourt("Bloggs", []string{}).Add()
-	require.Nil(t, err, "err should be nothing")
-
-	_, err = os.Stat(courtInfoFile)
-	require.Nil(t, err, "err should be nothing")
-
-	list, err := ListCourts()
-	require.Nil(t, err, "err should be nothing")
-	require.Equal(t, 2, len(list), fmt.Sprintf("Unexpected size of List: expected: %d, Actual: %d", 2, len(list)))
-
-	_, err = NewCourt("Harry", []string{}).Add()
-	require.Nil(t, err, "err should be nothing")
-
-	list, err = ListCourts()
-	require.Equal(t, 3, len(list), fmt.Sprintf("Unexpected size of List: expected: %d, Actual: %d", 3, len(list)))
-}
-
-func TestNewInfoJunkCourt(t *testing.T) {
-	teardown := SetupFull(t)
-	defer teardown(t)
-
-	err := ClearCourts()
-	require.Nil(t, err, "err should be nothing")
-
-	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
-	require.Nil(t, err, "err should be nothing")
-}
-
 func TestNewInfoUnreadableInfofileCourt(t *testing.T) {
 	teardown := SetupFull(t)
 	defer teardown(t)
 
-	// Clear the court directory
-	err := ClearCourts()
-	require.Nil(t, err, "err should be nothing")
-
 	// Make the court info file unreadable
-	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
+	err := ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
 	require.Nil(t, err, "err should be nothing")
 
 	// Attempt to use the info file
@@ -115,13 +42,13 @@ func TestGetAndIncrementCurrentIDCourt(t *testing.T) {
 	teardown := SetupFull(t)
 	defer teardown(t)
 
-	t.Logf("Clear the court directory")
-	err := ClearCourts()
+	// Count the initial number of courts
+	list, err := ListCourts()
 	require.Nil(t, err, "err should be nothing")
 
 	for i := 0; i < 10; i++ {
 		count, _ := getAndIncrementCurrentCourtID()
-		require.Equal(t, count, 1000+i, "Unexpected value of ID")
+		require.Equal(t, count, 1000+len(list)+i, "Unexpected value of ID")
 	}
 }
 
@@ -129,13 +56,9 @@ func TestGetAndIncrementCurrentIDNoInfofileCourt(t *testing.T) {
 	teardown := SetupFull(t)
 	defer teardown(t)
 
-	t.Logf("Clear the court directory")
-	err := ClearCourts()
-	require.Nil(t, err, "err should be nothing")
-
 	// Remove the court info file
 	t.Logf("Remove the court info file")
-	err = os.Remove(courtInfoFile)
+	err := os.Remove(courtInfoFile)
 	require.Nil(t, err, "err should be nothing")
 
 	assert.NotPanics(t, func() {
@@ -147,11 +70,7 @@ func TestGetAndIncrementCurrentIDJunkContentsCourt(t *testing.T) {
 	teardown := SetupFull(t)
 	defer teardown(t)
 
-	t.Logf("Clear the court directory")
-	err := ClearCourts()
-	require.Nil(t, err, "err should be nothing")
-
-	err = ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
+	err := ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
 	require.Nil(t, err, "err should be nothing")
 
 	_, err = getAndIncrementCurrentCourtID()

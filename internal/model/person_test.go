@@ -1,17 +1,13 @@
 package model
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -59,7 +55,6 @@ func TestNewInfoJunkPerson(t *testing.T) {
 
 	list2, err := ListPeople([]string{"regular", "admin", "suspended"})
 	require.Nil(t, err, "err should be nothing")
-
 	require.Equal(t, len(list1)+1, len(list2), "List of people not updated correctly")
 }
 
@@ -75,192 +70,132 @@ func TestSavePerson(t *testing.T) {
 
 	list2, err := ListPeople(AllRoles)
 	require.Nil(t, err, "err should be nothing")
-	assert.Equal(t, len(list1)+1, len(list2))
-}
-
-func TestAddPerson(t *testing.T) {
-	r := require.New(t)
-
-	err := ClearPeople()
-	r.Nil(err, "err should be nothing")
-
-	err = NewPerson("fred", "smith", junkEmail, junkHashedPassword, false).Save("fred")
-	r.Nil(err, "err should be nothing")
-
-	err = NewPerson("bloggs", "grey", junkEmail, junkHashedPassword, true).Save("bloggs")
-	r.Nil(err, "err should be nothing")
-
-	list, err := ListPeople(AllRoles)
-	assert.Equal(t, 2, len(list))
-	r.Nil(err, "err should be nothing")
-
-	err = NewPerson("harry", "silver", junkEmail, junkHashedPassword, true).Save("harry")
-	r.Nil(err, "err should be nothing")
-
-	list, err = ListPeople([]string{"regular", "admin", "suspended"})
-	assert.Equal(t, 3, len(list))
+	require.Equal(t, len(list1)+1, len(list2))
 }
 
 func TestPerson(t *testing.T) {
-	r := require.New(t)
+	teardown := SetupFull(t)
+	defer teardown(t)
 
-	// Clear all people
-	err := ClearPeople()
-	r.Nil(err, "err should be nothing")
+	// Get the initial number of people
+	list1, err := ListPeople(AllRoles)
+	require.Nil(t, err, "err should be nothing")
 
 	// Add a couple of people
-	count := 0
-	count = count + 1
-	err = NewPerson("Fred", "xxx", junkEmail, junkHashedPassword, false).Save("1")
-	r.Nil(err, "err should be nothing")
+	datapeople := []struct {
+		id             string
+		firstname      string
+		lastname       string
+		email          string
+		hashedpassword []byte
+		role           string
+		player         bool
+	}{
+		{id: "1", firstname: "Fred", lastname: "xxx", email: junkEmail, hashedpassword: junkHashedPassword, role: "suspended", player: false},
+		{id: "2", firstname: "Bloggs", lastname: "xxx", email: junkEmail, hashedpassword: junkHashedPassword, role: "suspended", player: false},
+		{id: "3", firstname: "Jane", lastname: "xxx", email: junkEmail, hashedpassword: junkHashedPassword, role: "suspended", player: false},
+		{id: "4", firstname: "Alice", lastname: "xxx", email: junkEmail, hashedpassword: junkHashedPassword, role: "suspended", player: false},
+		{id: "5", firstname: "Bob", lastname: "xxx", email: junkEmail, hashedpassword: junkHashedPassword, role: "suspended", player: false},
+	}
 
-	count = count + 1
-	err = NewPerson("Bloggs", "xxx", junkEmail, junkHashedPassword, false).Save("2")
-	r.Nil(err, "err should be nothing")
-
-	count = count + 1
-	err = NewPerson("Jane", "xxx", junkEmail, junkHashedPassword, false).Save("3")
-	r.Nil(err, "err should be nothing")
-
-	count = count + 1
-	err = NewPerson("Alice", "xxx", junkEmail, junkHashedPassword, false).Save("4")
-	r.Nil(err, "err should be nothing")
-
-	count = count + 1
-	err = NewPerson("Bob", "xxx", junkEmail, junkHashedPassword, false).Save("5")
-	r.Nil(err, "err should be nothing")
+	// Add a couple of people
+	for _, i := range datapeople {
+		err := NewPerson(i.firstname, i.lastname, i.email, i.hashedpassword, i.player).Save(i.id)
+		require.Nil(t, err, "err should be nothing")
+	}
 
 	// Check the expected number of People have been created
-	list, err := ListPeople([]string{"regular", "admin", "suspended"})
-	r.Nil(err, "err should be nothing")
-	r.Equal(count, len(list), fmt.Sprintf("Unexpected number of people created. expected:%d actual:%d", count, len(list)))
+	list2, err := ListPeople(AllRoles)
+	require.Nil(t, err, "err should be nothing")
+	require.Equal(t, len(list1)+len(datapeople), len(list2), fmt.Sprintf("Unexpected number of people created. expected:%d actual:%d", len(list1)+len(datapeople), len(list2)))
 
 	// Check the expected People have been created
-	for _, id := range list {
-		p, err := LoadPerson(id)
-		r.Nil(err, "err should be nothing")
+	for _, i := range datapeople {
+		p, err := LoadPerson(i.id)
+		require.Nil(t, err, "err should be nothing")
 
-		found := false
-		for _, id2 := range list {
-			p2, err := LoadPerson(id2)
-			r.Nil(err, "err should be nothing")
-
-			equal := true
-			if p.FirstName != p2.FirstName {
-				equal = false
-			}
-			if p.LastName != p2.LastName {
-				equal = false
-			}
-			if p.Email != p2.Email {
-				equal = false
-			}
-			if p.Role != p2.Role {
-				equal = false
-			}
-			if p.Player != p2.Player {
-				equal = false
-			}
-
-			// Have we found the person?
-			if equal {
-				found = true
-				break
-			}
-		}
-		assert.Equal(t, found, true, fmt.Sprintf("Person [%s] not found", id))
+		require.Equal(t, p.FirstName, i.firstname, fmt.Sprintf("Person[%s] not updated correctly: 'Firstname': expected %s, got: %s", i.id, i.firstname, p.FirstName))
+		require.Equal(t, p.LastName, i.lastname, fmt.Sprintf("Person[%s] not updated correctly: 'LastName': expected %s, got: %s", i.id, i.lastname, p.LastName))
+		require.Equal(t, p.Email, i.email, fmt.Sprintf("Person[%s] not updated correctly: 'Email': expected %s, got: %s", i.id, i.email, p.Email))
+		require.Equal(t, p.Role, i.role, fmt.Sprintf("Person[%s] not updated correctly: 'Role': expected %s, got: %s", i.id, i.role, p.Role))
+		require.Equal(t, p.Player, i.player, fmt.Sprintf("Person[%s] not updated correctly: 'Player': expected %t, got: %t", i.id, i.player, p.Player))
 	}
 
-	// Delete the list of people
-	for _, id := range list {
-		err := RemovePerson(id)
-		r.Nil(err, "err should be nothing")
+	// Delete the people we created
+	for _, i := range datapeople {
+		err := RemovePerson(i.id)
+		require.Nil(t, err, "err should be nothing")
 	}
 
-	// Check there are no more people
-	list, err = ListPeople([]string{"regular", "admin", "suspended"})
-	r.Nil(err, "err should be nothing")
-	r.Equal(0, len(list), fmt.Sprintf("Unexpected number of people. Expected:%d, actual:%d", 0, len(list)))
+	// Check the final number of people
+	list3, err := ListPeople(AllRoles)
+	require.Nil(t, err, "err should be nothing")
+	require.Equal(t, len(list1), len(list3), fmt.Sprintf("Unexpected number of people. Expected:%d, actual:%d", len(list1), len(list3)))
 }
 
 func TestDeletePersonWithDuffID(t *testing.T) {
-	r := require.New(t)
-
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
-
-	// Clear the people
-	err := ClearPeople()
-	r.Nil(err, "err should be nothing")
+	teardown := SetupFull(t)
+	defer teardown(t)
 
 	// Attempt to delete a person using a duff ID
-	err = RemovePerson("junk")
+	err := RemovePerson("junk")
 	if err == nil {
-		r.Fail(fmt.Sprintf("Expected an error. actually got: [%v].", err))
+		require.Fail(t, fmt.Sprintf("Expected an error. actually got: [%v].", err))
 	} else {
 		if cerr, ok := err.(*codeerror.CodeError); ok {
 			if cerr.Code() != http.StatusNotFound {
-				r.Fail(fmt.Sprintf("Unexpected error: [%v]", err))
+				require.Fail(t, fmt.Sprintf("Unexpected error: [%v]", err))
 			}
 		} else {
-			r.Fail(fmt.Sprintf("Unexpected error: [%v]", err))
+			require.Fail(t, fmt.Sprintf("Unexpected error: [%v]", err))
 		}
 	}
 }
 
 func TestListPeopleWithDuffPlayerFile(t *testing.T) {
-	r := require.New(t)
-
-	// Clear the people
-	err := ClearPeople()
-	r.Nil(err, "err should be nothing")
+	teardown := SetupFull(t)
+	defer teardown(t)
 
 	filename, err := makePersonFilename("x")
-	r.Nil(err, "err should be nothing")
+	require.Nil(t, err, "err should be nothing")
 
 	// Create a new person file with junk contents
 	err = ioutil.WriteFile(filename, []byte("junk"), 0644)
-	r.Nil(err, "err should be nothing")
+	require.Nil(t, err, "err should be nothing")
 
 	// Attempt to use the 'junk' person!
 	_, err = ListPeople([]string{"regular", "admin", "suspended"})
 	if err != nil {
 		if cerr, ok := err.(*codeerror.CodeError); ok {
 			if cerr.Code() != http.StatusInternalServerError {
-				r.Fail(fmt.Sprintf("Unexpected error type: expected: %d, Actual: %d", http.StatusNotFound, cerr.Code()))
+				require.Fail(t, fmt.Sprintf("Unexpected error type: expected: %d, Actual: %d", http.StatusNotFound, cerr.Code()))
 			}
 		} else {
-			r.Fail(fmt.Sprintf("%s", err))
+			require.Fail(t, fmt.Sprintf("%s", err))
 		}
 	} else {
-		r.Fail("Unexpected success")
+		require.Fail(t, "Unexpected success")
 	}
 }
 
 func TestDetailsWithDuffPersonFile(t *testing.T) {
-	r := require.New(t)
-
-	// Clear the people
-	err := ClearPeople()
-	r.Nil(err, "err should be nothing")
+	teardown := SetupFull(t)
+	defer teardown(t)
 
 	// Create a new person file with junk contents
 	filename, err := makePersonFilename("0")
-	r.Nil(err, "err should be nothing")
+	require.Nil(t, err, "err should be nothing")
 
 	err = ioutil.WriteFile(filename, []byte("junk"), 0644)
-	r.Nil(err, "err should be nothing")
+	require.Nil(t, err, "err should be nothing")
 
 	// Check that List returns an error
 	expected := "invalid character 'j' looking for beginning of value"
 	_, err = LoadPerson("0")
 	if err == nil {
-		r.Fail(fmt.Sprintf("Error actual = (nil), and Expected = [%v].", expected))
+		require.Fail(t, fmt.Sprintf("Error actual = (nil), and Expected = [%v].", expected))
 	}
 	if err.Error() != expected {
-		r.Fail(fmt.Sprintf("Error actual = [%v], and Expected = [%v].", err, expected))
+		require.Fail(t, fmt.Sprintf("Error actual = [%v], and Expected = [%v].", err, expected))
 	}
 }

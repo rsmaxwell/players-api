@@ -80,24 +80,3 @@ func Startup() error {
 
 	return nil
 }
-
-// ClearModel the model
-func ClearModel() error {
-
-	err := ClearPeople()
-	if err != nil {
-		return err
-	}
-
-	err = ClearCourts()
-	if err != nil {
-		return err
-	}
-
-	err = ClearQueue()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}

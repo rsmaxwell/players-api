@@ -70,22 +70,6 @@ func removeAll() error {
 	return nil
 }
 
-// ClearPeople all the people
-func ClearPeople() error {
-
-	err := removeAll()
-	if err != nil {
-		return err
-	}
-
-	err = createPersonDirs()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // makePersonFilename function
 func makePersonFilename(id string) (string, error) {
 

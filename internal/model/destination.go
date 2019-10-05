@@ -5,7 +5,6 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // Destination is the Generic Destination interface
@@ -17,7 +16,7 @@ type Destination interface {
 	RemovePlayers(players []string) error
 	AddPlayers(players []string) error
 	Save(ref *common.Reference) error
-	Update(session *session.Session, fields map[string]interface{}) error
+	Update(fields map[string]interface{}) error
 }
 
 // FormatReference function

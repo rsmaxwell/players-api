@@ -22,6 +22,7 @@ func init() {
 
 // New creates a new session
 func New(userID string) (string, error) {
+
 	s := new(Session)
 	s.UserID = userID
 	s.Start = time.Now()

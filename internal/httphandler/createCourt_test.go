@@ -16,7 +16,7 @@ import (
 
 func TestCreateCourt(t *testing.T) {
 
-	teardown := model.SetupLoggedin(t)
+	teardown := model.SetupFull(t)
 	defer teardown(t)
 
 	// ***************************************************************

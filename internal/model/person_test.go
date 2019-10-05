@@ -35,7 +35,7 @@ func TestOverwriteExistingPerson(t *testing.T) {
 	err = NewPerson("John", "Buutler", "butler@ghj.co.uk", hashedPassword, false).Save("007")
 	require.Nil(t, err, "err should be nothing")
 
-	list2, err := ListPeople([]string{"regular", "admin", "suspended"})
+	list2, err := ListPeople(AllRoles)
 	require.Nil(t, err, "err should be nothing")
 	require.Equal(t, len(list1), len(list2), "List of people not updated correctly")
 }
@@ -53,7 +53,7 @@ func TestNewInfoJunkPerson(t *testing.T) {
 	err = NewPerson("John", "Buutler", "butler@ghj.co.uk", hashedPassword, false).Save("butler")
 	require.Nil(t, err, "err should be nothing")
 
-	list2, err := ListPeople([]string{"regular", "admin", "suspended"})
+	list2, err := ListPeople(AllRoles)
 	require.Nil(t, err, "err should be nothing")
 	require.Equal(t, len(list1)+1, len(list2), "List of people not updated correctly")
 }
@@ -261,5 +261,41 @@ func TestUpdatePersonPlayer(t *testing.T) {
 		require.Nil(t, err, "err should be nothing")
 		require.Equal(t, i.expectedResult, err, "Unexpected error")
 		require.Equal(t, p.Player, i.player, "Unexpected Player: wanted:%s, got:%s", p.Player, i.player)
+	}
+}
+
+func TestPersonCanLogin(t *testing.T) {
+	teardown := SetupFull(t)
+	defer teardown(t)
+
+	// Add a couple of people
+	tests := []struct {
+		testName       string
+		id             string
+		role           string
+		player         bool
+		expectedResult bool
+	}{
+		{testName: "admin", id: "007", role: RoleAdmin, player: true, expectedResult: true},
+		{testName: "suspended non-player", id: "nigel", role: RoleSuspended, player: false, expectedResult: false},
+		{testName: "suspended player", id: "jeremy", role: RoleSuspended, player: true, expectedResult: false},
+		{testName: "normal non-player", id: "joanna", role: RoleNormal, player: false, expectedResult: true},
+	}
+
+	// ***************************************************************
+	// * Run the tests
+	// ***************************************************************
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
+
+			err := UpdatePersonRole(test.id, test.role)
+			require.Nil(t, err, "err should be nothing")
+
+			err = UpdatePersonPlayer(test.id, test.player)
+			require.Nil(t, err, "err should be nothing")
+
+			ok := PersonCanLogin(test.id)
+			require.Equal(t, ok, test.expectedResult, "Unexpected error")
+		})
 	}
 }

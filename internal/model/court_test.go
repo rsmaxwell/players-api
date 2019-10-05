@@ -9,7 +9,6 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
-	"github.com/rsmaxwell/players-api/internal/session"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -226,14 +225,8 @@ func TestUpdateCourt(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			token, err := session.New(test.personID)
-			require.Nil(t, err)
-
-			mySession := session.LookupToken(token)
-			require.Nil(t, err)
-
 			ref := &common.Reference{Type: "court", ID: test.courtID}
-			err = UpdateCourt(ref, mySession, test.court)
+			err := UpdateCourt(ref, test.court)
 			require.Nil(t, err, "err should be nothing")
 
 			// Check the court was actually updated

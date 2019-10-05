@@ -2,6 +2,7 @@ package httphandler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/rsmaxwell/players-api/internal/session"
+	"github.com/stretchr/testify/require"
 
 	"github.com/gorilla/mux"
 )
@@ -23,24 +25,28 @@ func TestLogin(t *testing.T) {
 		testName       string
 		userID         string
 		password       string
+		role           string
 		expectedStatus int
 	}{
 		{
-			testName:       "Good request",
+			testName:       "Good request from admin",
 			userID:         "007",
 			password:       "topsecret",
+			role:           model.RoleAdmin,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			testName:       "Space in userID",
 			userID:         "0 7",
 			password:       "topsecret",
+			role:           model.RoleNormal,
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			testName:       "Path in userID",
 			userID:         "../007",
 			password:       "topsecret",
+			role:           model.RoleSuspended,
 			expectedStatus: http.StatusUnauthorized,
 		},
 	}
@@ -50,9 +56,7 @@ func TestLogin(t *testing.T) {
 
 			// Create a request to pass to our handler.
 			req, err := http.NewRequest("GET", "/login", nil)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.Nil(t, err, "err should be nothing")
 
 			req.Header.Set("Authorization", model.BasicAuth(test.userID, test.password))
 
@@ -67,9 +71,7 @@ func TestLogin(t *testing.T) {
 			router.ServeHTTP(rw, req)
 
 			// Check the status code is what we expect.
-			if rw.Code != test.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus)
-			}
+			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 
 			if rw.Code == http.StatusOK {
 				// Check the response is what we expect.

@@ -403,3 +403,39 @@ func PeopleSize() (int, error) {
 
 	return len(files), nil
 }
+
+// PersonCanLogin function
+func PersonCanLogin(id string) bool {
+
+	p, err := LoadPerson(id)
+	if err != nil {
+		return false
+	}
+
+	switch p.Role {
+	case RoleAdmin:
+		return true
+	case RoleNormal:
+		return true
+	}
+
+	return false
+}
+
+// PersonCanUpdate function
+func PersonCanUpdate(id string) bool {
+
+	p, err := LoadPerson(id)
+	if err != nil {
+		return false
+	}
+
+	switch p.Role {
+	case RoleAdmin:
+		return true
+	case RoleNormal:
+		return true
+	}
+
+	return false
+}

@@ -11,7 +11,6 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // Info type
@@ -78,14 +77,14 @@ func NewCourt(name string, players []string) *Court {
 }
 
 // UpdateCourt method
-func UpdateCourt(ref *common.Reference, session *session.Session, fields map[string]interface{}) error {
+func UpdateCourt(ref *common.Reference, fields map[string]interface{}) error {
 
 	c, err := LoadCourt(ref)
 	if err != nil {
 		return err
 	}
 
-	err = c.Update(session, fields)
+	err = c.Update(fields)
 	if err != nil {
 		return err
 	}
@@ -99,7 +98,7 @@ func UpdateCourt(ref *common.Reference, session *session.Session, fields map[str
 }
 
 // Update method
-func (c *Court) Update(session *session.Session, fields map[string]interface{}) error {
+func (c *Court) Update(fields map[string]interface{}) error {
 
 	if v, ok := fields["Container"]; ok {
 		if container2, ok := v.(map[string]interface{}); ok {

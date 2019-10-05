@@ -8,7 +8,6 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // Queue type
@@ -95,14 +94,14 @@ func NewQueue(name string) *Queue {
 }
 
 // UpdateQueue method
-func UpdateQueue(ref *common.Reference, session *session.Session, fields map[string]interface{}) error {
+func UpdateQueue(ref *common.Reference, fields map[string]interface{}) error {
 
 	q, err := LoadQueue(ref)
 	if err != nil {
 		return err
 	}
 
-	err = q.Update(session, fields)
+	err = q.Update(fields)
 	if err != nil {
 		return err
 	}
@@ -116,7 +115,7 @@ func UpdateQueue(ref *common.Reference, session *session.Session, fields map[str
 }
 
 // Update method
-func (q *Queue) Update(session *session.Session, fields map[string]interface{}) error {
+func (q *Queue) Update(fields map[string]interface{}) error {
 
 	if v, ok := fields["Container"]; ok {
 		if container2, ok := v.(map[string]interface{}); ok {

@@ -422,10 +422,10 @@ func PersonCanLogin(id string) bool {
 	return false
 }
 
-// PersonCanUpdate function
-func PersonCanUpdate(id string) bool {
+// PersonCanUpdateCourt function
+func PersonCanUpdateCourt(sessionID string) bool {
 
-	p, err := LoadPerson(id)
+	p, err := LoadPerson(sessionID)
 	if err != nil {
 		return false
 	}
@@ -435,6 +435,64 @@ func PersonCanUpdate(id string) bool {
 		return true
 	case RoleNormal:
 		return true
+	}
+
+	return false
+}
+
+// PersonCanUpdatePerson function
+func PersonCanUpdatePerson(sessionID, userID string) bool {
+
+	p, err := LoadPerson(sessionID)
+	if err != nil {
+		return false
+	}
+
+	switch p.Role {
+	case RoleAdmin:
+		return true
+	case RoleNormal:
+		if sessionID == userID {
+			return true
+		}
+	}
+
+	return false
+}
+
+// PersonCanUpdatePersonRole function
+func PersonCanUpdatePersonRole(sessionID, userID string) bool {
+
+	p, err := LoadPerson(sessionID)
+	if err != nil {
+		return false
+	}
+
+	switch p.Role {
+	case RoleAdmin:
+		if sessionID != userID {
+			return true
+		}
+	}
+
+	return false
+}
+
+// PersonCanUpdatePersonPlayer function
+func PersonCanUpdatePersonPlayer(sessionID, userID string) bool {
+
+	p, err := LoadPerson(sessionID)
+	if err != nil {
+		return false
+	}
+
+	switch p.Role {
+	case RoleAdmin:
+		return true
+	case RoleNormal:
+		if sessionID == userID {
+			return true
+		}
 	}
 
 	return false

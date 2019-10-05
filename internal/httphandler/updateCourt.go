@@ -44,7 +44,7 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	if !model.PersonCanUpdate(session.UserID) {
+	if !model.PersonCanUpdateCourt(session.UserID) {
 		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
 		clientError++
 		return

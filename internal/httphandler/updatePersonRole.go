@@ -10,14 +10,14 @@ import (
 	"github.com/rsmaxwell/players-api/internal/session"
 )
 
-// UpdatePersonRequest structure
-type UpdatePersonRequest struct {
-	Token  string                 `json:"token"`
-	Person map[string]interface{} `json:"person"`
+// UpdatePersonRoleRequest structure
+type UpdatePersonRoleRequest struct {
+	Token string `json:"token"`
+	Role  string `json:"role"`
 }
 
-// UpdatePerson method
-func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
+// UpdatePersonRole method
+func UpdatePersonRole(rw http.ResponseWriter, req *http.Request, id string) {
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -27,7 +27,7 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	var r UpdatePersonRequest
+	var r UpdatePersonRoleRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
@@ -42,13 +42,13 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	if !model.PersonCanUpdatePerson(session.UserID, id) {
+	if !model.PersonCanUpdatePersonRole(session.UserID, id) {
 		WriteResponse(rw, http.StatusInternalServerError, "Not Authorized")
 		clientError++
 		return
 	}
 
-	err = model.UpdatePerson(id, r.Person)
+	err = model.UpdatePersonRole(id, r.Role)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

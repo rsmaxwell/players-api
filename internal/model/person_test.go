@@ -199,3 +199,67 @@ func TestDetailsWithDuffPersonFile(t *testing.T) {
 		require.Fail(t, fmt.Sprintf("Error actual = [%v], and Expected = [%v].", err, expected))
 	}
 }
+
+func TestUpdatePerson(t *testing.T) {
+	teardown := SetupFull(t)
+	defer teardown(t)
+
+	// Add a couple of people
+	datapeople := []struct {
+		id             string
+		firstname      string
+		lastname       string
+		email          string
+		hashedpassword []byte
+	}{
+		{id: "007", firstname: "aaa", lastname: "bbb", email: junkEmail, hashedpassword: junkHashedPassword},
+	}
+
+	for _, i := range datapeople {
+
+		p2 := make(map[string]interface{})
+
+		p2["FirstName"] = i.firstname
+		p2["LastName"] = i.lastname
+		p2["Email"] = i.email
+		p2["HashedPassword"] = i.hashedpassword
+
+		err := UpdatePerson("007", p2)
+		require.Nil(t, err, "err should be nothing")
+
+		// Check the expected People have been created
+		p, err := LoadPerson(i.id)
+		require.Nil(t, err, "err should be nothing")
+
+		require.Equal(t, p.FirstName, i.firstname, fmt.Sprintf("Person[%s] not updated correctly: 'Firstname': expected %s, got: %s", i.id, i.firstname, p.FirstName))
+		require.Equal(t, p.LastName, i.lastname, fmt.Sprintf("Person[%s] not updated correctly: 'LastName': expected %s, got: %s", i.id, i.lastname, p.LastName))
+		require.Equal(t, p.Email, i.email, fmt.Sprintf("Person[%s] not updated correctly: 'Email': expected %s, got: %s", i.id, i.email, p.Email))
+		require.Equal(t, p.HashedPassword, i.hashedpassword, fmt.Sprintf("Person[%s] not updated correctly: 'HashedPassword': expected %s, got: %s", i.id, i.hashedpassword, p.HashedPassword))
+	}
+}
+
+func TestUpdatePersonPlayer(t *testing.T) {
+	teardown := SetupFull(t)
+	defer teardown(t)
+
+	datapeople := []struct {
+		id             string
+		player         bool
+		expectedResult error
+	}{
+		{id: "007", player: false, expectedResult: nil},
+		{id: "alice", player: true, expectedResult: nil},
+	}
+
+	for _, i := range datapeople {
+
+		err := UpdatePersonPlayer(i.id, i.player)
+		require.Nil(t, err, "err should be nothing")
+
+		// Check the expected People have been created
+		p, err := LoadPerson(i.id)
+		require.Nil(t, err, "err should be nothing")
+		require.Equal(t, i.expectedResult, err, "Unexpected error")
+		require.Equal(t, p.Player, i.player, "Unexpected Player: wanted:%s, got:%s", p.Player, i.player)
+	}
+}

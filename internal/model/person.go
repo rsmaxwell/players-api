@@ -13,7 +13,6 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // Person type
@@ -119,14 +118,14 @@ func NewPerson(firstname string, lastname string, email string, hashedPassword [
 }
 
 // UpdatePerson method
-func UpdatePerson(id string, session *session.Session, fields map[string]interface{}) error {
+func UpdatePerson(id string, fields map[string]interface{}) error {
 
 	p, err := LoadPerson(id)
 	if err != nil {
 		return err
 	}
 
-	err = p.Update(session, fields)
+	err = p.updatePersonFields(fields)
 	if err != nil {
 		return err
 	}
@@ -139,8 +138,8 @@ func UpdatePerson(id string, session *session.Session, fields map[string]interfa
 	return nil
 }
 
-// Update method
-func (p *Person) Update(session *session.Session, person2 map[string]interface{}) error {
+// updatePersonFields method
+func (p *Person) updatePersonFields(person2 map[string]interface{}) error {
 
 	if v, ok := person2["FirstName"]; ok {
 		value, ok := v.(string)
@@ -158,36 +157,76 @@ func (p *Person) Update(session *session.Session, person2 map[string]interface{}
 		p.LastName = value
 	}
 
-	if v, ok := person2["Player"]; ok {
-		value, ok := v.(bool)
-		if !ok {
-			return codeerror.NewBadRequest("The type of 'Person.Player' should be a bool")
-		}
-		p.Player = value
-	}
-
-	if v, ok := person2["Status"]; ok {
-
-		// Check we have the authority to perform this update
-		myself, err := LoadPerson(session.UserID)
-		if err != nil {
-			return err
-		}
-
-		// Only 'admin' users can change the status of a user
-		if myself.Role == RoleAdmin {
-			return codeerror.NewUnauthorized("Not authorised to update 'Person.Status'")
-		}
-
-		// Check the type of the new status is a string
+	if v, ok := person2["Email"]; ok {
 		value, ok := v.(string)
 		if !ok {
-			return codeerror.NewBadRequest("The type of 'Person.Status' should be a string")
+			return codeerror.NewBadRequest("The type of 'Person.Email' should be a string")
 		}
-
-		p.Role = value
+		p.Email = value
 	}
 
+	if v, ok := person2["HashedPassword"]; ok {
+		value, ok := v.([]byte)
+		if !ok {
+			return codeerror.NewBadRequest("The type of 'Person.HashedPassword' should be a string")
+		}
+		p.HashedPassword = value
+	}
+
+	return nil
+}
+
+// UpdatePersonPlayer method
+func UpdatePersonPlayer(id string, value bool) error {
+
+	p, err := LoadPerson(id)
+	if err != nil {
+		return err
+	}
+
+	err = p.updatePersonFieldsPlayer(value)
+	if err != nil {
+		return err
+	}
+
+	err = p.Save(id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// updatePersonFieldsPlayer method
+func (p *Person) updatePersonFieldsPlayer(value bool) error {
+	p.Player = value
+	return nil
+}
+
+// UpdatePersonRole method
+func UpdatePersonRole(id string, value string) error {
+
+	p, err := LoadPerson(id)
+	if err != nil {
+		return err
+	}
+
+	err = p.updatePersonFieldsRole(value)
+	if err != nil {
+		return err
+	}
+
+	err = p.Save(id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// updatePersonFieldsRole method
+func (p *Person) updatePersonFieldsRole(value string) error {
+	p.Role = value
 	return nil
 }
 
@@ -244,7 +283,7 @@ func (p *Person) Save(id string) error {
 	return nil
 }
 
-// ListPeople returns a list of the person IDs with one of the allowed status values
+// ListPeople returns a list of the person IDs with one of the allowed role values
 func ListPeople(filter []string) ([]string, error) {
 
 	err := createPersonDirs()

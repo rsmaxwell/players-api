@@ -42,7 +42,7 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	err = model.UpdatePerson(id, session, r.Person)
+	err = model.UpdatePerson(id, r.Person)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/rsmaxwell/players-api/internal/model"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // createTestdataFull function
@@ -12,11 +11,6 @@ func createTestdataFull() error {
 	if err != nil {
 		return err
 	}
-
-	var (
-		myUserID   = "007"
-		myPassword = "topsecret"
-	)
 
 	datapeople := []struct {
 		id        string
@@ -46,22 +40,9 @@ func createTestdataFull() error {
 		}
 	}
 
-	myToken, err := Login(myUserID, myPassword)
-	if err != nil {
-		return err
-	}
-
-	mySession := session.LookupToken(myToken)
-	if err != nil {
-		return err
-	}
-
 	// Make all the people a 'player'
-	person2 := make(map[string]interface{})
-	person2["Player"] = true
-
 	for _, i := range datapeople {
-		err = model.UpdatePerson(i.id, mySession, person2)
+		err = model.UpdatePersonPlayer(i.id, true)
 		if err != nil {
 			return err
 		}

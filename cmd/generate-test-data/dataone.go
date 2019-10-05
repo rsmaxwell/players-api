@@ -1,11 +1,9 @@
 package main
 
-import "github.com/rsmaxwell/players-api/internal/model"
-
 // createTestdataOne function
 func createTestdataOne() error {
 
-	err := model.ClearModel()
+	err := clearModel()
 	if err != nil {
 		return err
 	}

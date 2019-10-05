@@ -3,14 +3,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // createTestdataLoggedon function
 func createTestdataLoggedon() error {
 
-	err := model.ClearModel()
+	err := clearModel()
 	if err != nil {
 		return err
 	}

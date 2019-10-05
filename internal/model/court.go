@@ -46,12 +46,17 @@ func makeCourtFilename(id string) (string, error) {
 		return "", err
 	}
 
+	err = createCourtDirs()
+	if err != nil {
+		return "", err
+	}
+
 	filename := courtListDir + "/" + id + ".json"
 	return filename, nil
 }
 
 // createDirs creates the people directory
-func createCourtFiles() error {
+func createCourtDirs() error {
 
 	_, err := os.Stat(courtListDir)
 	if err != nil {
@@ -59,11 +64,6 @@ func createCourtFiles() error {
 		if err != nil {
 			return codeerror.NewInternalServerError(err.Error())
 		}
-	}
-
-	_, err = GetCourtInfo()
-	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
 	}
 
 	return nil
@@ -167,6 +167,11 @@ func (c *Court) Save(ref *common.Reference) error {
 // ListCourts returns a list of the court IDs
 func ListCourts() ([]string, error) {
 
+	err := createCourtDirs()
+	if err != nil {
+		return nil, err
+	}
+
 	files, err := ioutil.ReadDir(courtListDir)
 	if err != nil {
 		return nil, codeerror.NewInternalServerError(err.Error())
@@ -264,6 +269,11 @@ func GetCourtInfo() (*Info, error) {
 			return nil, codeerror.NewInternalServerError(err.Error())
 		}
 
+		err = createCourtDirs()
+		if err != nil {
+			return nil, err
+		}
+
 		err = ioutil.WriteFile(courtInfoFile, infoJSON, 0644)
 		if err != nil {
 			return nil, codeerror.NewInternalServerError(err.Error())
@@ -290,6 +300,11 @@ func saveCourtInfo(i Info) error {
 	infoJSON, err := json.Marshal(i)
 	if err != nil {
 		return codeerror.NewInternalServerError(err.Error())
+	}
+
+	err = createCourtDirs()
+	if err != nil {
+		return err
 	}
 
 	err = ioutil.WriteFile(courtInfoFile, infoJSON, 0644)

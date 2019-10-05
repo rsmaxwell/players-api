@@ -8,7 +8,7 @@ import (
 // createTestdataFull function
 func createTestdataFull() error {
 
-	err := model.ClearModel()
+	err := clearModel()
 	if err != nil {
 		return err
 	}

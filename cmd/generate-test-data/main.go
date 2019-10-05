@@ -3,7 +3,12 @@ package main
 import (
 	"errors"
 	"log"
+	"os"
+	"path/filepath"
 
+	"github.com/rsmaxwell/players-api/internal/common"
+
+	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/rsmaxwell/players-api/internal/session"
 	"golang.org/x/crypto/bcrypt"
@@ -157,5 +162,36 @@ func CreateCourt(name string, players []string) error {
 		return err
 	}
 
+	return nil
+}
+
+func clearModel() error {
+	_, err := os.Stat(common.RootDir)
+	if err == nil {
+		err = removeContents(common.RootDir)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// removeContents empties the contents of a directory
+func removeContents(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return codeerror.NewInternalServerError(err.Error())
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return codeerror.NewInternalServerError(err.Error())
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return codeerror.NewInternalServerError(err.Error())
+		}
+	}
 	return nil
 }

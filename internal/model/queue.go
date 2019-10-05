@@ -52,6 +52,7 @@ func xClearQueue() error {
 // makeQueueFilename function
 func makeQueueFilename() (string, error) {
 	filename := queueBaseDir + "/" + "queue" + ".json"
+
 	return filename, nil
 }
 
@@ -180,6 +181,11 @@ func LoadQueue(ref *common.Reference) (*Queue, error) {
 	}
 
 	filename, err := makeQueueFilename()
+	if err != nil {
+		return nil, err
+	}
+
+	err = createQueueFiles()
 	if err != nil {
 		return nil, err
 	}

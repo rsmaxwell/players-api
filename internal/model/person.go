@@ -56,24 +56,15 @@ func init() {
 	validate = validator.New()
 }
 
-// removeAll removes ALL the people
-func removeAll() error {
-
-	_, err := os.Stat(personListDir)
-	if err == nil {
-		err = common.RemoveContents(personListDir)
-		if err != nil {
-			return codeerror.NewInternalServerError(err.Error())
-		}
-	}
-
-	return nil
-}
-
 // makePersonFilename function
 func makePersonFilename(id string) (string, error) {
 
 	err := common.CheckCharactersInID(id)
+	if err != nil {
+		return "", err
+	}
+
+	err = createPersonDirs()
 	if err != nil {
 		return "", err
 	}
@@ -255,6 +246,11 @@ func (p *Person) Save(id string) error {
 
 // ListPeople returns a list of the person IDs with one of the allowed status values
 func ListPeople(filter []string) ([]string, error) {
+
+	err := createPersonDirs()
+	if err != nil {
+		return nil, err
+	}
 
 	files, err := ioutil.ReadDir(personListDir)
 	if err != nil {

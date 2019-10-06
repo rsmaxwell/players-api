@@ -114,6 +114,16 @@ func SetupHandlers(r *mux.Router) {
 			UpdatePerson(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodPut)
 
+	r.HandleFunc("/personplayer/{id}",
+		func(w http.ResponseWriter, req *http.Request) {
+			UpdatePersonPlayer(w, req, mux.Vars(req)["id"])
+		}).Methods(http.MethodPut)
+
+	r.HandleFunc("/personrole/{id}",
+		func(w http.ResponseWriter, req *http.Request) {
+			UpdatePersonRole(w, req, mux.Vars(req)["id"])
+		}).Methods(http.MethodPut)
+
 	r.HandleFunc("/person/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			DeletePerson(w, req, mux.Vars(req)["id"])

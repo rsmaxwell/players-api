@@ -6,13 +6,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
-)
-
-var (
-	clientSuccess             int
-	clientError               int
-	clientAuthenticationError int
-	serverError               int
+	"github.com/rsmaxwell/players-api/internal/common"
 )
 
 // messageResponse structure
@@ -51,12 +45,12 @@ func errorHandler(rw http.ResponseWriter, req *http.Request, err error) {
 		setHeaders(rw, req)
 		if serr, ok := err.(*codeerror.CodeError); ok {
 			WriteResponse(rw, serr.Code(), serr.Error())
-			clientError++
+			common.MetricsData.ClientError++
 			return
 		}
 
 		WriteResponse(rw, http.StatusInternalServerError, "InternalServerError")
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 }

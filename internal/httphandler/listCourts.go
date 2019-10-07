@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // ListCourtsRequest structure
@@ -27,7 +27,7 @@ func ListCourts(rw http.ResponseWriter, req *http.Request) {
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
@@ -35,18 +35,11 @@ func ListCourts(rw http.ResponseWriter, req *http.Request) {
 	err = json.Unmarshal(b, &r)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
-	session := session.LookupToken(r.Token)
-	if session == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		clientError++
-		return
-	}
-
-	listOfCourts, err := model.ListCourts()
+	listOfCourts, err := model.ListCourts(r.Token)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

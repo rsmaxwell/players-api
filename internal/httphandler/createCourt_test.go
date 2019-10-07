@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rsmaxwell/players-api/internal/basic/court"
+	"github.com/rsmaxwell/players-api/internal/basic/peoplecontainer"
 	"github.com/rsmaxwell/players-api/internal/model"
 
 	"github.com/gorilla/mux"
@@ -56,13 +58,13 @@ func TestCreateCourt(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			initialNumberOfCourts, err := model.CourtSize()
+			initialNumberOfCourts, err := court.Size()
 			require.Nil(t, err, "err should be nothing")
 
 			requestBody, err := json.Marshal(CreateCourtRequest{
 				Token: test.token,
-				Court: model.Court{
-					Container: model.PeopleContainer{
+				Court: court.Court{
+					Container: peoplecontainer.PeopleContainer{
 						Name:    test.name,
 						Players: test.players,
 					},
@@ -82,7 +84,7 @@ func TestCreateCourt(t *testing.T) {
 			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 
 			// Check the response
-			finalNumberOfCourts, err := model.CourtSize()
+			finalNumberOfCourts, err := court.Size()
 			require.Nil(t, err, "err should be nothing")
 
 			if rw.Code == http.StatusOK {

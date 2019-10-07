@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,7 @@ func TestListPeople(t *testing.T) {
 	goodToken, err := getLoginToken(t, goodUserID, goodPassword)
 	require.Nil(t, err, "err should be nothing")
 
-	allPeopleIDs, err := model.ListPeople(model.AllRoles)
+	allPeopleIDs, err := person.List(person.AllRoles)
 	require.Nil(t, err, "err should be nothing")
 
 	// ***************************************************************
@@ -42,14 +43,14 @@ func TestListPeople(t *testing.T) {
 		{
 			testName:       "Good request",
 			token:          goodToken,
-			filter:         model.AllRoles,
+			filter:         person.AllRoles,
 			expectedStatus: http.StatusOK,
 			expectedResult: allPeopleIDs,
 		},
 		{
 			testName:       "Bad token",
 			token:          "junk",
-			filter:         model.AllRoles,
+			filter:         person.AllRoles,
 			expectedStatus: http.StatusUnauthorized,
 			expectedResult: []string{},
 		},

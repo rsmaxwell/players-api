@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // UpdatePersonRoleRequest structure
@@ -23,7 +23,7 @@ func UpdatePersonRole(rw http.ResponseWriter, req *http.Request, id string) {
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
@@ -31,24 +31,11 @@ func UpdatePersonRole(rw http.ResponseWriter, req *http.Request, id string) {
 	err = json.Unmarshal(b, &r)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
-	session := session.LookupToken(r.Token)
-	if session == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		clientError++
-		return
-	}
-
-	if !model.PersonCanUpdatePersonRole(session.UserID, id) {
-		WriteResponse(rw, http.StatusInternalServerError, "Not Authorized")
-		clientError++
-		return
-	}
-
-	err = model.UpdatePersonRole(id, r.Role)
+	err = model.UpdatePersonRole(r.Token, id, r.Role)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

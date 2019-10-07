@@ -7,7 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/internal/session"
+	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // GetMetricsRequest structure
@@ -17,10 +18,7 @@ type GetMetricsRequest struct {
 
 // GetMetricsResponse structure
 type GetMetricsResponse struct {
-	ClientSuccess             int `json:"clientSuccess"`
-	ClientError               int `json:"clientError"`
-	ClientAuthenticationError int `json:"clientAuthenticationError"`
-	ServerError               int `json:"serverError"`
+	Data common.Metrics `json:"data"`
 }
 
 // GetMetrics method
@@ -30,7 +28,7 @@ func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
@@ -41,19 +39,15 @@ func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session := session.LookupToken(r.Token)
-	if session == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		clientError++
+	err = model.GetMetrics(r.Token)
+	if err != nil {
+		errorHandler(rw, req, err)
 		return
 	}
 
 	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(GetMetricsResponse{
-		ClientSuccess:             clientSuccess,
-		ClientError:               clientError,
-		ClientAuthenticationError: clientAuthenticationError,
-		ServerError:               serverError,
+		Data: common.MetricsData,
 	})
 }

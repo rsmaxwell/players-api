@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
@@ -89,7 +90,7 @@ func TestUpdatePersonRole(t *testing.T) {
 
 			// Check the person was actually updated
 			if rw.Code == http.StatusOK {
-				person, err := model.LoadPerson(test.id)
+				person, err := person.Load(test.id)
 				require.Nil(t, err, "err should be nothing")
 
 				if i, ok := test.person["FirstName"]; ok {

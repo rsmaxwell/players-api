@@ -1,9 +1,10 @@
-package model
+package queue
 
 import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestNewInfoJunkQueue(t *testing.T) {
-	teardown := SetupFull(t)
+	teardown := setupTestcase(t)
 	defer teardown(t)
 
 	queuefile, err := makeQueueFilename()
@@ -22,8 +23,8 @@ func TestNewInfoJunkQueue(t *testing.T) {
 	err = ioutil.WriteFile(queuefile, []byte("junk"), 0644)
 	require.Nil(t, err, "err should be nothing")
 
-	ref := common.Reference{Type: "queue", ID: ""}
-	_, err = LoadQueue(&ref)
+	ref := &common.Reference{Type: "queue", ID: ""}
+	_, err = Load(ref)
 	if err != nil {
 		if cerr, ok := err.(*codeerror.CodeError); ok {
 			if cerr.Code() == http.StatusInternalServerError {
@@ -36,5 +37,21 @@ func TestNewInfoJunkQueue(t *testing.T) {
 		}
 	} else {
 		require.Fail(t, "Unexpected success")
+	}
+}
+
+// SetupTestcase function
+func setupTestcase(t *testing.T) func(t *testing.T) {
+
+	queuefile, err := makeQueueFilename()
+	require.Nil(t, err, "err should be nothing")
+
+	_, err = os.Stat(queuefile)
+	if err == nil {
+		err = os.Remove(queuefile)
+		require.Nil(t, err, "err should be nothing")
+	}
+
+	return func(t *testing.T) {
 	}
 }

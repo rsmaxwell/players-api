@@ -7,7 +7,8 @@ import (
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/model"
-	"github.com/rsmaxwell/players-api/internal/session"
+
+	"github.com/rsmaxwell/players-api/internal/common"
 )
 
 // UpdatePersonRequest structure
@@ -23,7 +24,7 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
@@ -31,24 +32,11 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
 	err = json.Unmarshal(b, &r)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
-	session := session.LookupToken(r.Token)
-	if session == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		clientError++
-		return
-	}
-
-	if !model.PersonCanUpdatePerson(session.UserID, id) {
-		WriteResponse(rw, http.StatusInternalServerError, "Not Authorized")
-		clientError++
-		return
-	}
-
-	err = model.UpdatePerson(id, r.Person)
+	err = model.UpdatePerson(r.Token, id, r.Person)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

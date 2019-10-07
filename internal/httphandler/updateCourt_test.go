@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
 
@@ -113,7 +114,7 @@ func TestUpdateCourt(t *testing.T) {
 			// Check the response
 			if rw.Code == http.StatusOK {
 				ref := common.Reference{Type: "court", ID: test.id}
-				c, err := model.LoadCourt(&ref)
+				c, err := court.Load(&ref)
 				require.Nil(t, err, "err should be nothing")
 
 				if i, ok := test.court["Name"]; ok {

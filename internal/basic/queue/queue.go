@@ -1,4 +1,4 @@
-package model
+package queue
 
 import (
 	"encoding/json"
@@ -6,14 +6,16 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/rsmaxwell/players-api/internal/basic/destination"
+	"github.com/rsmaxwell/players-api/internal/basic/peoplecontainer"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
 )
 
 // Queue type
 type Queue struct {
-	Destination
-	Container PeopleContainer `json:"container"`
+	destination.Destination
+	Container peoplecontainer.PeopleContainer `json:"container"`
 }
 
 var (
@@ -22,30 +24,6 @@ var (
 
 func init() {
 	queueBaseDir = common.RootDir
-}
-
-// xClearQueue the Queue
-func xClearQueue() error {
-
-	filename, err := makeQueueFilename()
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(filename)
-	if err == nil {
-		err = os.Remove(filename)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = createQueueFiles()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // makeQueueFilename function
@@ -96,7 +74,7 @@ func NewQueue(name string) *Queue {
 // UpdateQueue method
 func UpdateQueue(ref *common.Reference, fields map[string]interface{}) error {
 
-	q, err := LoadQueue(ref)
+	q, err := Load(ref)
 	if err != nil {
 		return err
 	}
@@ -172,8 +150,8 @@ func QueueExists(id string) bool {
 	return true
 }
 
-// LoadQueue returns the Queue
-func LoadQueue(ref *common.Reference) (*Queue, error) {
+// Load returns the Queue
+func Load(ref *common.Reference) (*Queue, error) {
 
 	if ref.Type != "queue" {
 		return nil, codeerror.NewInternalServerError("Unexpected Reference type")
@@ -206,14 +184,14 @@ func LoadQueue(ref *common.Reference) (*Queue, error) {
 }
 
 // GetContainer returns the Destination
-func (q *Queue) GetContainer() *PeopleContainer {
+func (q *Queue) GetContainer() *peoplecontainer.PeopleContainer {
 	return &q.Container
 }
 
 // CheckPlayersLocation checks the players are at this destination
 func (q *Queue) CheckPlayersLocation(players []string) error {
 	pc := q.GetContainer()
-	return CheckPlayersInContainer(pc, players)
+	return destination.CheckPlayersInContainer(pc, players)
 }
 
 // CheckSpace checks there is space in the target for the moving players
@@ -224,11 +202,11 @@ func (q *Queue) CheckSpace(players []string) error {
 // RemovePlayers deletes players from the destination
 func (q *Queue) RemovePlayers(players []string) error {
 	pc := q.GetContainer()
-	return RemovePlayersFromContainer(pc, players)
+	return destination.RemovePlayersFromContainer(pc, players)
 }
 
 // AddPlayers adds players to the destination
 func (q *Queue) AddPlayers(players []string) error {
 	pc := q.GetContainer()
-	return AddPlayersToContainer(pc, players)
+	return destination.AddPlayersToContainer(pc, players)
 }

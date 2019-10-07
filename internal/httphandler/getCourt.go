@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // GetCourtRequest structure
@@ -18,7 +18,7 @@ type GetCourtRequest struct {
 
 // GetCourtResponse structure
 type GetCourtResponse struct {
-	Court model.Court `json:"court"`
+	Court court.Court `json:"court"`
 }
 
 // GetCourt method
@@ -28,7 +28,7 @@ func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
@@ -36,19 +36,11 @@ func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 	err = json.Unmarshal(b, &r)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
-	session := session.LookupToken(r.Token)
-	if session == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		clientError++
-		return
-	}
-
-	ref := &common.Reference{Type: "court", ID: id}
-	court, err := model.LoadCourt(ref)
+	c, err := model.GetCourt(r.Token, id)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return
@@ -57,6 +49,6 @@ func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(GetCourtResponse{
-		Court: *court,
+		Court: *c,
 	})
 }

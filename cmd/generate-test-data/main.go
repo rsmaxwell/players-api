@@ -2,13 +2,15 @@ package main
 
 import (
 	"errors"
+	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
+	"path"
 
+	"github.com/rsmaxwell/players-api/internal/basic/court"
+	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/common"
 
-	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/rsmaxwell/players-api/internal/session"
 	"golang.org/x/crypto/bcrypt"
@@ -131,7 +133,7 @@ func Register(id, password, firstName, lastName, email string) error {
 		return err
 	}
 
-	err = model.NewPerson(firstName, lastName, email, hashedPassword, false).Save(id)
+	err = person.New(firstName, lastName, email, hashedPassword, false).Save(id)
 	if err != nil {
 		return err
 	}
@@ -142,7 +144,7 @@ func Register(id, password, firstName, lastName, email string) error {
 // Login function
 func Login(user, pass string) (string, error) {
 
-	if !model.CheckUser(user, pass) {
+	if !person.CheckPassword(user, pass) {
 		return "", errors.New("Invalid Userid or Password")
 	}
 
@@ -157,7 +159,7 @@ func Login(user, pass string) (string, error) {
 // CreateCourt function
 func CreateCourt(name string, players []string) error {
 
-	_, err := model.NewCourt(name, players).Add()
+	_, err := court.New(name, players).Add()
 	if err != nil {
 		return err
 	}
@@ -177,20 +179,16 @@ func clearModel() error {
 }
 
 // removeContents empties the contents of a directory
-func removeContents(dir string) error {
-	d, err := os.Open(dir)
+func removeContents(dirname string) error {
+	children, err := ioutil.ReadDir(dirname)
 	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
+		return err
 	}
-	defer d.Close()
-	names, err := d.Readdirnames(-1)
-	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
-	}
-	for _, name := range names {
-		err = os.RemoveAll(filepath.Join(dir, name))
+
+	for _, d := range children {
+		err = os.RemoveAll(path.Join([]string{dirname, d.Name()}...))
 		if err != nil {
-			return codeerror.NewInternalServerError(err.Error())
+			return err
 		}
 	}
 	return nil

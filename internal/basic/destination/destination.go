@@ -1,16 +1,17 @@
-package model
+package destination
 
 import (
 	"fmt"
 
+	"github.com/rsmaxwell/players-api/internal/basic/peoplecontainer"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
 )
 
 // Destination is the Generic Destination interface
 type Destination interface {
-	Load(ref *common.Reference) (*PeopleContainer, error)
-	GetContainer() *PeopleContainer
+	Load(ref *common.Reference) (*peoplecontainer.PeopleContainer, error)
+	GetContainer() *peoplecontainer.PeopleContainer
 	CheckPlayersLocation(players []string) error
 	CheckSpace(players []string) error
 	RemovePlayers(players []string) error
@@ -28,18 +29,8 @@ func FormatReference(ref *common.Reference) string {
 	return "queue"
 }
 
-// Load method
-func Load(ref *common.Reference) (Destination, error) {
-
-	if ref.Type == "court" {
-		return LoadCourt(ref)
-	}
-
-	return LoadQueue(ref)
-}
-
 // CheckPlayersInContainer checks the players are at this destination
-func CheckPlayersInContainer(c *PeopleContainer, players []string) error {
+func CheckPlayersInContainer(c *peoplecontainer.PeopleContainer, players []string) error {
 
 	for _, personID := range players {
 		found := false
@@ -57,7 +48,7 @@ func CheckPlayersInContainer(c *PeopleContainer, players []string) error {
 }
 
 // RemovePlayersFromContainer deletes players from the container
-func RemovePlayersFromContainer(c *PeopleContainer, players []string) error {
+func RemovePlayersFromContainer(c *peoplecontainer.PeopleContainer, players []string) error {
 	array := []string{}
 	for _, id := range c.Players {
 
@@ -79,7 +70,7 @@ func RemovePlayersFromContainer(c *PeopleContainer, players []string) error {
 }
 
 // AddPlayersToContainer adds players to a container
-func AddPlayersToContainer(c *PeopleContainer, players []string) error {
+func AddPlayersToContainer(c *peoplecontainer.PeopleContainer, players []string) error {
 	array := []string{}
 	for _, id := range c.Players {
 		array = append(array, id)
@@ -105,7 +96,7 @@ func AddPlayersToContainer(c *PeopleContainer, players []string) error {
 }
 
 // GetContainer method
-func GetContainer() (*PeopleContainer, error) {
+func GetContainer() (*peoplecontainer.PeopleContainer, error) {
 	panic("This is an abstract method. Please provide an implementation!")
 }
 

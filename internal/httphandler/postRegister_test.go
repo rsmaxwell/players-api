@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 
+	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
@@ -60,7 +61,7 @@ func TestRegister(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			initialNumberOfPeople, err := model.PeopleSize()
+			initialNumberOfPeople, err := person.Size()
 			require.Nil(t, err)
 
 			requestBody, err := json.Marshal(RegisterRequest{
@@ -93,7 +94,7 @@ func TestRegister(t *testing.T) {
 				require.Equal(t, test.expectedStatus, rw.Code, "Unexpected status code")
 			}
 
-			finalNumberOfPeople, err := model.PeopleSize()
+			finalNumberOfPeople, err := person.Size()
 			require.Nil(t, err)
 
 			if rw.Code != http.StatusOK {
@@ -104,9 +105,9 @@ func TestRegister(t *testing.T) {
 			require.Equal(t, initialNumberOfPeople+1, finalNumberOfPeople, "Person was not registered")
 
 			// Check the status of the new person
-			p, err := model.LoadPerson(test.userID)
+			p, err := person.Load(test.userID)
 			require.Nil(t, err)
-			require.Equal(t, model.RoleSuspended, p.Role, "Unexpected role")
+			require.Equal(t, person.RoleSuspended, p.Role, "Unexpected role")
 		})
 	}
 }

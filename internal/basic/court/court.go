@@ -1,4 +1,4 @@
-package model
+package court
 
 import (
 	"encoding/json"
@@ -11,6 +11,10 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"gopkg.in/go-playground/validator.v9"
+
+	"github.com/rsmaxwell/players-api/internal/basic/destination"
+	"github.com/rsmaxwell/players-api/internal/basic/peoplecontainer"
 )
 
 // Info type
@@ -21,31 +25,35 @@ type Info struct {
 
 // Court type
 type Court struct {
-	Destination
-	Container PeopleContainer `json:"container" validate:"required,dive"`
+	destination.Destination
+	Container peoplecontainer.PeopleContainer `json:"container" validate:"required,dive"`
 }
 
 var (
 	courtBaseDir  string
 	courtListDir  string
 	courtInfoFile string
+
+	validate *validator.Validate
 )
 
 func init() {
 	courtBaseDir = common.RootDir + "/courts"
 	courtListDir = courtBaseDir + "/list"
 	courtInfoFile = courtBaseDir + "/info.json"
+
+	validate = validator.New()
 }
 
-// makeCourtFilename function
-func makeCourtFilename(id string) (string, error) {
+// makeFilename function
+func makeFilename(id string) (string, error) {
 
 	err := common.CheckCharactersInID(id)
 	if err != nil {
 		return "", err
 	}
 
-	err = createCourtDirs()
+	err = makefileStructure()
 	if err != nil {
 		return "", err
 	}
@@ -54,8 +62,8 @@ func makeCourtFilename(id string) (string, error) {
 	return filename, nil
 }
 
-// createDirs creates the people directory
-func createCourtDirs() error {
+// makefileStructure creates the people directory
+func makefileStructure() error {
 
 	_, err := os.Stat(courtListDir)
 	if err != nil {
@@ -68,23 +76,23 @@ func createCourtDirs() error {
 	return nil
 }
 
-// NewCourt initialises a Court object
-func NewCourt(name string, players []string) *Court {
+// New initialises a Court object
+func New(name string, players []string) *Court {
 	c := new(Court)
 	c.Container.Name = name
 	c.Container.Players = players
 	return c
 }
 
-// UpdateCourt method
-func UpdateCourt(ref *common.Reference, fields map[string]interface{}) error {
+// Update method
+func Update(ref *common.Reference, fields map[string]interface{}) error {
 
-	c, err := LoadCourt(ref)
+	c, err := Load(ref)
 	if err != nil {
 		return err
 	}
 
-	err = c.Update(fields)
+	err = c.updateFields(fields)
 	if err != nil {
 		return err
 	}
@@ -97,8 +105,8 @@ func UpdateCourt(ref *common.Reference, fields map[string]interface{}) error {
 	return nil
 }
 
-// Update method
-func (c *Court) Update(fields map[string]interface{}) error {
+// updateFields method
+func (c *Court) updateFields(fields map[string]interface{}) error {
 
 	if v, ok := fields["Container"]; ok {
 		if container2, ok := v.(map[string]interface{}); ok {
@@ -150,7 +158,7 @@ func (c *Court) Save(ref *common.Reference) error {
 		return codeerror.NewInternalServerError(err.Error())
 	}
 
-	filename, err := makeCourtFilename(ref.ID)
+	filename, err := makeFilename(ref.ID)
 	if err != nil {
 		return err
 	}
@@ -163,10 +171,10 @@ func (c *Court) Save(ref *common.Reference) error {
 	return nil
 }
 
-// ListCourts returns a list of the court IDs
-func ListCourts() ([]string, error) {
+// List returns a list of the court IDs
+func List() ([]string, error) {
 
-	err := createCourtDirs()
+	err := makefileStructure()
 	if err != nil {
 		return nil, err
 	}
@@ -186,10 +194,10 @@ func ListCourts() ([]string, error) {
 	return list, nil
 }
 
-// CourtExists returns 'true' if the court exists
-func CourtExists(id string) bool {
+// Exists returns 'true' if the court exists
+func Exists(id string) bool {
 
-	filename, err := makeCourtFilename(id)
+	filename, err := makeFilename(id)
 	if err != nil {
 		return false
 	}
@@ -202,14 +210,14 @@ func CourtExists(id string) bool {
 	return true
 }
 
-// LoadCourt returns the Court with the given ID
-func LoadCourt(ref *common.Reference) (*Court, error) {
+// Load returns the Court with the given ID
+func Load(ref *common.Reference) (*Court, error) {
 
 	if ref.Type != "court" {
 		return nil, codeerror.NewInternalServerError("Unexpected Reference type")
 	}
 
-	filename, err := makeCourtFilename(ref.ID)
+	filename, err := makeFilename(ref.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -230,10 +238,10 @@ func LoadCourt(ref *common.Reference) (*Court, error) {
 	return &c, nil
 }
 
-// RemoveCourt the court with the given ID
-func RemoveCourt(id string) error {
+// Remove the court with the given ID
+func Remove(id string) error {
 
-	filename, err := makeCourtFilename(id)
+	filename, err := makeFilename(id)
 	if err != nil {
 		return err
 	}
@@ -268,7 +276,7 @@ func GetCourtInfo() (*Info, error) {
 			return nil, codeerror.NewInternalServerError(err.Error())
 		}
 
-		err = createCourtDirs()
+		err = makefileStructure()
 		if err != nil {
 			return nil, err
 		}
@@ -301,7 +309,7 @@ func saveCourtInfo(i Info) error {
 		return codeerror.NewInternalServerError(err.Error())
 	}
 
-	err = createCourtDirs()
+	err = makefileStructure()
 	if err != nil {
 		return err
 	}
@@ -333,8 +341,8 @@ func getAndIncrementCurrentCourtID() (int, error) {
 	return id, nil
 }
 
-// CourtSize returns the number of courts
-func CourtSize() (int, error) {
+// Size returns the number of courts
+func Size() (int, error) {
 
 	files, err := ioutil.ReadDir(courtListDir)
 	if err != nil {
@@ -345,14 +353,14 @@ func CourtSize() (int, error) {
 }
 
 // GetContainer returns the Destination
-func (c *Court) GetContainer() *PeopleContainer {
+func (c *Court) GetContainer() *peoplecontainer.PeopleContainer {
 	return &c.Container
 }
 
 // CheckPlayersLocation checks the players are at this destination
 func (c *Court) CheckPlayersLocation(players []string) error {
 	pc := c.GetContainer()
-	return CheckPlayersInContainer(pc, players)
+	return destination.CheckPlayersInContainer(pc, players)
 }
 
 // CheckSpace checks there is space in the target for the moving players
@@ -374,11 +382,11 @@ func (c *Court) CheckSpace(players []string) error {
 // RemovePlayers deletes players from the destination
 func (c *Court) RemovePlayers(players []string) error {
 	pc := c.GetContainer()
-	return RemovePlayersFromContainer(pc, players)
+	return destination.RemovePlayersFromContainer(pc, players)
 }
 
 // AddPlayers adds players to the destination
 func (c *Court) AddPlayers(players []string) error {
 	pc := c.GetContainer()
-	return AddPlayersToContainer(pc, players)
+	return destination.AddPlayersToContainer(pc, players)
 }

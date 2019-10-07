@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/model"
 
 	"github.com/gorilla/mux"
@@ -60,7 +61,7 @@ func TestDeletePerson(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			initialNumberOfPeople, err := model.PeopleSize()
+			initialNumberOfPeople, err := person.Size()
 			require.Nil(t, err, "err should be nothing")
 
 			requestBody, err := json.Marshal(ListPeopleRequest{
@@ -80,7 +81,7 @@ func TestDeletePerson(t *testing.T) {
 			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 
 			// Check the response
-			finalNumberOfPeople, err := model.PeopleSize()
+			finalNumberOfPeople, err := person.Size()
 			require.Nil(t, err, "err should be nothing")
 
 			if rw.Code == http.StatusOK {

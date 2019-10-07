@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/rsmaxwell/players-api/internal/basic/queue"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // GetQueueRequest structure
@@ -18,7 +18,7 @@ type GetQueueRequest struct {
 
 // GetQueueResponse structure
 type GetQueueResponse struct {
-	Queue model.Queue `json:"queue"`
+	Queue queue.Queue `json:"queue"`
 }
 
 // GetQueue method
@@ -28,7 +28,7 @@ func GetQueue(rw http.ResponseWriter, req *http.Request) {
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
@@ -36,19 +36,11 @@ func GetQueue(rw http.ResponseWriter, req *http.Request) {
 	err = json.Unmarshal(b, &r)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
-	session := session.LookupToken(r.Token)
-	if session == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		clientError++
-		return
-	}
-
-	ref := common.Reference{Type: "queue", ID: ""}
-	q, err := model.LoadQueue(&ref)
+	q, err := model.GetQueue(r.Token)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

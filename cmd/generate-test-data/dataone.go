@@ -1,6 +1,6 @@
 package main
 
-import "github.com/rsmaxwell/players-api/internal/model"
+import "github.com/rsmaxwell/players-api/internal/basic/person"
 
 // createTestdataOne function
 func createTestdataOne() error {
@@ -19,9 +19,9 @@ func createTestdataOne() error {
 		role      string
 		player    bool
 	}{
-		{id: "007", password: "topsecret", firstname: "James", lastname: "Bond", email: "james@mi6.co.uk", role: model.RoleAdmin, player: true},
-		{id: "bob", password: "qwerty", firstname: "Robert", lastname: "Bruce", email: "bob@aol.com", role: model.RoleNormal, player: true},
-		{id: "alice", password: "wonder", firstname: "Alice", lastname: "Wonderland", email: "alice@abc.com", role: model.RoleSuspended, player: true},
+		{id: "007", password: "topsecret", firstname: "James", lastname: "Bond", email: "james@mi6.co.uk", role: person.RoleAdmin, player: true},
+		{id: "bob", password: "qwerty", firstname: "Robert", lastname: "Bruce", email: "bob@aol.com", role: person.RoleNormal, player: true},
+		{id: "alice", password: "wonder", firstname: "Alice", lastname: "Wonderland", email: "alice@abc.com", role: person.RoleSuspended, player: true},
 	}
 
 	for _, i := range datapeople {
@@ -30,7 +30,7 @@ func createTestdataOne() error {
 			return err
 		}
 
-		err = model.UpdatePersonRole(i.id, i.role)
+		err = person.UpdateRole(i.id, i.role)
 		if err != nil {
 			return err
 		}

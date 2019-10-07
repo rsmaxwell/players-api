@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/model"
 
 	"github.com/gorilla/mux"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestDeleteCourt(t *testing.T) {
-	
+
 	teardown := model.SetupFull(t)
 	defer teardown(t)
 
@@ -54,7 +55,7 @@ func TestDeleteCourt(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			initialNumberOfCourts, err := model.CourtSize()
+			initialNumberOfCourts, err := court.Size()
 			require.Nil(t, err, "err should be nothing")
 
 			requestBody, err := json.Marshal(ListCourtsRequest{
@@ -74,7 +75,7 @@ func TestDeleteCourt(t *testing.T) {
 			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 
 			// Check the response
-			finalNumberOfCourts, err := model.CourtSize()
+			finalNumberOfCourts, err := court.Size()
 			require.Nil(t, err, "err should be nothing")
 
 			if rw.Code == http.StatusOK {

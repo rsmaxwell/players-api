@@ -19,7 +19,18 @@ type Reference struct {
 var (
 	// RootDir directory
 	RootDir string
+
+	// MetricsData containing metrics
+	MetricsData Metrics
 )
+
+// Metrics structure
+type Metrics struct {
+	ClientSuccess             int `json:"clientSuccess"`
+	ClientError               int `json:"clientError"`
+	ClientAuthenticationError int `json:"clientAuthenticationError"`
+	ServerError               int `json:"serverError"`
+}
 
 func homeDir() string {
 

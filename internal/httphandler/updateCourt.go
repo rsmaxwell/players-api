@@ -6,8 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/internal/session"
-
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
@@ -25,7 +23,7 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request, id string) {
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
@@ -33,25 +31,11 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request, id string) {
 	err = json.Unmarshal(b, &r)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
-	session := session.LookupToken(r.Token)
-	if session == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		clientError++
-		return
-	}
-
-	if !model.PersonCanUpdateCourt(session.UserID) {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		clientError++
-		return
-	}
-
-	ref := common.Reference{Type: "court", ID: id}
-	err = model.UpdateCourt(&ref, r.Court)
+	err = model.UpdateCourt(r.Token, id, r.Court)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

@@ -1,4 +1,4 @@
-package model
+package person
 
 import (
 	"encoding/json"
@@ -40,6 +40,8 @@ var (
 
 	// AllRoles is the 'all' filter which returns every person
 	AllRoles []string
+
+	validate *validator.Validate
 )
 
 func init() {
@@ -55,15 +57,15 @@ func init() {
 	validate = validator.New()
 }
 
-// makePersonFilename function
-func makePersonFilename(id string) (string, error) {
+// makeFilename function
+func makeFilename(id string) (string, error) {
 
 	err := common.CheckCharactersInID(id)
 	if err != nil {
 		return "", err
 	}
 
-	err = createPersonDirs()
+	err = createFileStructure()
 	if err != nil {
 		return "", err
 	}
@@ -72,8 +74,8 @@ func makePersonFilename(id string) (string, error) {
 	return filename, nil
 }
 
-// createDirs  creates the people directory
-func createPersonDirs() error {
+// createFileStructure  creates the people directory
+func createFileStructure() error {
 
 	_, err := os.Stat(personListDir)
 	if err != nil {
@@ -86,10 +88,10 @@ func createPersonDirs() error {
 	return nil
 }
 
-// CheckUser - Basic check on the user calling the service
-func CheckUser(id, password string) bool {
+// CheckPassword - Basic check on the user calling the service
+func CheckPassword(id, password string) bool {
 
-	p, err := LoadPerson(id)
+	p, err := Load(id)
 	if err != nil {
 		return false
 	}
@@ -105,8 +107,8 @@ func CheckUser(id, password string) bool {
 	return true
 }
 
-// NewPerson initialises a Person
-func NewPerson(firstname string, lastname string, email string, hashedPassword []byte, player bool) *Person {
+// New initialises a Person
+func New(firstname string, lastname string, email string, hashedPassword []byte, player bool) *Person {
 	person := new(Person)
 	person.FirstName = firstname
 	person.LastName = lastname
@@ -117,15 +119,15 @@ func NewPerson(firstname string, lastname string, email string, hashedPassword [
 	return person
 }
 
-// UpdatePerson method
-func UpdatePerson(id string, fields map[string]interface{}) error {
+// Update method
+func Update(id string, fields map[string]interface{}) error {
 
-	p, err := LoadPerson(id)
+	p, err := Load(id)
 	if err != nil {
 		return err
 	}
 
-	err = p.updatePersonFields(fields)
+	err = p.updateFields(fields)
 	if err != nil {
 		return err
 	}
@@ -138,10 +140,10 @@ func UpdatePerson(id string, fields map[string]interface{}) error {
 	return nil
 }
 
-// updatePersonFields method
-func (p *Person) updatePersonFields(person2 map[string]interface{}) error {
+// updateFields method
+func (p *Person) updateFields(fields map[string]interface{}) error {
 
-	if v, ok := person2["FirstName"]; ok {
+	if v, ok := fields["FirstName"]; ok {
 		value, ok := v.(string)
 		if !ok {
 			return codeerror.NewBadRequest("The type of 'Person.FirstName' should be a string")
@@ -149,7 +151,7 @@ func (p *Person) updatePersonFields(person2 map[string]interface{}) error {
 		p.FirstName = value
 	}
 
-	if v, ok := person2["LastName"]; ok {
+	if v, ok := fields["LastName"]; ok {
 		value, ok := v.(string)
 		if !ok {
 			return codeerror.NewBadRequest("The type of 'Person.LastName' should be a string")
@@ -157,7 +159,7 @@ func (p *Person) updatePersonFields(person2 map[string]interface{}) error {
 		p.LastName = value
 	}
 
-	if v, ok := person2["Email"]; ok {
+	if v, ok := fields["Email"]; ok {
 		value, ok := v.(string)
 		if !ok {
 			return codeerror.NewBadRequest("The type of 'Person.Email' should be a string")
@@ -165,7 +167,7 @@ func (p *Person) updatePersonFields(person2 map[string]interface{}) error {
 		p.Email = value
 	}
 
-	if v, ok := person2["HashedPassword"]; ok {
+	if v, ok := fields["HashedPassword"]; ok {
 		value, ok := v.([]byte)
 		if !ok {
 			return codeerror.NewBadRequest("The type of 'Person.HashedPassword' should be a string")
@@ -176,15 +178,15 @@ func (p *Person) updatePersonFields(person2 map[string]interface{}) error {
 	return nil
 }
 
-// UpdatePersonPlayer method
-func UpdatePersonPlayer(id string, value bool) error {
+// UpdatePlayer method
+func UpdatePlayer(id string, value bool) error {
 
-	p, err := LoadPerson(id)
+	p, err := Load(id)
 	if err != nil {
 		return err
 	}
 
-	err = p.updatePersonFieldsPlayer(value)
+	err = p.updateFieldsPlayer(value)
 	if err != nil {
 		return err
 	}
@@ -197,21 +199,21 @@ func UpdatePersonPlayer(id string, value bool) error {
 	return nil
 }
 
-// updatePersonFieldsPlayer method
-func (p *Person) updatePersonFieldsPlayer(value bool) error {
+// updateFieldsPlayer method
+func (p *Person) updateFieldsPlayer(value bool) error {
 	p.Player = value
 	return nil
 }
 
-// UpdatePersonRole method
-func UpdatePersonRole(id string, value string) error {
+// UpdateRole method
+func UpdateRole(id string, value string) error {
 
-	p, err := LoadPerson(id)
+	p, err := Load(id)
 	if err != nil {
 		return err
 	}
 
-	err = p.updatePersonFieldsRole(value)
+	err = p.updateFieldsRole(value)
 	if err != nil {
 		return err
 	}
@@ -224,8 +226,8 @@ func UpdatePersonRole(id string, value string) error {
 	return nil
 }
 
-// updatePersonFieldsRole method
-func (p *Person) updatePersonFieldsRole(value string) error {
+// updateFieldsRole method
+func (p *Person) updateFieldsRole(value string) error {
 	p.Role = value
 	return nil
 }
@@ -243,7 +245,7 @@ func (p *Person) Add(id string) error {
 	}
 
 	// Check the user does not already exist
-	found := PersonExists(id)
+	found := Exists(id)
 	if found {
 		return codeerror.NewInternalServerError(fmt.Sprintf("Person [%s] already exists", id))
 	}
@@ -270,7 +272,7 @@ func (p *Person) Save(id string) error {
 		return codeerror.NewInternalServerError(err.Error())
 	}
 
-	filename, err := makePersonFilename(id)
+	filename, err := makeFilename(id)
 	if err != nil {
 		return err
 	}
@@ -283,10 +285,10 @@ func (p *Person) Save(id string) error {
 	return nil
 }
 
-// ListPeople returns a list of the person IDs with one of the allowed role values
-func ListPeople(filter []string) ([]string, error) {
+// List returns a list of the person IDs with one of the allowed role values
+func List(filter []string) ([]string, error) {
 
-	err := createPersonDirs()
+	err := createFileStructure()
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +303,7 @@ func ListPeople(filter []string) ([]string, error) {
 		filename := filenameInfo.Name()
 		id := strings.TrimSuffix(filename, path.Ext(filename))
 
-		p, err := LoadPerson(id)
+		p, err := Load(id)
 		if err != nil {
 			return nil, err
 		}
@@ -315,10 +317,10 @@ func ListPeople(filter []string) ([]string, error) {
 	return list, nil
 }
 
-// PersonExists returns 'true' if the person exists
-func PersonExists(id string) bool {
+// Exists returns 'true' if the person exists
+func Exists(id string) bool {
 
-	filename, err := makePersonFilename(id)
+	filename, err := makeFilename(id)
 	if err != nil {
 		return false
 	}
@@ -331,10 +333,10 @@ func PersonExists(id string) bool {
 	return true
 }
 
-// PersonIsPlayer returns 'true' if the person exists and is a player
-func PersonIsPlayer(id string) bool {
+// IsPlayer returns 'true' if the person exists and is a player
+func IsPlayer(id string) bool {
 
-	person, err := LoadPerson(id)
+	person, err := Load(id)
 	if err != nil {
 		return false
 	}
@@ -345,10 +347,10 @@ func PersonIsPlayer(id string) bool {
 	return person.Player
 }
 
-// LoadPerson returns the Person with the given ID
-func LoadPerson(id string) (*Person, error) {
+// Load returns the Person with the given ID
+func Load(id string) (*Person, error) {
 
-	filename, err := makePersonFilename(id)
+	filename, err := makeFilename(id)
 	if err != nil {
 		return nil, err
 	}
@@ -369,10 +371,10 @@ func LoadPerson(id string) (*Person, error) {
 	return &p, nil
 }
 
-// RemovePerson the person with the given ID
-func RemovePerson(id string) error {
+// Remove the person with the given ID
+func Remove(id string) error {
 
-	filename, err := makePersonFilename(id)
+	filename, err := makeFilename(id)
 	if err != nil {
 		return err
 	}
@@ -393,8 +395,8 @@ func RemovePerson(id string) error {
 	return codeerror.NewInternalServerError(err.Error())
 }
 
-// PeopleSize returns the number of people
-func PeopleSize() (int, error) {
+// Size returns the number of people
+func Size() (int, error) {
 
 	files, err := ioutil.ReadDir(personListDir)
 	if err != nil {
@@ -404,10 +406,10 @@ func PeopleSize() (int, error) {
 	return len(files), nil
 }
 
-// PersonCanLogin function
-func PersonCanLogin(id string) bool {
+// CanLogin function
+func CanLogin(id string) bool {
 
-	p, err := LoadPerson(id)
+	p, err := Load(id)
 	if err != nil {
 		return false
 	}
@@ -422,10 +424,10 @@ func PersonCanLogin(id string) bool {
 	return false
 }
 
-// PersonCanUpdateCourt function
-func PersonCanUpdateCourt(sessionID string) bool {
+// CanUpdateCourt function
+func CanUpdateCourt(sessionID string) bool {
 
-	p, err := LoadPerson(sessionID)
+	p, err := Load(sessionID)
 	if err != nil {
 		return false
 	}
@@ -440,10 +442,10 @@ func PersonCanUpdateCourt(sessionID string) bool {
 	return false
 }
 
-// PersonCanUpdatePerson function
-func PersonCanUpdatePerson(sessionID, userID string) bool {
+// CanUpdatePerson function
+func CanUpdatePerson(sessionID, userID string) bool {
 
-	p, err := LoadPerson(sessionID)
+	p, err := Load(sessionID)
 	if err != nil {
 		return false
 	}
@@ -460,10 +462,10 @@ func PersonCanUpdatePerson(sessionID, userID string) bool {
 	return false
 }
 
-// PersonCanUpdatePersonRole function
-func PersonCanUpdatePersonRole(sessionID, userID string) bool {
+// CanUpdatePersonRole function
+func CanUpdatePersonRole(sessionID, userID string) bool {
 
-	p, err := LoadPerson(sessionID)
+	p, err := Load(sessionID)
 	if err != nil {
 		return false
 	}
@@ -478,10 +480,10 @@ func PersonCanUpdatePersonRole(sessionID, userID string) bool {
 	return false
 }
 
-// PersonCanUpdatePersonPlayer function
-func PersonCanUpdatePersonPlayer(sessionID, userID string) bool {
+// CanUpdatePersonPlayer function
+func CanUpdatePersonPlayer(sessionID, userID string) bool {
 
-	p, err := LoadPerson(sessionID)
+	p, err := Load(sessionID)
 	if err != nil {
 		return false
 	}
@@ -493,6 +495,22 @@ func PersonCanUpdatePersonPlayer(sessionID, userID string) bool {
 		if sessionID == userID {
 			return true
 		}
+	}
+
+	return false
+}
+
+// CanGetMetrics function
+func CanGetMetrics(sessionID string) bool {
+
+	p, err := Load(sessionID)
+	if err != nil {
+		return false
+	}
+
+	switch p.Role {
+	case RoleAdmin:
+		return true
 	}
 
 	return false

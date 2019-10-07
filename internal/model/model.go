@@ -3,31 +3,24 @@ package model
 import (
 	"fmt"
 
+	"github.com/rsmaxwell/players-api/internal/basic/court"
+	"github.com/rsmaxwell/players-api/internal/basic/person"
+	"github.com/rsmaxwell/players-api/internal/basic/queue"
 	"github.com/rsmaxwell/players-api/internal/common"
-
-	"gopkg.in/go-playground/validator.v9"
 )
-
-var (
-	validate *validator.Validate
-)
-
-func init() {
-	validate = validator.New()
-}
 
 // Startup checks the state on disk is consistent
 func Startup() error {
 
 	// Make a list of players
-	listOfPeople, err := ListPeople(AllRoles)
+	listOfPeople, err := person.List(person.AllRoles)
 	if err != nil {
 		return err
 	}
 
 	listOfPlayers := []string{}
 	for _, id := range listOfPeople {
-		p, err := LoadPerson(id)
+		p, err := person.Load(id)
 		if err != nil {
 			return err
 		}
@@ -37,13 +30,13 @@ func Startup() error {
 	}
 
 	// Subtract the players on courts away from the list of players
-	listOfCourts, err := ListCourts()
+	listOfCourts, err := court.List()
 	if err != nil {
 		return err
 	}
 	for _, id := range listOfCourts {
 		ref := common.Reference{Type: "court", ID: id}
-		c, err := LoadCourt(&ref)
+		c, err := court.Load(&ref)
 		if err != nil {
 			return err
 		}
@@ -57,7 +50,7 @@ func Startup() error {
 
 	// Subtract the players waiting in the queue away from the list of players
 	ref := common.Reference{Type: "queue", ID: ""}
-	q, err := LoadQueue(&ref)
+	q, err := queue.Load(&ref)
 	if err != nil {
 		return err
 	}

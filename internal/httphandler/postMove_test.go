@@ -11,6 +11,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 
+	"github.com/rsmaxwell/players-api/internal/basic/court"
+	"github.com/rsmaxwell/players-api/internal/basic/destination"
+	"github.com/rsmaxwell/players-api/internal/basic/queue"
 	"github.com/rsmaxwell/players-api/internal/commands"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
@@ -119,11 +122,11 @@ func TestPostMove(t *testing.T) {
 
 					// Check the moved person is NOT at the source
 					found := commands.EqualsContainerReference(ref, &test.source)
-					require.False(t, found, fmt.Sprintf("person[%s] is still at the source: %s", personID, model.FormatReference(&test.source)))
+					require.False(t, found, fmt.Sprintf("person[%s] is still at the source: %s", personID, destination.FormatReference(&test.source)))
 
 					// Check the moved person IS at the target
 					found = commands.EqualsContainerReference(ref, &test.target)
-					require.True(t, found, fmt.Sprintf("person[%s] is not at the target: %s", personID, model.FormatReference(&test.target)))
+					require.True(t, found, fmt.Sprintf("person[%s] is not at the target: %s", personID, destination.FormatReference(&test.target)))
 				}
 			}
 		})
@@ -132,7 +135,7 @@ func TestPostMove(t *testing.T) {
 
 func findPlayer(t *testing.T, id string) (*common.Reference, error) {
 
-	courts, err := model.ListCourts()
+	courts, err := court.List()
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +144,7 @@ func findPlayer(t *testing.T, id string) (*common.Reference, error) {
 	for _, courtID := range courts {
 
 		ref := common.Reference{Type: "court", ID: courtID}
-		c, err := model.LoadCourt(&ref)
+		c, err := court.Load(&ref)
 		require.Nil(t, err, "err should be nothing")
 
 		for _, personID := range c.Container.Players {
@@ -155,7 +158,7 @@ func findPlayer(t *testing.T, id string) (*common.Reference, error) {
 
 	// Look for the player on the queue
 	ref := common.Reference{Type: "queue", ID: ""}
-	q, err := model.LoadQueue(&ref)
+	q, err := queue.Load(&ref)
 	require.Nil(t, err, "err should be nothing")
 
 	for _, personID := range q.Container.Players {

@@ -16,7 +16,7 @@ import (
 )
 
 func TestGetMetrics(t *testing.T) {
-	
+
 	teardown := model.SetupFull(t)
 	defer teardown(t)
 
@@ -79,7 +79,7 @@ func TestGetMetrics(t *testing.T) {
 				var response GetMetricsResponse
 				err = json.Unmarshal(bytes, &response)
 				require.Nil(t, err, "err should be nothing")
-				require.Equal(t, test.expectedClientSuccess, response.ClientSuccess, fmt.Sprintf("Unexpected metrics: expected: %v, actual:   %v", test.expectedClientSuccess, response.ClientSuccess))
+				require.Equal(t, test.expectedClientSuccess, response.Data.ClientSuccess, fmt.Sprintf("Unexpected metrics: expected: %v, actual:   %v", test.expectedClientSuccess, response.Data.ClientSuccess))
 			}
 		})
 	}

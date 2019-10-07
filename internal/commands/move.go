@@ -1,27 +1,26 @@
 package commands
 
 import (
-	"fmt"
+	"github.com/rsmaxwell/players-api/internal/basic/destination"
 
+	"github.com/rsmaxwell/players-api/internal/basic/court"
+	"github.com/rsmaxwell/players-api/internal/basic/queue"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
-	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // Move method
 func Move(source, target *common.Reference, players []string) error {
 
-	fmt.Printf("x")
-
 	// **********************************************************
 	// * Load the source and target
 	// **********************************************************
-	s, err := model.Load(source)
+	s, err := load(source)
 	if err != nil {
 		return codeerror.NewInternalServerError(err.Error())
 	}
 
-	t, err := model.Load(target)
+	t, err := load(target)
 	if err != nil {
 		return err
 	}
@@ -82,4 +81,14 @@ func EqualsContainerReference(a, b *common.Reference) bool {
 	}
 
 	return true
+}
+
+// load method
+func load(ref *common.Reference) (destination.Destination, error) {
+
+	if ref.Type == "court" {
+		return court.Load(ref)
+	}
+
+	return queue.Load(ref)
 }

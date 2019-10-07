@@ -2,14 +2,12 @@ package httphandler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 
+	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 // RegisterRequest structure
@@ -28,7 +26,7 @@ func Register(rw http.ResponseWriter, req *http.Request) {
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
@@ -36,33 +34,11 @@ func Register(rw http.ResponseWriter, req *http.Request) {
 	err = json.Unmarshal(b, &r)
 	if err != nil {
 		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		clientError++
+		common.MetricsData.ClientError++
 		return
 	}
 
-	if model.PersonExists(r.UserID) {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Person [%s] already exists", r.UserID))
-		clientError++
-		return
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(r.Password), bcrypt.DefaultCost)
-	if err != nil {
-		errorHandler(rw, req, err)
-		return
-	}
-
-	list, err := model.ListPeople(model.AllRoles)
-	if err != nil {
-		errorHandler(rw, req, err)
-		return
-	}
-	if len(list) >= 100 {
-		WriteResponse(rw, http.StatusBadRequest, "Too many people")
-		return
-	}
-
-	err = model.NewPerson(r.FirstName, r.LastName, r.Email, hashedPassword, false).Save(r.UserID)
+	err = model.Register(r.UserID, r.Password, r.FirstName, r.LastName, r.Email)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

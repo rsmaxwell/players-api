@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 
+	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
@@ -27,7 +28,7 @@ func TestListCourts(t *testing.T) {
 	goodToken, err := getLoginToken(t, goodUserID, goodPassword)
 	require.Nil(t, err, "err should be nothing")
 
-	allCourtIDs, err := model.ListCourts()
+	allCourtIDs, err := court.List()
 	require.Nil(t, err, "err should be nothing")
 
 	// ***************************************************************

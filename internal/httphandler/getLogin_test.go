@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/rsmaxwell/players-api/internal/session"
 	"github.com/stretchr/testify/require"
@@ -32,21 +33,21 @@ func TestLogin(t *testing.T) {
 			testName:       "Good request from admin",
 			userID:         "007",
 			password:       "topsecret",
-			role:           model.RoleAdmin,
+			role:           person.RoleAdmin,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			testName:       "Space in userID",
 			userID:         "0 7",
 			password:       "topsecret",
-			role:           model.RoleNormal,
+			role:           person.RoleNormal,
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			testName:       "Path in userID",
 			userID:         "../007",
 			password:       "topsecret",
-			role:           model.RoleSuspended,
+			role:           person.RoleSuspended,
 			expectedStatus: http.StatusUnauthorized,
 		},
 	}

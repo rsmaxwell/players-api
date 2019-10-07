@@ -1,8 +1,9 @@
-package model
+package peoplecontainer
 
 import (
 	"fmt"
 
+	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
 )
@@ -72,11 +73,11 @@ func (c *PeopleContainer) Update(container2 map[string]interface{}) error {
 }
 
 func updateListOfPeople(id string, array []string) ([]string, error) {
-	if !PersonExists(id) {
+	if !person.Exists(id) {
 		return array, codeerror.NewNotFound(fmt.Sprintf("Person [%s] not found", id))
 	}
 
-	if !PersonIsPlayer(id) {
+	if !person.IsPlayer(id) {
 		return array, codeerror.NewBadRequest(fmt.Sprintf("Person [%s] is not a player", id))
 	}
 

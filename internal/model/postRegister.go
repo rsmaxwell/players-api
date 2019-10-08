@@ -18,6 +18,7 @@ func Register(id, password, firstname, lastname, email string) error {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
+		return err
 	}
 
 	list, err := person.List(person.AllRoles)

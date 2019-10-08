@@ -14,7 +14,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/basic/destination"
 	"github.com/rsmaxwell/players-api/internal/basic/queue"
-	"github.com/rsmaxwell/players-api/internal/commands"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
@@ -121,11 +120,11 @@ func TestPostMove(t *testing.T) {
 					require.NotNil(t, ref, fmt.Sprintf("person[%s] not found", personID))
 
 					// Check the moved person is NOT at the source
-					found := commands.EqualsContainerReference(ref, &test.source)
+					found := model.EqualsContainerReference(ref, &test.source)
 					require.False(t, found, fmt.Sprintf("person[%s] is still at the source: %s", personID, destination.FormatReference(&test.source)))
 
 					// Check the moved person IS at the target
-					found = commands.EqualsContainerReference(ref, &test.target)
+					found = model.EqualsContainerReference(ref, &test.target)
 					require.True(t, found, fmt.Sprintf("person[%s] is not at the target: %s", personID, destination.FormatReference(&test.target)))
 				}
 			}

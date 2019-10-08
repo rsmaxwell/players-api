@@ -107,7 +107,11 @@ func TestRegister(t *testing.T) {
 			// Check the status of the new person
 			p, err := person.Load(test.userID)
 			require.Nil(t, err)
-			require.Equal(t, person.RoleSuspended, p.Role, "Unexpected role")
+			if initialNumberOfPeople == 0 {
+				require.Equal(t, person.RoleAdmin, p.Role, "Unexpected role")
+			} else {
+				require.Equal(t, person.RoleSuspended, p.Role, "Unexpected role")
+			}
 		})
 	}
 }

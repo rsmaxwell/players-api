@@ -75,7 +75,7 @@ func TestPerson(t *testing.T) {
 		role           string
 		player         bool
 	}{
-		{id: "1", firstname: "Fred", lastname: "xxx", email: junkEmail, hashedpassword: junkHashedPassword, role: "suspended", player: false},
+		{id: "1", firstname: "Fred", lastname: "xxx", email: junkEmail, hashedpassword: junkHashedPassword, role: "admin", player: false},
 		{id: "2", firstname: "Bloggs", lastname: "xxx", email: junkEmail, hashedpassword: junkHashedPassword, role: "suspended", player: false},
 		{id: "3", firstname: "Jane", lastname: "xxx", email: junkEmail, hashedpassword: junkHashedPassword, role: "suspended", player: false},
 		{id: "4", firstname: "Alice", lastname: "xxx", email: junkEmail, hashedpassword: junkHashedPassword, role: "suspended", player: false},

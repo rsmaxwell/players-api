@@ -167,12 +167,18 @@ func (p *Person) updateFields(fields map[string]interface{}) error {
 		p.Email = value
 	}
 
-	if v, ok := fields["HashedPassword"]; ok {
-		value, ok := v.([]byte)
+	if v, ok := fields["Password"]; ok {
+		value, ok := v.(string)
 		if !ok {
 			return codeerror.NewBadRequest("The type of 'Person.HashedPassword' should be a string")
 		}
-		p.HashedPassword = value
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(value), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+
+		p.HashedPassword = hashedPassword
 	}
 
 	return nil
@@ -232,59 +238,6 @@ func (p *Person) updateFieldsRole(value string) error {
 	return nil
 }
 
-// Add adds a person to the list
-func (p *Person) Add(id string) error {
-
-	// The first user must be made an 'admin' user
-	files, err := ioutil.ReadDir(personListDir)
-	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
-	}
-	if len(files) == 0 {
-		p.Role = RoleAdmin
-	}
-
-	// Check the user does not already exist
-	found := Exists(id)
-	if found {
-		return codeerror.NewInternalServerError(fmt.Sprintf("Person [%s] already exists", id))
-	}
-
-	// Save the updated court to disk
-	err = p.Save(id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Save writes a Person to disk
-func (p *Person) Save(id string) error {
-
-	err := validate.Struct(p)
-	if err != nil {
-		return codeerror.NewBadRequest(err.Error())
-	}
-
-	personJSON, err := json.Marshal(p)
-	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
-	}
-
-	filename, err := makeFilename(id)
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(filename, personJSON, 0644)
-	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
-	}
-
-	return nil
-}
-
 // List returns a list of the person IDs with one of the allowed role values
 func List(filter []string) ([]string, error) {
 
@@ -317,22 +270,6 @@ func List(filter []string) ([]string, error) {
 	return list, nil
 }
 
-// Exists returns 'true' if the person exists
-func Exists(id string) bool {
-
-	filename, err := makeFilename(id)
-	if err != nil {
-		return false
-	}
-
-	_, err = os.Stat(filename)
-	if err != nil {
-		return false
-	}
-
-	return true
-}
-
 // IsPlayer returns 'true' if the person exists and is a player
 func IsPlayer(id string) bool {
 
@@ -345,65 +282,6 @@ func IsPlayer(id string) bool {
 	}
 
 	return person.Player
-}
-
-// Load returns the Person with the given ID
-func Load(id string) (*Person, error) {
-
-	filename, err := makeFilename(id)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, codeerror.NewNotFound(err.Error())
-		}
-		return nil, codeerror.NewInternalServerError(err.Error())
-	}
-
-	var p Person
-	err = json.Unmarshal(data, &p)
-	if err != nil {
-		return nil, codeerror.NewInternalServerError(err.Error())
-	}
-	return &p, nil
-}
-
-// Remove the person with the given ID
-func Remove(id string) error {
-
-	filename, err := makeFilename(id)
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(filename)
-
-	if err == nil { // File exists
-		err = os.Remove(filename)
-		if err != nil {
-			return codeerror.NewInternalServerError(err.Error())
-		}
-		return nil
-
-	} else if os.IsNotExist(err) { // File does not exist
-		return codeerror.NewNotFound(fmt.Sprintf("File Not Found: %s", filename))
-	}
-
-	return codeerror.NewInternalServerError(err.Error())
-}
-
-// Size returns the number of people
-func Size() (int, error) {
-
-	files, err := ioutil.ReadDir(personListDir)
-	if err != nil {
-		return 0, codeerror.NewInternalServerError(err.Error())
-	}
-
-	return len(files), nil
 }
 
 // CanLogin function
@@ -514,4 +392,124 @@ func CanGetMetrics(sessionID string) bool {
 	}
 
 	return false
+}
+
+// ***************************************************************************
+//
+// ***************************************************************************
+
+// Save writes a Person to disk
+func (p *Person) Save(id string) error {
+
+	// The first user must be made an 'admin' user
+	files, err := ioutil.ReadDir(personListDir)
+	if err != nil {
+		return codeerror.NewInternalServerError(err.Error())
+	}
+	if len(files) == 0 {
+		p.Role = RoleAdmin
+	}
+
+	// Check the user does not already exist
+	// found := Exists(id)
+	// if found {
+	// 	return codeerror.NewInternalServerError(fmt.Sprintf("Person [%s] already exists", id))
+	// }
+
+	err = validate.Struct(p)
+	if err != nil {
+		return codeerror.NewBadRequest(err.Error())
+	}
+
+	personJSON, err := json.Marshal(p)
+	if err != nil {
+		return codeerror.NewInternalServerError(err.Error())
+	}
+
+	filename, err := makeFilename(id)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(filename, personJSON, 0644)
+	if err != nil {
+		return codeerror.NewInternalServerError(err.Error())
+	}
+
+	return nil
+}
+
+// Load returns the Person with the given ID
+func Load(id string) (*Person, error) {
+
+	filename, err := makeFilename(id)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, codeerror.NewNotFound(err.Error())
+		}
+		return nil, codeerror.NewInternalServerError(err.Error())
+	}
+
+	var p Person
+	err = json.Unmarshal(data, &p)
+	if err != nil {
+		return nil, codeerror.NewInternalServerError(err.Error())
+	}
+	return &p, nil
+}
+
+// Remove the person with the given ID
+func Remove(id string) error {
+
+	filename, err := makeFilename(id)
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stat(filename)
+
+	if err == nil { // File exists
+		err = os.Remove(filename)
+		if err != nil {
+			return codeerror.NewInternalServerError(err.Error())
+		}
+		return nil
+
+	} else if os.IsNotExist(err) { // File does not exist
+		return codeerror.NewNotFound(fmt.Sprintf("File Not Found: %s", filename))
+	}
+
+	return codeerror.NewInternalServerError(err.Error())
+}
+
+// Size returns the number of people
+func Size() (int, error) {
+
+	files, err := ioutil.ReadDir(personListDir)
+	if err != nil {
+		return 0, codeerror.NewInternalServerError(err.Error())
+	}
+
+	return len(files), nil
+}
+
+// Exists returns 'true' if the person exists
+func Exists(id string) bool {
+
+	filename, err := makeFilename(id)
+	if err != nil {
+		return false
+	}
+
+	_, err = os.Stat(filename)
+	if err != nil {
+		return false
+	}
+
+	return true
 }

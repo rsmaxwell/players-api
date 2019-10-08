@@ -43,10 +43,10 @@ func TestUpdatePerson(t *testing.T) {
 			id:       goodUserID,
 			person: map[string]interface{}{
 				"FirstName": "aaa",
-				"Lastname":  "bbb",
+				"LastName":  "bbb",
 				"Email":     "123.456@xxx.com",
 				"Player":    false,
-				"Password":  "amother",
+				"Password":  "another",
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -56,10 +56,10 @@ func TestUpdatePerson(t *testing.T) {
 			id:       goodUserID,
 			person: map[string]interface{}{
 				"FirstName": "aaa",
-				"Lastname":  "bbb",
+				"LastName":  "bbb",
 				"Email":     "123.456@xxx.com",
 				"Player":    false,
-				"Password":  "amother",
+				"Password":  "another",
 			},
 			expectedStatus: http.StatusUnauthorized,
 		},
@@ -108,7 +108,7 @@ func TestUpdatePerson(t *testing.T) {
 						t.Errorf("The type of 'test.person[\"LastName\"]' should be a string")
 					}
 					person.LastName = value
-					assert.Equal(t, person.FirstName, value, "The Person lastname was not updated correctly")
+					assert.Equal(t, person.LastName, value, "The Person lastname was not updated correctly")
 				}
 
 				if i, ok := test.person["Email"]; ok {

@@ -44,25 +44,25 @@ func TestUpdatePerson(t *testing.T) {
 
 	// Add a couple of people
 	datapeople := []struct {
-		id             string
-		firstname      string
-		lastname       string
-		email          string
-		hashedpassword []byte
+		id        string
+		firstname string
+		lastname  string
+		email     string
+		password  string
 	}{
-		{id: "007", firstname: "aaa", lastname: "bbb", email: junkEmail, hashedpassword: junkHashedPassword},
+		{id: "007", firstname: "aaa", lastname: "bbb", email: junkEmail, password: "junk"},
 	}
 
 	for _, i := range datapeople {
 
-		p2 := make(map[string]interface{})
+		fields := make(map[string]interface{})
 
-		p2["FirstName"] = i.firstname
-		p2["LastName"] = i.lastname
-		p2["Email"] = i.email
-		p2["HashedPassword"] = i.hashedpassword
+		fields["FirstName"] = i.firstname
+		fields["LastName"] = i.lastname
+		fields["Email"] = i.email
+		fields["Password"] = i.password
 
-		err := person.Update("007", p2)
+		err := person.Update("007", fields)
 		require.Nil(t, err, "err should be nothing")
 
 		// Check the expected People have been created
@@ -72,7 +72,10 @@ func TestUpdatePerson(t *testing.T) {
 		require.Equal(t, p.FirstName, i.firstname, fmt.Sprintf("Person[%s] not updated correctly: 'Firstname': expected %s, got: %s", i.id, i.firstname, p.FirstName))
 		require.Equal(t, p.LastName, i.lastname, fmt.Sprintf("Person[%s] not updated correctly: 'LastName': expected %s, got: %s", i.id, i.lastname, p.LastName))
 		require.Equal(t, p.Email, i.email, fmt.Sprintf("Person[%s] not updated correctly: 'Email': expected %s, got: %s", i.id, i.email, p.Email))
-		require.Equal(t, p.HashedPassword, i.hashedpassword, fmt.Sprintf("Person[%s] not updated correctly: 'HashedPassword': expected %s, got: %s", i.id, i.hashedpassword, p.HashedPassword))
+
+		if !person.CheckPassword(i.id, i.password) {
+			require.Fail(t, fmt.Sprintf("Person[%s] not updated correctly: 'Password': not valid: %s", i.id, i.password))
+		}
 	}
 }
 

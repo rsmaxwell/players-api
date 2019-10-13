@@ -33,8 +33,8 @@ func makeQueueFilename() (string, error) {
 	return filename, nil
 }
 
-// createDirs creates the queue file
-func createQueueFiles() error {
+// createFileStructure creates the queue file
+func createFileStructure() error {
 
 	_, err := os.Stat(queueBaseDir)
 	if err != nil {
@@ -54,7 +54,7 @@ func createQueueFiles() error {
 	_, err = os.Stat(filename)
 	if err != nil {
 		if os.IsNotExist(err) { // File does not exist
-			err = NewQueue("Queue").Save(&ref)
+			err = New("Queue").Save(&ref)
 		} else {
 			return codeerror.NewInternalServerError(err.Error())
 		}
@@ -63,16 +63,16 @@ func createQueueFiles() error {
 	return nil
 }
 
-// NewQueue initialises a Queue object
-func NewQueue(name string) *Queue {
+// New initialises a Queue object
+func New(name string) *Queue {
 	queue := new(Queue)
 	queue.Container.Name = name
 	queue.Container.Players = []string{}
 	return queue
 }
 
-// UpdateQueue method
-func UpdateQueue(ref *common.Reference, fields map[string]interface{}) error {
+// Update method
+func Update(ref *common.Reference, fields map[string]interface{}) error {
 
 	q, err := Load(ref)
 	if err != nil {
@@ -134,8 +134,8 @@ func (q *Queue) Save(ref *common.Reference) error {
 	return nil
 }
 
-// QueueExists returns 'true' if the queue exists
-func QueueExists(id string) bool {
+// Exists returns 'true' if the queue exists
+func Exists(id string) bool {
 
 	filename, err := makeQueueFilename()
 	if err != nil {
@@ -162,7 +162,7 @@ func Load(ref *common.Reference) (*Queue, error) {
 		return nil, err
 	}
 
-	err = createQueueFiles()
+	err = createFileStructure()
 	if err != nil {
 		return nil, err
 	}

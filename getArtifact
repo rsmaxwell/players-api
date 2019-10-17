@@ -1,0 +1,19 @@
+#!/bin/bash
+
+REPOSITORY="internal"
+GROUPID="com.rsmaxwell.players-api"
+ARTIFACTID="players-api-amd64-linux"
+PACKAGING="zip"
+VERSION="19"
+URL="https://server.rsmaxwell.co.uk/archiva/repository/${REPOSITORY}"
+
+home="/cygdrive/c/Users/Richard"
+GROUPID2=${GROUPID//./\/}
+artifact=${home}/.m2/repository/${GROUPID2}/${ARTIFACTID}/${VERSION}/${ARTIFACTID}-${VERSION}.${PACKAGING}
+echo "artifact: ${artifact}"
+
+if [ ! f ${artifact} ]; then
+    mvn dependency:get -DgroupId=${GROUPID} -DartifactId=${ARTIFACTID} -Dversion=${VERSION} -Dpackaging=${PACKAGING} -DremoteRepositories=${URL}
+fi
+
+ls -al ${artifact}

@@ -8,7 +8,7 @@ export GOPATH=${WORKSPACE}
 
 
 versionfile=./internal/basic/version/version.go
-cat >${task} <<EOT
+cat >${versionfile} <<EOT
 package version
 
 // BuildID function

@@ -7,23 +7,23 @@ ENDPOINT="https://server.rsmaxwell.co.uk/players-api"
 #------------------------------------------------------------------
 echo "Register"
 
-# COMMAND="/register"
-# 
-# cat > data.json <<EOT
-# {  
-#     "userID": "007",
-#     "first_name": "James",
-#     "last_name": "Bond",
-#     "email": "james@mi6.co.uk",
-#     "password": "topsecret"
-# }
-# EOT
-# 
-# set -x
-# curl -k -X POST ${ENDPOINT}${COMMAND} \
-# --header "Content-Type: application/json" \
-# --data-binary @data.json
-# set +x
+COMMAND="/register"
+
+cat > data.json <<EOT
+{  
+    "userID": "007",
+    "firstname": "James",
+    "lastname": "Bond",
+    "email": "james@mi6.co.uk",
+    "password": "topsecret"
+}
+EOT
+
+set -x
+curl -k -X POST ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--data-binary @data.json
+set +x
 
 #------------------------------------------------------------------
 echo "Login"

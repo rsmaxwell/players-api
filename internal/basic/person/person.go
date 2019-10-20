@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"strings"
@@ -241,6 +242,12 @@ func (p *Person) updateFieldsRole(value string) error {
 // List returns a list of the person IDs with one of the allowed role values
 func List(filter []string) ([]string, error) {
 
+	log.Printf("person.List:")
+	log.Printf("    filter:    %s", filter)
+	for _, v := range filter {
+		log.Printf("        %s", v)
+	}
+
 	err := createFileStructure()
 	if err != nil {
 		return nil, err
@@ -256,14 +263,17 @@ func List(filter []string) ([]string, error) {
 		filename := filenameInfo.Name()
 		id := strings.TrimSuffix(filename, path.Ext(filename))
 
+		log.Printf("    loading: %s", id)
 		p, err := Load(id)
 		if err != nil {
 			return nil, err
 		}
 		if !common.Contains(filter, p.Role) {
+			log.Printf("    skipping: %s", id)
 			continue
 		}
 
+		log.Printf("    adding: %s", id)
 		list = append(list, id)
 	}
 

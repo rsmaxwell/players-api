@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/common"
@@ -24,6 +25,12 @@ type ListPeopleResponse struct {
 // ListPeople method
 func ListPeople(rw http.ResponseWriter, req *http.Request) {
 
+	log.Printf("ListPeople:")
+	log.Printf("    Method: %s", req.Method)
+	log.Printf("    Proto:  %s", req.Proto)
+	log.Printf("    Host:   %s", req.Host)
+	log.Printf("    URL:    %s", req.URL)
+
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
@@ -39,6 +46,8 @@ func ListPeople(rw http.ResponseWriter, req *http.Request) {
 		common.MetricsData.ClientError++
 		return
 	}
+
+	log.Printf("    Filter:    %s", r.Filter)
 
 	listOfPeople, err := model.ListPeople(r.Token, r.Filter)
 	if err != nil {

@@ -1,14 +1,14 @@
 
-rem set ENDPOINT=https://server.rsmaxwell.co.uk/players-api
-set ENDPOINT=http://localhost:4201/players-api
+set ENDPOINT=https://server.rsmaxwell.co.uk/players-api
+rem set ENDPOINT=http://localhost:4201/players-api
 
-set COMMAND=/registerx
+set COMMAND=/register
 
 (
 	echo {
 	echo     "userID": "007",
-	echo     "first_name": "James",
-	echo     "last_name": "Bond",
+	echo     "firstname": "James",
+	echo     "lastname": "Bond",
 	echo     "email": "james@mi6.co.uk",
 	echo     "password": "topsecret"
 	echo }

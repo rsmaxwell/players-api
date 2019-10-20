@@ -2,25 +2,25 @@ package version
 
 // BuildID function
 func BuildID() string {
-	return "unknown"
+	return "<BUILD_ID>"
 }
 
 // BuildDate function
 func BuildDate() string {
-	return "unknown"
+	return "<TIMESTAMP>"
 }
 
 // GitCommit function
 func GitCommit() string {
-	return "unknown"
+	return "<GIT_COMMIT>"
 }
 
 // GitBranch function
 func GitBranch() string {
-	return "unknown"
+	return "<GIT_BRANCH>"
 }
 
 // GitURL function
 func GitURL() string {
-	return "unknown"
+	return "<GIT_URL>"
 }

@@ -1,42 +1,18 @@
 #!/bin/bash
 
+set -x
 export GOPATH=${WORKSPACE}
 
 #rm -rf ${WORKSPACE}/bin/*
 
-
-
-
 versionfile=./internal/basic/version/version.go
-cat >${versionfile} <<EOT
-package version
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-// BuildID function
-func BuildID() string {
-	return ${BUILD_ID}
-}
-
-// BuildDate function
-func BuildDate() string {
-	return $(date '+%Y-%m-%d %H:%M:%S')
-}
-
-// GitCommit function
-func GitCommit() string {
-	return ${GIT_COMMIT}
-}
-
-// GitBranch function
-func GitBranch() string {
-	return "${GIT_BRANCH}"
-}
-
-// GitURL function
-func GitURL() string {
-	return "${GIT_URL}"
-}
-
-EOT
+sed -i "s@<BUILD_ID>@${BUILD_ID}@g"     ${versionfile}
+sed -i "s@<TIMESTAMP>@${TIMESTAMP}@g"   ${versionfile}
+sed -i "s@<GIT_COMMIT>@${GIT_COMMIT}@g" ${versionfile}
+sed -i "s@<GIT_BRANCH>@${GIT_BRANCH}@g" ${versionfile}
+sed -i "s@<GIT_URL>@${GIT_URL}@g"       ${versionfile}
 
 echo "----[ ${versionfile} ]----------------"
 cat ${versionfile}

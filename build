@@ -38,5 +38,9 @@ func GitURL() string {
 
 EOT
 
+echo "----[ ${versionfile} ]----------------"
+cat ${versionfile}
+echo "----[ ${versionfile} ]----------------"
+
 go get -d ./...
 go install ./...

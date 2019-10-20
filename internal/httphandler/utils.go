@@ -58,87 +58,89 @@ func errorHandler(rw http.ResponseWriter, req *http.Request, err error) {
 // SetupHandlers Handlers for REST API routes
 func SetupHandlers(r *mux.Router) {
 
-	r.HandleFunc("/register",
+	s := r.PathPrefix("/players-api").Subrouter()
+
+	s.HandleFunc("/register",
 		func(w http.ResponseWriter, req *http.Request) {
 			Register(w, req)
 		}).Methods(http.MethodPost)
 
-	r.HandleFunc("/login",
+	s.HandleFunc("/login",
 		func(w http.ResponseWriter, req *http.Request) {
 			Login(w, req)
 		}).Methods(http.MethodGet)
 
-	r.HandleFunc("/court",
+	s.HandleFunc("/court",
 		func(w http.ResponseWriter, req *http.Request) {
 			ListCourts(w, req)
 		}).Methods(http.MethodGet)
 
-	r.HandleFunc("/court/{id}",
+	s.HandleFunc("/court/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			GetCourt(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodGet)
 
-	r.HandleFunc("/court",
+	s.HandleFunc("/court",
 		func(w http.ResponseWriter, req *http.Request) {
 			CreateCourt(w, req)
 		}).Methods(http.MethodPost)
 
-	r.HandleFunc("/court/{id}",
+	s.HandleFunc("/court/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			UpdateCourt(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodPut)
 
-	r.HandleFunc("/court/{id}",
+	s.HandleFunc("/court/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			DeleteCourt(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodDelete)
 
-	r.HandleFunc("/person",
+	s.HandleFunc("/person",
 		func(w http.ResponseWriter, req *http.Request) {
 			ListPeople(w, req)
 		}).Methods(http.MethodGet)
 
-	r.HandleFunc("/person/{id}",
+	s.HandleFunc("/person/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			GetPerson(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodGet)
 
-	r.HandleFunc("/person/{id}",
+	s.HandleFunc("/person/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			UpdatePerson(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodPut)
 
-	r.HandleFunc("/personplayer/{id}",
+	s.HandleFunc("/personplayer/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			UpdatePersonPlayer(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodPut)
 
-	r.HandleFunc("/personrole/{id}",
+	s.HandleFunc("/personrole/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			UpdatePersonRole(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodPut)
 
-	r.HandleFunc("/person/{id}",
+	s.HandleFunc("/person/{id}",
 		func(w http.ResponseWriter, req *http.Request) {
 			DeletePerson(w, req, mux.Vars(req)["id"])
 		}).Methods(http.MethodDelete)
 
-	r.HandleFunc("/metrics",
+	s.HandleFunc("/metrics",
 		func(w http.ResponseWriter, req *http.Request) {
 			GetMetrics(w, req)
 		}).Methods(http.MethodGet)
 
-	r.HandleFunc("/queue",
+	s.HandleFunc("/queue",
 		func(w http.ResponseWriter, req *http.Request) {
 			GetQueue(w, req)
 		}).Methods(http.MethodGet)
 
-	r.HandleFunc("/move",
+	s.HandleFunc("/move",
 		func(w http.ResponseWriter, req *http.Request) {
 			PostMove(w, req)
 		}).Methods(http.MethodPost)
 
-	r.HandleFunc("/queue",
+	s.HandleFunc("/queue",
 		func(w http.ResponseWriter, req *http.Request) {
 			GetQueue(w, req)
 		}).Methods(http.MethodGet)

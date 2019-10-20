@@ -1,12 +1,0 @@
-{  
-    "userID": "007",
-    "first_name": "James",
-    "last_name": "Bond",
-    "email": "james@mi6.co.uk",
-    "password": "topsecret"
-}
-EOT
-
-curl -X POST https://server.rsmaxwell.co.uk/player-api/register \
---header "Content-Type: application/json" \
---data-binary @data.json

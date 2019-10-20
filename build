@@ -1,8 +1,8 @@
 #!/bin/bash
 
 export GOPATH=${WORKSPACE}
-cd src/github.com/rsmaxwell/${JOB_NAME}
-rm ${WORKSPACE}/bin/*
+
+#rm -rf ${WORKSPACE}/bin/*
 
 
 

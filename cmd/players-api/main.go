@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/rsmaxwell/players-api/internal/basic/version"
 	"github.com/rsmaxwell/players-api/internal/httphandler"
 	"github.com/rsmaxwell/players-api/internal/model"
 
@@ -19,7 +20,7 @@ var (
 
 func main() {
 
-	log.Printf("Players Server: 2018-01-31 13:30")
+	log.Printf("Players Server: %s", version.GetVersion())
 	var ok bool
 
 	portstring, ok := os.LookupEnv("PORT")

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+export GOPATH=${WORKSPACE}
+cd src/github.com/rsmaxwell/${JOB_NAME}
+rm ${WORKSPACE}/bin/*
+
+
+
+
+versionfile=./internal/basic/version/version.go
+cat >${task} <<EOT
+package version
+
+// GetVersion function
+func GetVersion() string {
+    return "xxxxx unknown"
+}
+
+EOT
+
+#go get -d ./...
+#go install ./...

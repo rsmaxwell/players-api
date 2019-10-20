@@ -1,0 +1,22 @@
+#!/bin/bash
+
+
+ 
+ENDPOINT="https://server.rsmaxwell.co.uk/player-api"
+
+
+COMMAND="/register"
+
+cat <<EOT > data.json
+{  
+    "userID": "007",
+    "first_name": "James",
+    "last_name": "Bond",
+    "email": "james@mi6.co.uk",
+    "password": "topsecret"
+}
+EOT
+
+curl -X POST ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--data-binary @data.json

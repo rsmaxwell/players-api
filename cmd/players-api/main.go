@@ -20,7 +20,12 @@ var (
 
 func main() {
 
-	log.Printf("Players Server: %s", version.GetVersion())
+	log.Printf("Players API")
+	log.Printf("    BuildID:   %s", version.BuildID())
+	log.Printf("    BuildDate: %s", version.BuildDate())
+	log.Printf("    GitCommit: %s", version.GitCommit())
+	log.Printf("    GitBranch: %s", version.GitBranch())
+	log.Printf("    GitURL:    %s", version.GitURL())
 	var ok bool
 
 	portstring, ok := os.LookupEnv("PORT")

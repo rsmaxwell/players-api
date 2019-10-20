@@ -11,9 +11,29 @@ versionfile=./internal/basic/version/version.go
 cat >${task} <<EOT
 package version
 
-// GetVersion function
-func GetVersion() string {
-    return "xxxxx unknown"
+// BuildID function
+func BuildID() string {
+	return ${BUILD_ID}
+}
+
+// BuildDate function
+func BuildDate() string {
+	return $(date '+%Y-%m-%d %H:%M:%S')
+}
+
+// GitCommit function
+func GitCommit() string {
+	return ${GIT_COMMIT}
+}
+
+// GitBranch function
+func GitBranch() string {
+	return "${GIT_BRANCH}"
+}
+
+// GitURL function
+func GitURL() string {
+	return "${GIT_URL}"
 }
 
 EOT

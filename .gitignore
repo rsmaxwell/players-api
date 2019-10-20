@@ -1,20 +1,16 @@
-.idea
-node_modules
-jspm_packages
-npm-debug.log
-debug.log
-src/**/*.js
-!src/systemjs.config.extras.js
-!src/systemjs.config.js
-!src/systemjs-angular-loader.js
-*.js.map
-e2e/**/*.js
-e2e/**/*.js.map
-_test-output
-_temp
-package-lock.json
-vendor/
-players-api-*
-generate-test-data-*
-coverage*
-backup/
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+__debug_bin
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/

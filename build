@@ -3,7 +3,7 @@
 set -x
 export GOPATH=${WORKSPACE}
 
-#rm -rf ${WORKSPACE}/bin/*
+rm -rf ${WORKSPACE}/bin/*
 
 versionfile=./internal/basic/version/version.go
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
@@ -13,10 +13,6 @@ sed -i "s@<TIMESTAMP>@${TIMESTAMP}@g"   ${versionfile}
 sed -i "s@<GIT_COMMIT>@${GIT_COMMIT}@g" ${versionfile}
 sed -i "s@<GIT_BRANCH>@${GIT_BRANCH}@g" ${versionfile}
 sed -i "s@<GIT_URL>@${GIT_URL}@g"       ${versionfile}
-
-echo "----[ ${versionfile} ]----------------"
-cat ${versionfile}
-echo "----[ ${versionfile} ]----------------"
 
 go get -d ./...
 go install ./...

@@ -2,7 +2,7 @@
 rem set ENDPOINT=https://server.rsmaxwell.co.uk/players-api
 set ENDPOINT=http://localhost:4201/players-api
 
-set COMMAND=/register
+set COMMAND=/registerx
 
 (
 	echo {
@@ -14,6 +14,6 @@ set COMMAND=/register
 	echo }
 ) > data.json
 
-curl -X POST %ENDPOINT%%COMMAND% ^
+curl -k -X POST %ENDPOINT%%COMMAND% ^
 --header "Content-Type: application/json" ^
 --data-binary @data.json

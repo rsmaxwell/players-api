@@ -11,10 +11,10 @@ import (
 func NotFound(rw http.ResponseWriter, req *http.Request) {
 
 	log.Printf("NotFound:")
-	log.Printf("    Method:   %s", req.Method)
-	log.Printf("    URL:   %s", req.URL)
-	log.Printf("    Proto:   %s", req.Proto)
+	log.Printf("    Method: %s", req.Method)
+	log.Printf("    Proto:  %s", req.Proto)
 	log.Printf("    Host:   %s", req.Host)
+	log.Printf("    URL:    %s", req.URL)
 
 	setHeaders(rw, req)
 	WriteResponse(rw, http.StatusNotFound, "Not Found")

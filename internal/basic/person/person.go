@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -72,9 +71,6 @@ func makeFilename(id string) (string, error) {
 	}
 
 	filename := personListDir + "/" + id + ".json"
-
-	log.Printf("person.makeFilename: %s", filename)
-
 	return filename, nil
 }
 

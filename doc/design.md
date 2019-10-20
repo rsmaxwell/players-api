@@ -204,6 +204,91 @@ response:
 }
 ```
 
+
+
+
+
+
+### Read People
+
+``` bash
+COMMAND="/people"
+
+cat <<EOT > data.json
+{
+    "token": "4acRtD1Bai5Gr83gAAEl"
+}
+EOT
+
+curl -X GET ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--data-binary @data.json
+```
+
+``` json
+httpStatus: 200
+response:
+{
+    "people": {
+        "123": {
+            "first_name": "James",
+            "last_name": "Bond",
+            "userID": "james",
+            "player": true
+        },
+        "another": { "..." }
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+### Read Courts
+
+``` bash
+COMMAND="/courts"
+
+cat <<EOT > data.json
+{
+    "token": "4acRtD1Bai5Gr83gAAEl"
+}
+EOT
+
+curl -X GET ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--data-binary @data.json
+```
+
+``` json
+httpStatus: 200
+response:
+{
+    "courts": {
+        "34": { 
+            "name": "Court 1", 
+            "players": [ 123, 77, 23, 87 ] 
+        },
+        "another": { "..." }
+    }
+}
+```
+
+
+
+
+
+
+
+
+
 ### Update General
 
 The list of fields supplied in the data may be incomplete. Only the given fields will be updated

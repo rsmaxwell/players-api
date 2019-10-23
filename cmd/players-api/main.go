@@ -49,7 +49,7 @@ func main() {
 	httphandler.SetupHandlers(router)
 
 	f.Infof("Listening on port: %d", port)
-	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", port), httphandler.Middleware(router))
 	if err != nil {
 		f.Fatalf(err.Error())
 	}

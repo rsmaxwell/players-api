@@ -1,7 +1,7 @@
 #!/bin/bash
 
-ENDPOINT="https://server.rsmaxwell.co.uk/players-api"
-#ENDPOINT="http://localhost:4201/players-api"
+#ENDPOINT="https://server.rsmaxwell.co.uk/players-api"
+ENDPOINT="http://localhost:4201/players-api"
 
 
 #------------------------------------------------------------------
@@ -42,6 +42,54 @@ token=$(echo ${output} | jq .token -r)
 
 echo "token: ${token}"
 
+
+
+
+#------------------------------------------------------------------
+echo "Register"
+
+COMMAND="/register"
+
+cat > data.json <<EOT
+{  
+    "userID": "alice",
+    "firstname": "Alice",
+    "lastname": "Wonderland",
+    "email": "alice@abc.com",
+    "password": "wonder"
+}
+EOT
+
+set -x
+curl -w "%{http_code}\n" -k -X POST ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--data-binary @data.json
+set +x
+
+
+
+#------------------------------------------------------------------
+echo "Update Person"
+
+COMMAND="/person/alice"
+
+cat > data.json <<EOT
+{
+    "token": "${token}",
+    "person": {
+        "role": "normal"
+    }
+}
+EOT
+
+set -x
+curl -w "%{http_code}\n" -k -X PUT ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--data-binary @data.json
+set +x
+
+
 #------------------------------------------------------------------
 echo "Read People"
 
@@ -49,12 +97,17 @@ COMMAND="/person"
 
 cat > data.json <<EOT
 {
-    "token": "${token}"
+    "token": "${token}",
+    "filter": [
+        "admin",
+        "normal",
+        "suspended"
+    ]
 }
 EOT
 
 set -x
-curl --silent -k -X GET ${ENDPOINT}${COMMAND} \
+curl -w "%{http_code}\n" -k -X GET ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --header "Accept: application/json" \
 --data-binary @data.json

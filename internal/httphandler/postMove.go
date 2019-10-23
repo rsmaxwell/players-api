@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
@@ -20,6 +21,7 @@ type PostMoveRequest struct {
 
 // PostMove method
 func PostMove(rw http.ResponseWriter, req *http.Request) {
+	f := debug.NewFunction(pkg, "PostMove")
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -28,6 +30,8 @@ func PostMove(rw http.ResponseWriter, req *http.Request) {
 		common.MetricsData.ClientError++
 		return
 	}
+
+	f.DebugRequestBody(b)
 
 	var r PostMoveRequest
 	err = json.Unmarshal(b, &r)

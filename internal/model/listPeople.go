@@ -1,21 +1,16 @@
 package model
 
 import (
-	"log"
-
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 // ListPeople method
 func ListPeople(token string, filter []string) ([]string, error) {
-
-	log.Printf("model.ListPeople:")
-	log.Printf("    Filter:    %s", filter)
-	for _, v := range filter {
-		log.Printf("        %s", v)
-	}
+	f := debug.NewFunction(pkg, "ListPeople")
+	f.DebugVerbose("Filter: %s", filter)
 
 	session := session.LookupToken(token)
 	if session == nil {

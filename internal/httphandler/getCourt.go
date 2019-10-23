@@ -6,8 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
@@ -22,7 +24,8 @@ type GetCourtResponse struct {
 }
 
 // GetCourt method
-func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
+func GetCourt(rw http.ResponseWriter, req *http.Request) {
+	f := debug.NewFunction(pkg, "GetCourt")
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -32,6 +35,8 @@ func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
+	f.DebugRequestBody(b)
+
 	var r GetCourtRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
@@ -39,6 +44,9 @@ func GetCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		common.MetricsData.ClientError++
 		return
 	}
+
+	id := mux.Vars(req)["id"]
+	f.DebugVerbose("ID: %s", id)
 
 	c, err := model.GetCourt(r.Token, id)
 	if err != nil {

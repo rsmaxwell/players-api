@@ -16,12 +16,17 @@ func UpdateCourt(token string, id string, fields map[string]interface{}) error {
 		return codeerror.NewUnauthorized("Not Authorised")
 	}
 
-	if !person.CanUpdateCourt(session.UserID) {
+	p, err := person.Load(session.UserID)
+	if err != nil {
+		return codeerror.NewUnauthorized("Not Authorised")
+	}
+
+	if !p.CanUpdateCourt() {
 		return codeerror.NewUnauthorized("Not Authorised")
 	}
 
 	ref := &common.Reference{Type: "court", ID: id}
-	err := court.Update(ref, fields)
+	err = court.Update(ref, fields)
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
@@ -16,7 +18,8 @@ type DeleteCourtRequest struct {
 }
 
 // DeleteCourt method
-func DeleteCourt(rw http.ResponseWriter, req *http.Request, id string) {
+func DeleteCourt(rw http.ResponseWriter, req *http.Request) {
+	f := debug.NewFunction(pkg, "DeleteCourt")
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -26,6 +29,8 @@ func DeleteCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
+	f.DebugRequestBody(b)
+
 	var r DeleteCourtRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
@@ -33,6 +38,9 @@ func DeleteCourt(rw http.ResponseWriter, req *http.Request, id string) {
 		common.MetricsData.ClientError++
 		return
 	}
+
+	id := mux.Vars(req)["id"]
+	f.DebugVerbose("ID: %s", id)
 
 	err = model.DeleteCourt(r.Token, id)
 	if err != nil {

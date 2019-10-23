@@ -73,7 +73,7 @@ func TestUpdatePerson(t *testing.T) {
 		require.Equal(t, p.LastName, i.lastname, fmt.Sprintf("Person[%s] not updated correctly: 'LastName': expected %s, got: %s", i.id, i.lastname, p.LastName))
 		require.Equal(t, p.Email, i.email, fmt.Sprintf("Person[%s] not updated correctly: 'Email': expected %s, got: %s", i.id, i.email, p.Email))
 
-		if !person.CheckPassword(i.id, i.password) {
+		if !p.CheckPassword(i.password) {
 			require.Fail(t, fmt.Sprintf("Person[%s] not updated correctly: 'Password': not valid: %s", i.id, i.password))
 		}
 	}
@@ -135,7 +135,10 @@ func TestPersonCanLogin(t *testing.T) {
 			err = person.UpdatePlayer(test.id, test.player)
 			require.Nil(t, err, "err should be nothing")
 
-			ok := person.CanLogin(test.id)
+			p, err := person.Load(test.id)
+			require.Nil(t, err, "err should be nothing")
+
+			ok := p.CanLogin()
 			require.Equal(t, ok, test.expectedResult, "Unexpected error")
 		})
 	}

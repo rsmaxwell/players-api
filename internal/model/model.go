@@ -7,10 +7,21 @@ import (
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/basic/queue"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 )
+
+var (
+	pkg *debug.Package
+)
+
+func init() {
+	pkg = debug.NewPackage("model")
+}
 
 // Startup checks the state on disk is consistent
 func Startup() error {
+	f := debug.NewFunction(pkg, "Startup")
+	f.DebugVerbose("")
 
 	// Make a list of players
 	listOfPeople, err := person.List(person.AllRoles)

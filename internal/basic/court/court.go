@@ -11,6 +11,7 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"gopkg.in/go-playground/validator.v9"
 
 	"github.com/rsmaxwell/players-api/internal/basic/destination"
@@ -35,7 +36,12 @@ var (
 	courtInfoFile string
 
 	validate *validator.Validate
+	pkg      *debug.Package
 )
+
+func init() {
+	pkg = debug.NewPackage("court")
+}
 
 func init() {
 	courtBaseDir = common.RootDir + "/courts"
@@ -86,6 +92,8 @@ func New(name string, players []string) *Court {
 
 // Update method
 func Update(ref *common.Reference, fields map[string]interface{}) error {
+	f := debug.NewFunction(pkg, "Update")
+	f.DebugVerbose("ref: %v, fields: %v", ref, fields)
 
 	c, err := Load(ref)
 	if err != nil {
@@ -107,6 +115,8 @@ func Update(ref *common.Reference, fields map[string]interface{}) error {
 
 // updateFields method
 func (c *Court) updateFields(fields map[string]interface{}) error {
+	f := debug.NewFunction(pkg, "updateFields")
+	f.DebugVerbose("fields: %v:", fields)
 
 	if v, ok := fields["Container"]; ok {
 		if container2, ok := v.(map[string]interface{}); ok {
@@ -125,6 +135,8 @@ func (c *Court) updateFields(fields map[string]interface{}) error {
 
 // Add a new court to the list
 func (c *Court) Add() (string, error) {
+	f := debug.NewFunction(pkg, "Add")
+	f.DebugVerbose("name: %s", c.Container.Name)
 
 	count, err := getAndIncrementCurrentCourtID()
 	if err != nil {
@@ -138,11 +150,14 @@ func (c *Court) Add() (string, error) {
 		return "", err
 	}
 
+	f.DebugVerbose("id: %s", id)
 	return id, nil
 }
 
 // Save writes a Court to disk
 func (c *Court) Save(ref *common.Reference) error {
+	f := debug.NewFunction(pkg, "Save")
+	f.DebugVerbose("ref: %v", ref)
 
 	if ref.Type != "court" {
 		return codeerror.NewInternalServerError("Unexpected Reference type")

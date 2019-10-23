@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/gorilla/mux"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 
 	"github.com/rsmaxwell/players-api/internal/common"
@@ -18,7 +20,8 @@ type UpdatePersonRequest struct {
 }
 
 // UpdatePerson method
-func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
+func UpdatePerson(rw http.ResponseWriter, req *http.Request) {
+	f := debug.NewFunction(pkg, "UpdatePerson")
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -28,6 +31,8 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
+	f.DebugRequestBody(b)
+
 	var r UpdatePersonRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
@@ -35,6 +40,12 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request, id string) {
 		common.MetricsData.ClientError++
 		return
 	}
+
+	id := mux.Vars(req)["id"]
+
+	f.DebugVerbose("ID:     %s", id)
+	f.DebugVerbose("Token:  %s", r.Token)
+	f.DebugVerbose("Person: %v", r.Person)
 
 	err = model.UpdatePerson(r.Token, id, r.Person)
 	if err != nil {

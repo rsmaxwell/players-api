@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
@@ -22,6 +23,7 @@ type ListCourtsResponse struct {
 
 // ListCourts method
 func ListCourts(rw http.ResponseWriter, req *http.Request) {
+	f := debug.NewFunction(pkg, "ListCourts")
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -30,6 +32,8 @@ func ListCourts(rw http.ResponseWriter, req *http.Request) {
 		common.MetricsData.ClientError++
 		return
 	}
+
+	f.DebugRequestBody(b)
 
 	var r ListCourtsRequest
 	err = json.Unmarshal(b, &r)

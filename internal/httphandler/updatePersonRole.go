@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
@@ -17,7 +19,8 @@ type UpdatePersonRoleRequest struct {
 }
 
 // UpdatePersonRole method
-func UpdatePersonRole(rw http.ResponseWriter, req *http.Request, id string) {
+func UpdatePersonRole(rw http.ResponseWriter, req *http.Request) {
+	f := debug.NewFunction(pkg, "UpdatePersonRole")
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -27,6 +30,8 @@ func UpdatePersonRole(rw http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
+	f.DebugRequestBody(b)
+
 	var r UpdatePersonRoleRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
@@ -34,6 +39,9 @@ func UpdatePersonRole(rw http.ResponseWriter, req *http.Request, id string) {
 		common.MetricsData.ClientError++
 		return
 	}
+
+	id := mux.Vars(req)["id"]
+	f.DebugVerbose("ID: %s", id)
 
 	err = model.UpdatePersonRole(r.Token, id, r.Role)
 	if err != nil {

@@ -14,7 +14,12 @@ func GetMetrics(token string) error {
 		return codeerror.NewUnauthorized("Not Authorized")
 	}
 
-	if !person.CanGetMetrics(session.UserID) {
+	p, err := person.Load(session.UserID)
+	if err != nil {
+		return codeerror.NewUnauthorized("Not Authorized")
+	}
+
+	if !p.CanGetMetrics() {
 		return codeerror.NewUnauthorized("Not Authorized")
 	}
 

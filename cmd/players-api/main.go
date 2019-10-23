@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/rsmaxwell/players-api/internal/basic/version"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/httphandler"
 	"github.com/rsmaxwell/players-api/internal/model"
 
@@ -16,16 +16,18 @@ import (
 
 var (
 	port int
+	pkg  *debug.Package
 )
 
 func main() {
+	pkg = debug.NewPackage("main")
+	f := debug.NewFunction(pkg, "main")
 
-	log.Printf("Players API")
-	log.Printf("    BuildID:   %s", version.BuildID())
-	log.Printf("    BuildDate: %s", version.BuildDate())
-	log.Printf("    GitCommit: %s", version.GitCommit())
-	log.Printf("    GitBranch: %s", version.GitBranch())
-	log.Printf("    GitURL:    %s", version.GitURL())
+	f.Infof("Players API: BuildID: %s", version.BuildID())
+	f.Verbosef("    BuildDate: %s", version.BuildDate())
+	f.Verbosef("    GitCommit: %s", version.GitCommit())
+	f.Verbosef("    GitBranch: %s", version.GitBranch())
+	f.Verbosef("    GitURL:    %s", version.GitURL())
 	var ok bool
 
 	portstring, ok := os.LookupEnv("PORT")
@@ -34,23 +36,21 @@ func main() {
 	}
 	port, err := strconv.Atoi(portstring)
 	if err != nil {
-		log.Fatalf(err.Error())
+		f.Fatalf(err.Error())
 	}
 
 	err = model.Startup()
 	if err != nil {
-		log.Fatalf(err.Error())
+		f.Fatalf(err.Error())
 	}
 
-	log.Printf("Registering Router and setting Handlers")
+	f.Verbosef("Registering Router and setting Handlers")
 	router := mux.NewRouter()
 	httphandler.SetupHandlers(router)
 
-	log.Printf("Listening on port: %d", port)
+	f.Infof("Listening on port: %d", port)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 	if err != nil {
-		log.Fatalf(err.Error())
+		f.Fatalf(err.Error())
 	}
-
-	log.Printf("Success")
 }

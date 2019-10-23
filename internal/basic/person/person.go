@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
 // Person type
@@ -43,7 +43,12 @@ var (
 	AllRoles []string
 
 	validate *validator.Validate
+	pkg      *debug.Package
 )
+
+func init() {
+	pkg = debug.NewPackage("person")
+}
 
 func init() {
 	personBaseDir = common.RootDir + "/people"
@@ -90,17 +95,9 @@ func createFileStructure() error {
 }
 
 // CheckPassword - Basic check on the user calling the service
-func CheckPassword(id, password string) bool {
+func (p *Person) CheckPassword(password string) bool {
 
-	p, err := Load(id)
-	if err != nil {
-		return false
-	}
-	if p == nil {
-		return false
-	}
-
-	err = bcrypt.CompareHashAndPassword(p.HashedPassword, []byte(password))
+	err := bcrypt.CompareHashAndPassword(p.HashedPassword, []byte(password))
 	if err != nil {
 		return false
 	}
@@ -122,6 +119,8 @@ func New(firstname string, lastname string, email string, hashedPassword []byte,
 
 // Update method
 func Update(id string, fields map[string]interface{}) error {
+	f := debug.NewFunction(pkg, "Update")
+	f.DebugVerbose("fields: %v:", fields)
 
 	p, err := Load(id)
 	if err != nil {
@@ -143,6 +142,8 @@ func Update(id string, fields map[string]interface{}) error {
 
 // updateFields method
 func (p *Person) updateFields(fields map[string]interface{}) error {
+	f := debug.NewFunction(pkg, "updateFields")
+	f.DebugVerbose("fields: %v:", fields)
 
 	if v, ok := fields["FirstName"]; ok {
 		value, ok := v.(string)
@@ -187,6 +188,8 @@ func (p *Person) updateFields(fields map[string]interface{}) error {
 
 // UpdatePlayer method
 func UpdatePlayer(id string, value bool) error {
+	f := debug.NewFunction(pkg, "UpdatePlayer")
+	f.DebugVerbose("id: %s, player: %t", id, value)
 
 	p, err := Load(id)
 	if err != nil {
@@ -214,6 +217,8 @@ func (p *Person) updateFieldsPlayer(value bool) error {
 
 // UpdateRole method
 func UpdateRole(id string, value string) error {
+	f := debug.NewFunction(pkg, "UpdateRole")
+	f.DebugVerbose("id: %s, role: %s", id, value)
 
 	p, err := Load(id)
 	if err != nil {
@@ -241,12 +246,8 @@ func (p *Person) updateFieldsRole(value string) error {
 
 // List returns a list of the person IDs with one of the allowed role values
 func List(filter []string) ([]string, error) {
-
-	log.Printf("person.List:")
-	log.Printf("    filter:    %s", filter)
-	for _, v := range filter {
-		log.Printf("        %s", v)
-	}
+	f := debug.NewFunction(pkg, "List")
+	f.DebugVerbose("filter: %s", filter)
 
 	err := createFileStructure()
 	if err != nil {
@@ -263,17 +264,17 @@ func List(filter []string) ([]string, error) {
 		filename := filenameInfo.Name()
 		id := strings.TrimSuffix(filename, path.Ext(filename))
 
-		log.Printf("    loading: %s", id)
+		f.DebugVerbose("loading: %s", id)
 		p, err := Load(id)
 		if err != nil {
 			return nil, err
 		}
 		if !common.Contains(filter, p.Role) {
-			log.Printf("    skipping: %s", id)
+			f.DebugVerbose("skipping: %s", id)
 			continue
 		}
 
-		log.Printf("    adding: %s", id)
+		f.DebugVerbose("adding: %s", id)
 		list = append(list, id)
 	}
 
@@ -295,12 +296,7 @@ func IsPlayer(id string) bool {
 }
 
 // CanLogin function
-func CanLogin(id string) bool {
-
-	p, err := Load(id)
-	if err != nil {
-		return false
-	}
+func (p *Person) CanLogin() bool {
 
 	switch p.Role {
 	case RoleAdmin:
@@ -313,12 +309,7 @@ func CanLogin(id string) bool {
 }
 
 // CanUpdateCourt function
-func CanUpdateCourt(sessionID string) bool {
-
-	p, err := Load(sessionID)
-	if err != nil {
-		return false
-	}
+func (p *Person) CanUpdateCourt() bool {
 
 	switch p.Role {
 	case RoleAdmin:
@@ -389,12 +380,7 @@ func CanUpdatePersonPlayer(sessionID, userID string) bool {
 }
 
 // CanGetMetrics function
-func CanGetMetrics(sessionID string) bool {
-
-	p, err := Load(sessionID)
-	if err != nil {
-		return false
-	}
+func (p *Person) CanGetMetrics() bool {
 
 	switch p.Role {
 	case RoleAdmin:
@@ -410,6 +396,8 @@ func CanGetMetrics(sessionID string) bool {
 
 // Save writes a Person to disk
 func (p *Person) Save(id string) error {
+	f := debug.NewFunction(pkg, "Save")
+	f.DebugVerbose("id: %s", id)
 
 	// The first user must be made an 'admin' user
 	files, err := ioutil.ReadDir(personListDir)
@@ -419,12 +407,6 @@ func (p *Person) Save(id string) error {
 	if len(files) == 0 {
 		p.Role = RoleAdmin
 	}
-
-	// Check the user does not already exist
-	// found := Exists(id)
-	// if found {
-	// 	return codeerror.NewInternalServerError(fmt.Sprintf("Person [%s] already exists", id))
-	// }
 
 	err = validate.Struct(p)
 	if err != nil {
@@ -451,6 +433,8 @@ func (p *Person) Save(id string) error {
 
 // Load returns the Person with the given ID
 func Load(id string) (*Person, error) {
+	f := debug.NewFunction(pkg, "Load")
+	f.DebugVerbose("id: %s", id)
 
 	filename, err := makeFilename(id)
 	if err != nil {
@@ -475,6 +459,8 @@ func Load(id string) (*Person, error) {
 
 // Remove the person with the given ID
 func Remove(id string) error {
+	f := debug.NewFunction(pkg, "Remove")
+	f.DebugVerbose("id: %s", id)
 
 	filename, err := makeFilename(id)
 	if err != nil {

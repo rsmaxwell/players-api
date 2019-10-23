@@ -8,6 +8,7 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/basic/queue"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
@@ -23,6 +24,7 @@ type GetQueueResponse struct {
 
 // GetQueue method
 func GetQueue(rw http.ResponseWriter, req *http.Request) {
+	f := debug.NewFunction(pkg, "GetQueue")
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -31,6 +33,8 @@ func GetQueue(rw http.ResponseWriter, req *http.Request) {
 		common.MetricsData.ClientError++
 		return
 	}
+
+	f.DebugRequestBody(b)
 
 	var r GetQueueRequest
 	err = json.Unmarshal(b, &r)

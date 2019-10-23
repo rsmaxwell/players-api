@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
@@ -23,6 +24,7 @@ type GetMetricsResponse struct {
 
 // GetMetrics method
 func GetMetrics(rw http.ResponseWriter, req *http.Request) {
+	f := debug.NewFunction(pkg, "GetMetrics")
 
 	limitedReader := io.LimitReader(req.Body, 100*1024)
 	b, err := ioutil.ReadAll(limitedReader)
@@ -31,6 +33,8 @@ func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 		common.MetricsData.ClientError++
 		return
 	}
+
+	f.DebugRequestBody(b)
 
 	var r GetMetricsRequest
 	err = json.Unmarshal(b, &r)

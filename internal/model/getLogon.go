@@ -9,11 +9,16 @@ import (
 // Login method
 func Login(id, password string) (string, error) {
 
-	if !person.CheckPassword(id, password) {
+	p, err := person.Load(id)
+	if err != nil {
 		return "", codeerror.NewUnauthorized("Invalid userID and/or password")
 	}
 
-	if !person.CanLogin(id) {
+	if !p.CheckPassword(password) {
+		return "", codeerror.NewUnauthorized("Invalid userID and/or password")
+	}
+
+	if !p.CanLogin() {
 		return "", codeerror.NewUnauthorized("Not Authorized")
 	}
 

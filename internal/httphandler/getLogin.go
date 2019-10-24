@@ -13,9 +13,13 @@ type LogonResponse struct {
 	Token string `json:"token"`
 }
 
+var (
+	functionLogin = debug.NewFunction(pkg, "Login")
+)
+
 // Login method
 func Login(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "Login")
+	f := functionLogin
 
 	id, password, _ := req.BasicAuth()
 

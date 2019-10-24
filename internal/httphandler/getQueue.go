@@ -22,9 +22,13 @@ type GetQueueResponse struct {
 	Queue queue.Queue `json:"queue"`
 }
 
+var (
+	functionGetQueue = debug.NewFunction(pkg, "GetQueue")
+)
+
 // GetQueue method
 func GetQueue(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "GetQueue")
+	f := functionGetQueue
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)

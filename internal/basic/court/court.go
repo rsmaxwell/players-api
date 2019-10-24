@@ -36,12 +36,25 @@ var (
 	courtInfoFile string
 
 	validate *validator.Validate
-	pkg      *debug.Package
-)
 
-func init() {
 	pkg = debug.NewPackage("court")
-}
+
+	functionMakeFilename                  = debug.NewFunction(pkg, "makeFilename")
+	functionMakefileStructure             = debug.NewFunction(pkg, "makefileStructure")
+	functionUpdate                        = debug.NewFunction(pkg, "Update")
+	functionUpdateFields                  = debug.NewFunction(pkg, "UpdateFields")
+	functionAdd                           = debug.NewFunction(pkg, "Add")
+	functionSave                          = debug.NewFunction(pkg, "Save")
+	functionList                          = debug.NewFunction(pkg, "List")
+	functionExists                        = debug.NewFunction(pkg, "Exists")
+	functionLoad                          = debug.NewFunction(pkg, "Load")
+	functionRemove                        = debug.NewFunction(pkg, "Remove")
+	functionGetCourtInfo                  = debug.NewFunction(pkg, "GetCourtInfo")
+	functionSaveCourtInfo                 = debug.NewFunction(pkg, "saveCourtInfo")
+	functionGetAndIncrementCurrentCourtID = debug.NewFunction(pkg, "getAndIncrementCurrentCourtID")
+	functionSize                          = debug.NewFunction(pkg, "Size")
+	functionCheckSpace                    = debug.NewFunction(pkg, "CheckSpace")
+)
 
 func init() {
 	courtBaseDir = common.RootDir + "/courts"
@@ -53,15 +66,20 @@ func init() {
 
 // makeFilename function
 func makeFilename(id string) (string, error) {
+	f := functionMakeFilename
 
 	err := common.CheckCharactersInID(id)
 	if err != nil {
-		return "", err
+		message := fmt.Sprintf("charactor check failed for court id [%s]: %v", id, err)
+		f.Dump(message)
+		return "", codeerror.NewInternalServerError(message)
 	}
 
 	err = makefileStructure()
 	if err != nil {
-		return "", err
+		message := fmt.Sprintf("could not make court file structure: %v", err)
+		f.Dump(message)
+		return "", codeerror.NewInternalServerError(message)
 	}
 
 	filename := courtListDir + "/" + id + ".json"
@@ -70,12 +88,15 @@ func makeFilename(id string) (string, error) {
 
 // makefileStructure creates the people directory
 func makefileStructure() error {
+	f := functionMakefileStructure
 
 	_, err := os.Stat(courtListDir)
 	if err != nil {
 		err := os.MkdirAll(courtListDir, 0755)
 		if err != nil {
-			return codeerror.NewInternalServerError(err.Error())
+			message := fmt.Sprintf("could not make the directory [%s]: %v", courtListDir, err)
+			f.Dump(message)
+			return codeerror.NewInternalServerError(message)
 		}
 	}
 
@@ -92,22 +113,28 @@ func New(name string, players []string) *Court {
 
 // Update method
 func Update(ref *common.Reference, fields map[string]interface{}) error {
-	f := debug.NewFunction(pkg, "Update")
-	f.DebugVerbose("ref: %v, fields: %v", ref, fields)
+	f := functionUpdate
+	f.DebugVerbose("ref: %v, fields: %v:", ref, fields)
 
 	c, err := Load(ref)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not load the court [%v]: %v", ref, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	err = c.updateFields(fields)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not update the fields for court [%v]: %v", ref, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	err = c.Save(ref)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not save the court [%v]: %v", ref, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	return nil
@@ -115,8 +142,7 @@ func Update(ref *common.Reference, fields map[string]interface{}) error {
 
 // updateFields method
 func (c *Court) updateFields(fields map[string]interface{}) error {
-	f := debug.NewFunction(pkg, "updateFields")
-	f.DebugVerbose("fields: %v:", fields)
+	f := functionUpdateFields
 
 	if v, ok := fields["Container"]; ok {
 		if container2, ok := v.(map[string]interface{}); ok {
@@ -126,7 +152,9 @@ func (c *Court) updateFields(fields map[string]interface{}) error {
 				return err
 			}
 		} else {
-			return codeerror.NewInternalServerError(fmt.Sprintf("Unexpected Container type: %t   %v", v, v))
+			message := fmt.Sprintf("Unexpected Container type: %t   %v", v, v)
+			f.Dump(message)
+			return codeerror.NewInternalServerError(message)
 		}
 	}
 
@@ -135,19 +163,22 @@ func (c *Court) updateFields(fields map[string]interface{}) error {
 
 // Add a new court to the list
 func (c *Court) Add() (string, error) {
-	f := debug.NewFunction(pkg, "Add")
-	f.DebugVerbose("name: %s", c.Container.Name)
+	f := functionAdd
 
 	count, err := getAndIncrementCurrentCourtID()
 	if err != nil {
-		return "", codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not increment the court counter: %v", err)
+		f.Dump(message)
+		return "", codeerror.NewInternalServerError(message)
 	}
 
 	id := strconv.Itoa(count)
 	ref := common.Reference{Type: "court", ID: id}
 	err = c.Save(&ref)
 	if err != nil {
-		return "", err
+		message := fmt.Sprintf("could save the court[%s]: %v", id, err)
+		f.Dump(message)
+		return "", codeerror.NewInternalServerError(message)
 	}
 
 	f.DebugVerbose("id: %s", id)
@@ -156,31 +187,40 @@ func (c *Court) Add() (string, error) {
 
 // Save writes a Court to disk
 func (c *Court) Save(ref *common.Reference) error {
-	f := debug.NewFunction(pkg, "Save")
-	f.DebugVerbose("ref: %v", ref)
+	f := functionSave
 
 	if ref.Type != "court" {
-		return codeerror.NewInternalServerError("Unexpected Reference type")
+		message := fmt.Sprintf("Unexpected Reference type[%s]", ref.Type)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	err := validate.Struct(c)
 	if err != nil {
-		return codeerror.NewBadRequest(err.Error())
+		message := fmt.Sprintf("validation for court failed: %v", err)
+		f.Dump(message)
+		return codeerror.NewBadRequest(message)
 	}
 
 	courtJSON, err := json.Marshal(c)
 	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not marshal court: %v", err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	filename, err := makeFilename(ref.ID)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not make filename for court[%s]: %v", ref.ID, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	err = ioutil.WriteFile(filename, courtJSON, 0644)
 	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not write file [%s] for court[%s]: %v", filename, ref.ID, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	return nil
@@ -188,15 +228,19 @@ func (c *Court) Save(ref *common.Reference) error {
 
 // List returns a list of the court IDs
 func List() ([]string, error) {
+	f := functionList
 
 	err := makefileStructure()
 	if err != nil {
+		f.Dump("could not make court file structure: %v", err)
 		return nil, err
 	}
 
 	files, err := ioutil.ReadDir(courtListDir)
 	if err != nil {
-		return nil, codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not read the directory[%s]: %v", courtListDir, err)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 
 	list := []string{}
@@ -211,14 +255,17 @@ func List() ([]string, error) {
 
 // Exists returns 'true' if the court exists
 func Exists(id string) bool {
+	f := functionExists
 
 	filename, err := makeFilename(id)
 	if err != nil {
+		f.Dump("could not make filename for court[%s]: %v", id, err)
 		return false
 	}
 
 	_, err = os.Stat(filename)
 	if err != nil {
+		f.DebugVerbose("could not stat filename[%s] for court[%s]: %v", filename, id, err)
 		return false
 	}
 
@@ -227,20 +274,26 @@ func Exists(id string) bool {
 
 // Load returns the Court with the given ID
 func Load(ref *common.Reference) (*Court, error) {
+	f := functionLoad
 
 	if ref.Type != "court" {
-		return nil, codeerror.NewInternalServerError("Unexpected Reference type")
+		message := fmt.Sprintf("Unexpected Reference type for court[%v]", ref)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 
 	filename, err := makeFilename(ref.ID)
 	if err != nil {
+		f.Dump("could not make filename for court[%s]", ref.ID)
 		return nil, err
 	}
 
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, codeerror.NewNotFound(err.Error())
+			message := fmt.Sprintf("could not read court file [%s]", filename)
+			f.Dump(message)
+			return nil, codeerror.NewNotFound(message)
 		}
 		return nil, codeerror.NewInternalServerError(err.Error())
 	}
@@ -248,16 +301,20 @@ func Load(ref *common.Reference) (*Court, error) {
 	var c Court
 	err = json.Unmarshal(data, &c)
 	if err != nil {
-		return nil, codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not unmarshal court [%s]", filename)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 	return &c, nil
 }
 
 // Remove the court with the given ID
 func Remove(id string) error {
+	f := functionRemove
 
 	filename, err := makeFilename(id)
 	if err != nil {
+		f.Dump("could not make file for court [%s]", id)
 		return err
 	}
 
@@ -266,12 +323,16 @@ func Remove(id string) error {
 	if err == nil { // File exists
 		err = os.Remove(filename)
 		if err != nil {
-			return codeerror.NewInternalServerError(err.Error())
+			message := fmt.Sprintf("could not remove the file [%s] for court [%s]", filename, id)
+			f.Dump(message)
+			return codeerror.NewInternalServerError(message)
 		}
 		return nil
 
 	} else if os.IsNotExist(err) { // File does not exist
-		return codeerror.NewNotFound(fmt.Sprintf("File Not Found: %s", filename))
+		message := fmt.Sprintf("the file [%s] for court [%s] does not exist", filename, id)
+		f.Dump(message)
+		return codeerror.NewNotFound(message)
 	}
 
 	return codeerror.NewInternalServerError(err.Error())
@@ -279,6 +340,7 @@ func Remove(id string) error {
 
 // GetCourtInfo returns the Court class data
 func GetCourtInfo() (*Info, error) {
+	f := functionGetCourtInfo
 
 	if _, err := os.Stat(courtInfoFile); os.IsNotExist(err) {
 
@@ -288,29 +350,38 @@ func GetCourtInfo() (*Info, error) {
 
 		infoJSON, err := json.Marshal(info)
 		if err != nil {
-			return nil, codeerror.NewInternalServerError(err.Error())
+			message := fmt.Sprintf("could not marshal court info: %v", err)
+			f.Dump(message)
+			return nil, codeerror.NewInternalServerError(message)
 		}
 
 		err = makefileStructure()
 		if err != nil {
+			f.Dump("could not make the court file structure: %v", err)
 			return nil, err
 		}
 
 		err = ioutil.WriteFile(courtInfoFile, infoJSON, 0644)
 		if err != nil {
-			return nil, codeerror.NewInternalServerError(err.Error())
+			message := fmt.Sprintf("could not write the court info file [%s]: %v", courtInfoFile, err)
+			f.Dump(message)
+			return nil, codeerror.NewInternalServerError(message)
 		}
 	}
 
 	data, err := ioutil.ReadFile(courtInfoFile)
 	if err != nil {
-		return nil, codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not read read the court info file [%s]: %v", courtInfoFile, err)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 
 	var i Info
 	err = json.Unmarshal(data, &i)
 	if err != nil {
-		return nil, codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not unmarshal the court info file [%s]: %v", courtInfoFile, err)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 
 	return &i, nil
@@ -318,20 +389,26 @@ func GetCourtInfo() (*Info, error) {
 
 // saveCourtInfo save the Court class info
 func saveCourtInfo(i Info) error {
+	f := functionSaveCourtInfo
 
 	infoJSON, err := json.Marshal(i)
 	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not marshal the court info: %v", err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	err = makefileStructure()
 	if err != nil {
+		f.Dump("could not make the court file structure: %v", err)
 		return err
 	}
 
 	err = ioutil.WriteFile(courtInfoFile, infoJSON, 0644)
 	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not write the court file[%s]: %v", courtInfoFile, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	return nil
@@ -339,9 +416,11 @@ func saveCourtInfo(i Info) error {
 
 // getAndIncrementCurrentCourtID returns the CurrentID and then increments the CurrentID on disk
 func getAndIncrementCurrentCourtID() (int, error) {
+	f := functionGetAndIncrementCurrentCourtID
 
 	i, err := GetCourtInfo()
 	if err != nil {
+		f.Dump("could not get the court info: %v", err)
 		return 0, err
 	}
 
@@ -350,6 +429,7 @@ func getAndIncrementCurrentCourtID() (int, error) {
 
 	err = saveCourtInfo(*i)
 	if err != nil {
+		f.Dump("could not save the court info: %v", err)
 		return 0, err
 	}
 
@@ -358,10 +438,13 @@ func getAndIncrementCurrentCourtID() (int, error) {
 
 // Size returns the number of courts
 func Size() (int, error) {
+	f := functionSize
 
 	files, err := ioutil.ReadDir(courtListDir)
 	if err != nil {
-		return 0, codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not read the court list directory[%s]: %v", courtListDir, err)
+		f.Dump(message)
+		return 0, codeerror.NewInternalServerError(message)
 	}
 
 	return len(files), nil
@@ -380,6 +463,8 @@ func (c *Court) CheckPlayersLocation(players []string) error {
 
 // CheckSpace checks there is space in the target for the moving players
 func (c *Court) CheckSpace(players []string) error {
+	f := functionCheckSpace
+
 	info, err := GetCourtInfo()
 	if err != nil {
 		return codeerror.NewInternalServerError(err.Error())
@@ -388,7 +473,9 @@ func (c *Court) CheckSpace(players []string) error {
 	playersSize := len(players)
 
 	if containerSize+playersSize > info.PlayersPerCourt {
-		return codeerror.NewBadRequest(fmt.Sprintf("Too many players. %d + %d > %d", containerSize, playersSize, info.PlayersPerCourt))
+		message := fmt.Sprintf("Too many players. %d + %d > %d", containerSize, playersSize, info.PlayersPerCourt)
+		f.Dump(message)
+		return codeerror.NewBadRequest(message)
 	}
 
 	return nil

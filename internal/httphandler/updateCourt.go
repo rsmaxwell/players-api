@@ -18,9 +18,13 @@ type UpdateCourtRequest struct {
 	Court map[string]interface{} `json:"court"`
 }
 
+var (
+	functionUpdateCourt = debug.NewFunction(pkg, "UpdateCourt")
+)
+
 // UpdateCourt method
 func UpdateCourt(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "UpdateCourt")
+	f := functionUpdateCourt
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)

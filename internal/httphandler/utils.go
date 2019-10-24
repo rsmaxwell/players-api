@@ -17,12 +17,10 @@ type messageResponse struct {
 }
 
 var (
-	pkg *debug.Package
-)
-
-func init() {
 	pkg = debug.NewPackage("httphandler")
-}
+
+	functionMiddleware = debug.NewFunction(pkg, "Middleware")
+)
 
 // WriteResponse method
 func WriteResponse(w http.ResponseWriter, httpStatus int, message string) {
@@ -94,7 +92,7 @@ func SetupHandlers(r *mux.Router) {
 // Middleware method
 func Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		f := debug.NewFunction(pkg, "Middleware")
+		f := functionMiddleware
 
 		rw2 := response.New(rw)
 

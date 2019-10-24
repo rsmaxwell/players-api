@@ -5,11 +5,18 @@ import (
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/session"
+)
+
+var (
+	functionUpdateCourt = debug.NewFunction(pkg, "UpdateCourt")
 )
 
 // UpdateCourt method
 func UpdateCourt(token string, id string, fields map[string]interface{}) error {
+	f := functionUpdateCourt
+	f.DebugVerbose("token: %s, id: %s, fields: %v", token, id, fields)
 
 	session := session.LookupToken(token)
 	if session == nil {

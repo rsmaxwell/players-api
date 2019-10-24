@@ -17,9 +17,13 @@ type DeleteCourtRequest struct {
 	Token string `json:"token"`
 }
 
+var (
+	functionDeleteCourt = debug.NewFunction(pkg, "DeleteCourt")
+)
+
 // DeleteCourt method
 func DeleteCourt(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "DeleteCourt")
+	f := functionDeleteCourt
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)

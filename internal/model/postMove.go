@@ -6,11 +6,18 @@ import (
 	"github.com/rsmaxwell/players-api/internal/basic/queue"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/session"
+)
+
+var (
+	functionPostMove = debug.NewFunction(pkg, "PostMove")
 )
 
 // PostMove method
 func PostMove(token string, source, target *common.Reference, players []string) error {
+	f := functionPostMove
+	f.DebugVerbose("token: %s, source: %v, target: %v, players: %v", token, source, target, players)
 
 	session := session.LookupToken(token)
 	if session == nil {
@@ -22,7 +29,7 @@ func PostMove(token string, source, target *common.Reference, players []string) 
 	// **********************************************************
 	s, err := load(source)
 	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
+		return err
 	}
 
 	t, err := load(target)

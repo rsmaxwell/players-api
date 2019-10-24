@@ -21,9 +21,13 @@ type ListCourtsResponse struct {
 	Courts []string `json:"courts"`
 }
 
+var (
+	functionListCourts = debug.NewFunction(pkg, "GetQListCourtsueue")
+)
+
 // ListCourts method
 func ListCourts(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "ListCourts")
+	f := functionListCourts
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)

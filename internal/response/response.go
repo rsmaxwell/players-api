@@ -8,12 +8,10 @@ import (
 )
 
 var (
-	pkg *debug.Package
+	pkg                 = debug.NewPackage("response")
+	functionWrite       = debug.NewFunction(pkg, "Write")
+	functionWriteHeader = debug.NewFunction(pkg, "WriteHeader")
 )
-
-func init() {
-	pkg = debug.NewPackage("response")
-}
 
 // Wrapper type
 type Wrapper struct {
@@ -34,14 +32,14 @@ func (r *Wrapper) Header() http.Header {
 
 // Write function
 func (r *Wrapper) Write(b []byte) (int, error) {
-	f := debug.NewFunction(pkg, "Write")
+	f := functionWrite
 	f.DebugVerbose(strings.TrimSuffix(string(b), "\n")) // log it out
 	return r.w.Write(b)                                 // pass it to the original ResponseWriter
 }
 
 // WriteHeader function
 func (r *Wrapper) WriteHeader(statusCode int) {
-	f := debug.NewFunction(pkg, "WriteHeader")
+	f := functionWriteHeader
 	f.DebugVerbose("statusCode: %d", statusCode)
 	r.w.WriteHeader(statusCode) // pass it to the original ResponseWriter
 }

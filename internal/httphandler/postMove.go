@@ -19,9 +19,13 @@ type PostMoveRequest struct {
 	Players []string         `json:"players"`
 }
 
+var (
+	functionPostMove = debug.NewFunction(pkg, "PostMove")
+)
+
 // PostMove method
 func PostMove(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "PostMove")
+	f := functionPostMove
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)

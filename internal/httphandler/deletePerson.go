@@ -17,9 +17,13 @@ type DeletePersonRequest struct {
 	Token string `json:"token"`
 }
 
+var (
+	functionDeletePerson = debug.NewFunction(pkg, "DeletePerson")
+)
+
 // DeletePerson method
 func DeletePerson(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "DeletePerson")
+	f := functionDeletePerson
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)

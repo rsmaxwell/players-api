@@ -8,10 +8,14 @@ import (
 	"github.com/rsmaxwell/players-api/internal/session"
 )
 
+var (
+	functionUpdatePersonPlayer = debug.NewFunction(pkg, "UpdatePersonPlayer")
+)
+
 // UpdatePersonPlayer method
 func UpdatePersonPlayer(token string, id string, player bool) error {
-	f := debug.NewFunction(pkg, "UpdatePersonPlayer")
-	f.DebugVerbose("")
+	f := functionUpdatePersonPlayer
+	f.DebugVerbose("token: %s, id: %s, player: %t", token, id, player)
 
 	session := session.LookupToken(token)
 	if session == nil {
@@ -19,13 +23,18 @@ func UpdatePersonPlayer(token string, id string, player bool) error {
 		return codeerror.NewUnauthorized("Not Authorised")
 	}
 
-	if !person.CanUpdatePersonPlayer(session.UserID, id) {
+	p, err := person.Load(session.UserID)
+	if err != nil {
+		return err
+	}
+
+	if !p.CanUpdatePersonPlayer() {
 		f.Verbosef("Not Authorised")
 		common.MetricsData.ClientError++
 		return codeerror.NewUnauthorized("Not Authorised")
 	}
 
-	err := person.UpdatePlayer(id, player)
+	err = person.UpdatePlayer(id, player)
 	if err != nil {
 		return err
 	}

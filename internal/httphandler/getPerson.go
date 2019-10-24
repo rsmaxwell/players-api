@@ -23,9 +23,13 @@ type GetPersonResponse struct {
 	Person person.Person `json:"person"`
 }
 
+var (
+	functionGetPerson = debug.NewFunction(pkg, "GetPerson")
+)
+
 // GetPerson method
 func GetPerson(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "GetPerson")
+	f := functionGetPerson
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)

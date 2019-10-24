@@ -7,9 +7,13 @@ import (
 	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
+var (
+	functionNotFound = debug.NewFunction(pkg, "NotFound")
+)
+
 // NotFound method
 func NotFound(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "NotFound")
+	f := functionNotFound
 	f.DebugVerbose("")
 
 	setHeaders(rw, req)

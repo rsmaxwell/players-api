@@ -18,9 +18,13 @@ type UpdatePersonRoleRequest struct {
 	Role  string `json:"role"`
 }
 
+var (
+	functionUpdatePersonRole = debug.NewFunction(pkg, "UpdatePersonRole")
+)
+
 // UpdatePersonRole method
 func UpdatePersonRole(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "UpdatePersonRole")
+	f := functionUpdatePersonRole
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)

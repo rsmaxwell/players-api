@@ -22,9 +22,13 @@ type GetMetricsResponse struct {
 	Data common.Metrics `json:"data"`
 }
 
+var (
+	functionGetMetrics = debug.NewFunction(pkg, "GetMetrics")
+)
+
 // GetMetrics method
 func GetMetrics(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "GetMetrics")
+	f := functionGetMetrics
 
 	limitedReader := io.LimitReader(req.Body, 100*1024)
 	b, err := ioutil.ReadAll(limitedReader)

@@ -6,15 +6,15 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 )
 
 // Package type
 type Package struct {
-	name      string
-	level     int
-	functions map[string]*Function
+	name  string
+	level int
 }
 
 // Function type
@@ -73,7 +73,6 @@ func getEnvInteger(name string, def int) (int, error) {
 // NewPackage function
 func NewPackage(name string) *Package {
 	m := &Package{name: name, level: defaultPackageLevel}
-	m.functions = make(map[string]*Function)
 
 	value, ok := os.LookupEnv("DEBUG_PACKAGE_LEVEL_" + name)
 	if ok {
@@ -89,18 +88,13 @@ func NewPackage(name string) *Package {
 // NewFunction function
 func NewFunction(pkg *Package, name string) *Function {
 
-	d := pkg.functions[name]
+	d := &Function{pkg: pkg, name: name, level: defaultFunctionLevel}
 
-	if d == nil {
-		d = &Function{pkg: pkg, name: name, level: defaultFunctionLevel}
-		pkg.functions[name] = d
-
-		value, ok := os.LookupEnv("DEBUG_FUNCTION_LEVEL_" + pkg.name + "." + name)
-		if ok {
-			number, err := strconv.Atoi(value)
-			if err == nil {
-				d.level = number
-			}
+	value, ok := os.LookupEnv("DEBUG_FUNCTION_LEVEL_" + pkg.name + "." + name)
+	if ok {
+		number, err := strconv.Atoi(value)
+		if err == nil {
+			d.level = number
 		}
 	}
 
@@ -266,4 +260,16 @@ func (f *Function) DebugRequestBody(data []byte) {
 		}
 		f.DebugAPI("request: %s", text3) // sanitised!
 	}
+}
+
+// Dump function
+func (f *Function) Dump(format string, a ...interface{}) {
+
+	pc, fn, line, ok := runtime.Caller(1)
+	if ok {
+		pkgfunction := runtime.FuncForPC(pc).Name()
+		fmt.Println(fmt.Sprintf("%s[%s:%d]", pkgfunction, fn, line))
+	}
+
+	fmt.Fprintln(os.Stderr, fmt.Sprintf(format, a...))
 }

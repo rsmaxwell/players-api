@@ -7,9 +7,13 @@ import (
 	"github.com/rsmaxwell/players-api/internal/session"
 )
 
+var (
+	functionListPeople = debug.NewFunction(pkg, "ListPeople")
+)
+
 // ListPeople method
 func ListPeople(token string, filter []string) ([]string, error) {
-	f := debug.NewFunction(pkg, "ListPeople")
+	f := functionListPeople
 	f.DebugVerbose("Filter: %s", filter)
 
 	session := session.LookupToken(token)

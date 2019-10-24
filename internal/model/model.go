@@ -11,16 +11,13 @@ import (
 )
 
 var (
-	pkg *debug.Package
+	pkg             = debug.NewPackage("model")
+	functionStartup = debug.NewFunction(pkg, "Startup")
 )
-
-func init() {
-	pkg = debug.NewPackage("model")
-}
 
 // Startup checks the state on disk is consistent
 func Startup() error {
-	f := debug.NewFunction(pkg, "Startup")
+	f := functionStartup
 	f.DebugVerbose("")
 
 	// Make a list of players
@@ -35,6 +32,7 @@ func Startup() error {
 		if err != nil {
 			return err
 		}
+
 		if p.Player {
 			listOfPlayers = append(listOfPlayers, id)
 		}

@@ -26,54 +26,72 @@ type Person struct {
 	Player         bool   `json:"player"`
 }
 
+const (
+	// RoleAdmin constant
+	RoleAdmin = "admin"
+
+	// RoleNormal constant
+	RoleNormal = "normal"
+
+	// RoleSuspended constant
+	RoleSuspended = "suspended"
+)
+
 var (
 	personBaseDir string
 	personListDir string
 
-	// RoleAdmin is allowed to do anything!
-	RoleAdmin string
-
-	// RoleNormal can change themselves
-	RoleNormal string
-
-	// RoleSuspended can do nothing. Only the 'admin' can change a suspended person
-	RoleSuspended string
-
-	// AllRoles is the 'all' filter which returns every person
-	AllRoles []string
-
 	validate *validator.Validate
-	pkg      *debug.Package
+
+	pkg = debug.NewPackage("person")
+
+	functionMakeFilename          = debug.NewFunction(pkg, "makeFilename")
+	functionCreateFileStructure   = debug.NewFunction(pkg, "createFileStructure")
+	functionCheckPassword         = debug.NewFunction(pkg, "CheckPassword")
+	functionUpdate                = debug.NewFunction(pkg, "Update")
+	functionUpdateFields          = debug.NewFunction(pkg, "updateFields")
+	functionUpdatePlayer          = debug.NewFunction(pkg, "UpdatePlayer")
+	functionUpdateRole            = debug.NewFunction(pkg, "UpdateRole")
+	functionList                  = debug.NewFunction(pkg, "List")
+	functionCanUpdatePerson       = debug.NewFunction(pkg, "CanUpdatePerson")
+	functionCanUpdatePersonRole   = debug.NewFunction(pkg, "CanUpdatePersonRole")
+	functionCanUpdatePersonPlayer = debug.NewFunction(pkg, "CanUpdatePersonPlayer")
+	functionSave                  = debug.NewFunction(pkg, "Save")
+	functionLoad                  = debug.NewFunction(pkg, "Load")
+	functionRemove                = debug.NewFunction(pkg, "Remove")
+	functionSize                  = debug.NewFunction(pkg, "Size")
+	functionExists                = debug.NewFunction(pkg, "Exists")
+
+	// AllRoles lists all the roles
+	AllRoles []string
 )
 
 func init() {
-	pkg = debug.NewPackage("person")
-}
+	validate = validator.New()
 
-func init() {
 	personBaseDir = common.RootDir + "/people"
 	personListDir = personBaseDir + "/list"
 
-	RoleAdmin = "admin"
-	RoleNormal = "normal"
-	RoleSuspended = "suspended"
-
+	// AllRoles lists all the roles
 	AllRoles = []string{RoleAdmin, RoleNormal, RoleSuspended}
-
-	validate = validator.New()
 }
 
 // makeFilename function
 func makeFilename(id string) (string, error) {
+	f := functionMakeFilename
 
 	err := common.CheckCharactersInID(id)
 	if err != nil {
-		return "", err
+		message := fmt.Sprintf("invalid charactors for a person id [%s]: %v", id, err)
+		f.DebugVerbose(message)
+		return "", codeerror.NewInternalServerError(message)
 	}
 
 	err = createFileStructure()
 	if err != nil {
-		return "", err
+		message := fmt.Sprintf("could not create people file structure: %v", err)
+		f.Dump(message)
+		return "", codeerror.NewInternalServerError(message)
 	}
 
 	filename := personListDir + "/" + id + ".json"
@@ -82,12 +100,15 @@ func makeFilename(id string) (string, error) {
 
 // createFileStructure  creates the people directory
 func createFileStructure() error {
+	f := functionCreateFileStructure
 
 	_, err := os.Stat(personListDir)
 	if err != nil {
 		err := os.MkdirAll(personListDir, 0755)
 		if err != nil {
-			return codeerror.NewInternalServerError(err.Error())
+			message := fmt.Sprintf("could not make people list directory[%s]: %v", personListDir, err)
+			f.Dump(message)
+			return codeerror.NewInternalServerError(message)
 		}
 	}
 
@@ -96,9 +117,11 @@ func createFileStructure() error {
 
 // CheckPassword - Basic check on the user calling the service
 func (p *Person) CheckPassword(password string) bool {
+	f := functionCheckPassword
 
 	err := bcrypt.CompareHashAndPassword(p.HashedPassword, []byte(password))
 	if err != nil {
+		f.DebugVerbose("password check failed: %v", err)
 		return false
 	}
 
@@ -119,8 +142,8 @@ func New(firstname string, lastname string, email string, hashedPassword []byte,
 
 // Update method
 func Update(id string, fields map[string]interface{}) error {
-	f := debug.NewFunction(pkg, "Update")
-	f.DebugVerbose("fields: %v:", fields)
+	f := functionUpdate
+	f.DebugVerbose("id: %s, fields: %v:", id, fields)
 
 	p, err := Load(id)
 	if err != nil {
@@ -129,12 +152,16 @@ func Update(id string, fields map[string]interface{}) error {
 
 	err = p.updateFields(fields)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not update person fields. person[%s]: %v", id, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	err = p.Save(id)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not save person[%s]: %v", id, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	return nil
@@ -142,13 +169,15 @@ func Update(id string, fields map[string]interface{}) error {
 
 // updateFields method
 func (p *Person) updateFields(fields map[string]interface{}) error {
-	f := debug.NewFunction(pkg, "updateFields")
+	f := functionUpdateFields
 	f.DebugVerbose("fields: %v:", fields)
 
 	if v, ok := fields["FirstName"]; ok {
 		value, ok := v.(string)
 		if !ok {
-			return codeerror.NewBadRequest("The type of 'Person.FirstName' should be a string")
+			message := fmt.Sprintf("The type of 'Person.FirstName' should be a string")
+			f.DebugVerbose(message)
+			return codeerror.NewBadRequest(message)
 		}
 		p.FirstName = value
 	}
@@ -156,7 +185,9 @@ func (p *Person) updateFields(fields map[string]interface{}) error {
 	if v, ok := fields["LastName"]; ok {
 		value, ok := v.(string)
 		if !ok {
-			return codeerror.NewBadRequest("The type of 'Person.LastName' should be a string")
+			message := fmt.Sprintf("The type of 'Person.LastName' should be a string")
+			f.DebugVerbose(message)
+			return codeerror.NewBadRequest(message)
 		}
 		p.LastName = value
 	}
@@ -164,7 +195,9 @@ func (p *Person) updateFields(fields map[string]interface{}) error {
 	if v, ok := fields["Email"]; ok {
 		value, ok := v.(string)
 		if !ok {
-			return codeerror.NewBadRequest("The type of 'Person.Email' should be a string")
+			message := fmt.Sprintf("The type of 'Person.Email' should be a string")
+			f.DebugVerbose(message)
+			return codeerror.NewBadRequest(message)
 		}
 		p.Email = value
 	}
@@ -172,12 +205,16 @@ func (p *Person) updateFields(fields map[string]interface{}) error {
 	if v, ok := fields["Password"]; ok {
 		value, ok := v.(string)
 		if !ok {
-			return codeerror.NewBadRequest("The type of 'Person.HashedPassword' should be a string")
+			message := fmt.Sprintf("The type of 'Person.HashedPassword' should be a string")
+			f.DebugVerbose(message)
+			return codeerror.NewBadRequest(message)
 		}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(value), bcrypt.DefaultCost)
 		if err != nil {
-			return err
+			message := fmt.Sprintf("could not hash the password: %v", err)
+			f.Dump(message)
+			return codeerror.NewBadRequest(message)
 		}
 
 		p.HashedPassword = hashedPassword
@@ -188,7 +225,7 @@ func (p *Person) updateFields(fields map[string]interface{}) error {
 
 // UpdatePlayer method
 func UpdatePlayer(id string, value bool) error {
-	f := debug.NewFunction(pkg, "UpdatePlayer")
+	f := functionUpdatePlayer
 	f.DebugVerbose("id: %s, player: %t", id, value)
 
 	p, err := Load(id)
@@ -198,12 +235,16 @@ func UpdatePlayer(id string, value bool) error {
 
 	err = p.updateFieldsPlayer(value)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not update player field for person[%s]: %v", id, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	err = p.Save(id)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not save person[%s]: %v", id, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	return nil
@@ -217,7 +258,7 @@ func (p *Person) updateFieldsPlayer(value bool) error {
 
 // UpdateRole method
 func UpdateRole(id string, value string) error {
-	f := debug.NewFunction(pkg, "UpdateRole")
+	f := functionUpdateRole
 	f.DebugVerbose("id: %s, role: %s", id, value)
 
 	p, err := Load(id)
@@ -232,7 +273,9 @@ func UpdateRole(id string, value string) error {
 
 	err = p.Save(id)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not save person[%s]: %v", id, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	return nil
@@ -246,17 +289,21 @@ func (p *Person) updateFieldsRole(value string) error {
 
 // List returns a list of the person IDs with one of the allowed role values
 func List(filter []string) ([]string, error) {
-	f := debug.NewFunction(pkg, "List")
+	f := functionList
 	f.DebugVerbose("filter: %s", filter)
 
 	err := createFileStructure()
 	if err != nil {
-		return nil, err
+		message := fmt.Sprintf("could not create person file structure: %v", err)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 
 	files, err := ioutil.ReadDir(personListDir)
 	if err != nil {
-		return nil, codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not read the personListDir directory [%s]: %v", personListDir, err)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 
 	list := []string{}
@@ -269,6 +316,7 @@ func List(filter []string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		if !common.Contains(filter, p.Role) {
 			f.DebugVerbose("skipping: %s", id)
 			continue
@@ -282,17 +330,8 @@ func List(filter []string) ([]string, error) {
 }
 
 // IsPlayer returns 'true' if the person exists and is a player
-func IsPlayer(id string) bool {
-
-	person, err := Load(id)
-	if err != nil {
-		return false
-	}
-	if person == nil {
-		return false
-	}
-
-	return person.Player
+func (p *Person) IsPlayer() bool {
+	return p.Player
 }
 
 // CanLogin function
@@ -322,12 +361,7 @@ func (p *Person) CanUpdateCourt() bool {
 }
 
 // CanUpdatePerson function
-func CanUpdatePerson(sessionID, userID string) bool {
-
-	p, err := Load(sessionID)
-	if err != nil {
-		return false
-	}
+func (p *Person) CanUpdatePerson(sessionID, userID string) bool {
 
 	switch p.Role {
 	case RoleAdmin:
@@ -342,7 +376,7 @@ func CanUpdatePerson(sessionID, userID string) bool {
 }
 
 // CanUpdatePersonRole function
-func CanUpdatePersonRole(sessionID, userID string) bool {
+func (p *Person) CanUpdatePersonRole(sessionID, userID string) bool {
 
 	p, err := Load(sessionID)
 	if err != nil {
@@ -360,20 +394,13 @@ func CanUpdatePersonRole(sessionID, userID string) bool {
 }
 
 // CanUpdatePersonPlayer function
-func CanUpdatePersonPlayer(sessionID, userID string) bool {
-
-	p, err := Load(sessionID)
-	if err != nil {
-		return false
-	}
+func (p *Person) CanUpdatePersonPlayer() bool {
 
 	switch p.Role {
 	case RoleAdmin:
 		return true
 	case RoleNormal:
-		if sessionID == userID {
-			return true
-		}
+		return true
 	}
 
 	return false
@@ -396,13 +423,15 @@ func (p *Person) CanGetMetrics() bool {
 
 // Save writes a Person to disk
 func (p *Person) Save(id string) error {
-	f := debug.NewFunction(pkg, "Save")
+	f := functionSave
 	f.DebugVerbose("id: %s", id)
 
 	// The first user must be made an 'admin' user
 	files, err := ioutil.ReadDir(personListDir)
 	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not read the personListDir directory[%s]: %v", personListDir, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 	if len(files) == 0 {
 		p.Role = RoleAdmin
@@ -410,22 +439,30 @@ func (p *Person) Save(id string) error {
 
 	err = validate.Struct(p)
 	if err != nil {
-		return codeerror.NewBadRequest(err.Error())
+		message := fmt.Sprintf("validation failed for person[%s]: %v", id, err)
+		f.Dump(message)
+		return codeerror.NewBadRequest(message)
 	}
 
 	personJSON, err := json.Marshal(p)
 	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not marshal person[%s]: %v", id, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	filename, err := makeFilename(id)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not make filename for person[%s]: %v", id, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	err = ioutil.WriteFile(filename, personJSON, 0644)
 	if err != nil {
-		return codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not write file [%s] for person[%s]: %v", filename, id, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	return nil
@@ -433,38 +470,49 @@ func (p *Person) Save(id string) error {
 
 // Load returns the Person with the given ID
 func Load(id string) (*Person, error) {
-	f := debug.NewFunction(pkg, "Load")
+	f := functionLoad
 	f.DebugVerbose("id: %s", id)
 
 	filename, err := makeFilename(id)
 	if err != nil {
-		return nil, err
+		message := fmt.Sprintf("could not make filename for person[%s]: %v", id, err)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, codeerror.NewNotFound(err.Error())
+			message := fmt.Sprintf("the file [%s] does not exist, for person[%s]", filename, id)
+			f.Dump(message)
+			return nil, codeerror.NewNotFound(message)
 		}
-		return nil, codeerror.NewInternalServerError(err.Error())
+
+		message := fmt.Sprintf("could not read the file [%s] for person[%s]: %v", filename, id, err)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 
 	var p Person
 	err = json.Unmarshal(data, &p)
 	if err != nil {
-		return nil, codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not unmarshal the contents of file [%s] for person[%s]: %v", filename, id, err)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 	return &p, nil
 }
 
 // Remove the person with the given ID
 func Remove(id string) error {
-	f := debug.NewFunction(pkg, "Remove")
+	f := functionRemove
 	f.DebugVerbose("id: %s", id)
 
 	filename, err := makeFilename(id)
 	if err != nil {
-		return err
+		message := fmt.Sprintf("could not make filename for person[%s]: %v", id, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	_, err = os.Stat(filename)
@@ -472,23 +520,32 @@ func Remove(id string) error {
 	if err == nil { // File exists
 		err = os.Remove(filename)
 		if err != nil {
-			return codeerror.NewInternalServerError(err.Error())
+			message := fmt.Sprintf("could not remove file [%s] for person[%s]: %v", filename, id, err)
+			f.Dump(message)
+			return codeerror.NewInternalServerError(message)
 		}
 		return nil
 
 	} else if os.IsNotExist(err) { // File does not exist
-		return codeerror.NewNotFound(fmt.Sprintf("File Not Found: %s", filename))
+		message := fmt.Sprintf("the file [%s] for person[%s] could not be found: %v", filename, id, err)
+		f.Dump(message)
+		return codeerror.NewNotFound(message)
 	}
 
-	return codeerror.NewInternalServerError(err.Error())
+	message := fmt.Sprintf("could not stat the file [%s] for person[%s]: %v", filename, id, err)
+	f.Dump(message)
+	return codeerror.NewInternalServerError(message)
 }
 
 // Size returns the number of people
 func Size() (int, error) {
+	f := functionSize
 
 	files, err := ioutil.ReadDir(personListDir)
 	if err != nil {
-		return 0, codeerror.NewInternalServerError(err.Error())
+		message := fmt.Sprintf("could not read the personListDir [%s]: %v", personListDir, err)
+		f.Dump(message)
+		return 0, codeerror.NewInternalServerError(message)
 	}
 
 	return len(files), nil
@@ -496,14 +553,17 @@ func Size() (int, error) {
 
 // Exists returns 'true' if the person exists
 func Exists(id string) bool {
+	f := functionExists
 
 	filename, err := makeFilename(id)
 	if err != nil {
+		f.Dump("could not make the filename for person[%s]: %v", id, err)
 		return false
 	}
 
 	_, err = os.Stat(filename)
 	if err != nil {
+		f.DebugVerbose("could not stat the file[%s] for person[%s]: %v", filename, id, err)
 		return false
 	}
 

@@ -4,13 +4,20 @@ import (
 	"fmt"
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
+	"github.com/rsmaxwell/players-api/internal/debug"
 
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"golang.org/x/crypto/bcrypt"
 )
 
+var (
+	functionRegister = debug.NewFunction(pkg, "Register")
+)
+
 // Register method
 func Register(id, password, firstname, lastname, email string) error {
+	f := functionRegister
+	f.DebugVerbose("id: %s, password: %s, firstname: %s, lastname: %s, email: %s", id, "********", firstname, lastname, email)
 
 	if person.Exists(id) {
 		return codeerror.NewBadRequest(fmt.Sprintf("Person[%s] already exists", id))

@@ -24,9 +24,13 @@ type CreateCourtResponse struct {
 	ID string `json:"id"`
 }
 
+var (
+	functionCreateCourt = debug.NewFunction(pkg, "CreateCourt")
+)
+
 // CreateCourt method
 func CreateCourt(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "CreateCourt")
+	f := functionCreateCourt
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)

@@ -15,13 +15,13 @@ import (
 )
 
 var (
-	port int
-	pkg  *debug.Package
+	port         int
+	pkg          = debug.NewPackage("main")
+	mainFunction = debug.NewFunction(pkg, "main")
 )
 
 func main() {
-	pkg = debug.NewPackage("main")
-	f := debug.NewFunction(pkg, "main")
+	f := mainFunction
 
 	f.Infof("Players API: BuildID: %s", version.BuildID())
 	f.Verbosef("    BuildDate: %s", version.BuildDate())

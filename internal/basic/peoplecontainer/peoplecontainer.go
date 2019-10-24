@@ -73,11 +73,13 @@ func (c *PeopleContainer) Update(container2 map[string]interface{}) error {
 }
 
 func updateListOfPeople(id string, array []string) ([]string, error) {
-	if !person.Exists(id) {
-		return array, codeerror.NewNotFound(fmt.Sprintf("Person [%s] not found", id))
+
+	p, err := person.Load(id)
+	if err != nil {
+		return nil, err
 	}
 
-	if !person.IsPlayer(id) {
+	if !p.IsPlayer() {
 		return array, codeerror.NewBadRequest(fmt.Sprintf("Person [%s] is not a player", id))
 	}
 

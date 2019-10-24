@@ -20,9 +20,13 @@ type RegisterRequest struct {
 	Email     string `json:"email"`
 }
 
+var (
+	functionRegister = debug.NewFunction(pkg, "Register")
+)
+
 // Register method
 func Register(rw http.ResponseWriter, req *http.Request) {
-	f := debug.NewFunction(pkg, "Register")
+	f := functionRegister
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)

@@ -4,14 +4,21 @@ import (
 	"fmt"
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
+	"github.com/rsmaxwell/players-api/internal/debug"
 
 	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/session"
 )
 
+var (
+	functionCreateCourt = debug.NewFunction(pkg, "CreateCourt")
+)
+
 // CreateCourt method
 func CreateCourt(token string, c *court.Court) (string, error) {
+	f := functionCreateCourt
+	f.DebugVerbose("token: %s court:%v", token, c)
 
 	session := session.LookupToken(token)
 	if session == nil {
@@ -25,7 +32,9 @@ func CreateCourt(token string, c *court.Court) (string, error) {
 	}
 
 	if len(c.Container.Players) > info.PlayersPerCourt {
-		return "", codeerror.NewBadRequest("Too many players on court")
+		message := fmt.Sprintf("Too many players on court")
+		f.DebugVerbose(message)
+		return "", codeerror.NewBadRequest(message)
 	}
 
 	// Check the people on the court are valid
@@ -36,11 +45,15 @@ func CreateCourt(token string, c *court.Court) (string, error) {
 		}
 
 		if p == nil {
-			return "", codeerror.NewBadRequest(fmt.Sprintf("person[%s] not found", id))
+			message := fmt.Sprintf("person[%s] not found", id)
+			f.DebugVerbose(message)
+			return "", codeerror.NewBadRequest(message)
 		}
 
 		if p.Player == false {
-			return "", codeerror.NewBadRequest(fmt.Sprintf("person[%s] is not a player", id))
+			message := fmt.Sprintf("person[%s] is not a player", id)
+			f.DebugVerbose(message)
+			return "", codeerror.NewBadRequest(message)
 		}
 	}
 

@@ -144,7 +144,12 @@ func Register(id, password, firstName, lastName, email string) error {
 // Login function
 func Login(user, pass string) (string, error) {
 
-	if !person.CheckPassword(user, pass) {
+	p, err := person.Load(user)
+	if err != nil {
+		return "", errors.New("Invalid Userid or Password")
+	}
+
+	if !p.CheckPassword(pass) {
 		return "", errors.New("Invalid Userid or Password")
 	}
 

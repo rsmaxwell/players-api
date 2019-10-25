@@ -23,7 +23,7 @@ var (
 func getLoginToken(t *testing.T, id, password string) (string, error) {
 
 	// Create a  request to pass to our handler.
-	req, err := http.NewRequest("GET", "/login", nil)
+	req, err := http.NewRequest("GET", contextPath+"/login", nil)
 	require.Nil(t, err, "err should be nothing")
 
 	req.Header.Set("Authorization", model.BasicAuth(id, password))

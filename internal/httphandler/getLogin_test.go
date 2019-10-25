@@ -56,7 +56,7 @@ func TestLogin(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 
 			// Create a request to pass to our handler.
-			req, err := http.NewRequest("GET", "/login", nil)
+			req, err := http.NewRequest("GET", contextPath+"/login", nil)
 			require.Nil(t, err, "err should be nothing")
 
 			req.Header.Set("Authorization", model.BasicAuth(test.userID, test.password))

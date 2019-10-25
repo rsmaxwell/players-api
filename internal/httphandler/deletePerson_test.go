@@ -70,7 +70,7 @@ func TestDeletePerson(t *testing.T) {
 			require.Nil(t, err, "err should be nothing")
 
 			// Create a request
-			req, err := http.NewRequest("DELETE", "/person/"+test.userID, bytes.NewBuffer(requestBody))
+			req, err := http.NewRequest("DELETE", contextPath+"/person/"+test.userID, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			// Pass the request to our handler

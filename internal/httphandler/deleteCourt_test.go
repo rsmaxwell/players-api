@@ -64,7 +64,7 @@ func TestDeleteCourt(t *testing.T) {
 			require.Nil(t, err, "err should be nothing")
 
 			// Create a request
-			req, err := http.NewRequest("DELETE", "/court/"+test.courtID, bytes.NewBuffer(requestBody))
+			req, err := http.NewRequest("DELETE", contextPath+"/court/"+test.courtID, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			// Pass the request to our handler

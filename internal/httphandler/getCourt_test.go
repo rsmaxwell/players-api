@@ -71,7 +71,7 @@ func TestGetCourt(t *testing.T) {
 			require.Nil(t, err, "err should be nothing")
 
 			// Create a request
-			req, err := http.NewRequest("GET", "/court/"+test.courtID, bytes.NewBuffer(requestBody))
+			req, err := http.NewRequest("GET", contextPath+"/court/"+test.courtID, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			// Pass the request to our handler

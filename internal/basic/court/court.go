@@ -118,16 +118,12 @@ func Update(ref *common.Reference, fields map[string]interface{}) error {
 
 	c, err := Load(ref)
 	if err != nil {
-		message := fmt.Sprintf("could not load the court [%v]: %v", ref, err)
-		f.Dump(message)
-		return codeerror.NewInternalServerError(message)
+		return err
 	}
 
 	err = c.updateFields(fields)
 	if err != nil {
-		message := fmt.Sprintf("could not update the fields for court [%v]: %v", ref, err)
-		f.Dump(message)
-		return codeerror.NewInternalServerError(message)
+		return err
 	}
 
 	err = c.Save(ref)
@@ -291,11 +287,11 @@ func Load(ref *common.Reference) (*Court, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			message := fmt.Sprintf("could not read court file [%s]", filename)
-			f.Dump(message)
-			return nil, codeerror.NewNotFound(message)
+			f.Dump(fmt.Sprintf("could not read court[%s] file [%s]", ref.Type, filename))
+			return nil, codeerror.NewNotFound(fmt.Sprintf("could not read court[%s]", ref.Type))
 		}
-		return nil, codeerror.NewInternalServerError(err.Error())
+		f.Dump(fmt.Sprintf("could not read court[%s] file [%s]: %v", ref.Type, filename, err))
+		return nil, codeerror.NewInternalServerError(fmt.Sprintf("could not read court[%s]", ref.Type))
 	}
 
 	var c Court

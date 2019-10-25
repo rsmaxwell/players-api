@@ -174,13 +174,18 @@ func TestDetailsWithDuffPersonFile(t *testing.T) {
 	require.Nil(t, err, "err should be nothing")
 
 	// Check that List returns an error
-	expected := "invalid character 'j' looking for beginning of value"
+	expected := http.StatusInternalServerError
 	_, err = Load("0")
-	if err == nil {
-		require.Fail(t, fmt.Sprintf("Error actual = (nil), and Expected = [%v].", expected))
-	}
-	if err.Error() != expected {
-		require.Fail(t, fmt.Sprintf("Error actual = [%v], and Expected = [%v].", err, expected))
+	if err != nil {
+		if cerr, ok := err.(*codeerror.CodeError); ok {
+			if cerr.Code() != expected {
+				require.Fail(t, fmt.Sprintf("Unexpected error type: expected: %d, Actual: %d", expected, cerr.Code()))
+			}
+		} else {
+			require.Fail(t, fmt.Sprintf("%s", err))
+		}
+	} else {
+		require.Fail(t, "Unexpected success")
 	}
 }
 

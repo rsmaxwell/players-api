@@ -76,7 +76,7 @@ func TestRegister(t *testing.T) {
 			}
 
 			// Create a request to pass to our handler.
-			req, err := http.NewRequest("POST", "/register", bytes.NewBuffer(requestBody))
+			req, err := http.NewRequest("POST", contextPath+"/register", bytes.NewBuffer(requestBody))
 			require.Nil(t, err)
 
 			router := mux.NewRouter()

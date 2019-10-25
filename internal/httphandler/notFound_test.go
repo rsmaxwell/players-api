@@ -57,7 +57,7 @@ func TestNotFound(t *testing.T) {
 			require.Nil(t, err, "err should be nothing")
 
 			// Create a  request to pass to our handler.
-			req, err := http.NewRequest("GET", "/junk", bytes.NewBuffer(requestBody))
+			req, err := http.NewRequest("GET", contextPath+"/junk", bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			// Pass the request to our handler

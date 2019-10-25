@@ -75,7 +75,7 @@ func TestGetPerson(t *testing.T) {
 			require.Nil(t, err, "err should be nothing")
 
 			// Create a request to pass to our handler.
-			req, err := http.NewRequest("GET", "/person/"+test.userID, bytes.NewBuffer(requestBody))
+			req, err := http.NewRequest("GET", contextPath+"/person/"+test.userID, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			// Pass the request to our handler

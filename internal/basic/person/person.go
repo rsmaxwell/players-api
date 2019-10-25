@@ -82,9 +82,7 @@ func makeFilename(id string) (string, error) {
 
 	err := common.CheckCharactersInID(id)
 	if err != nil {
-		message := fmt.Sprintf("invalid charactors for a person id [%s]: %v", id, err)
-		f.DebugVerbose(message)
-		return "", codeerror.NewInternalServerError(message)
+		return "", err
 	}
 
 	err = createFileStructure()
@@ -426,6 +424,13 @@ func (p *Person) Save(id string) error {
 	f := functionSave
 	f.DebugVerbose("id: %s", id)
 
+	err := createFileStructure()
+	if err != nil {
+		message := fmt.Sprintf("could not create the person file structure: %v", err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
+	}
+
 	// The first user must be made an 'admin' user
 	files, err := ioutil.ReadDir(personListDir)
 	if err != nil {
@@ -453,9 +458,7 @@ func (p *Person) Save(id string) error {
 
 	filename, err := makeFilename(id)
 	if err != nil {
-		message := fmt.Sprintf("could not make filename for person[%s]: %v", id, err)
-		f.Dump(message)
-		return codeerror.NewInternalServerError(message)
+		return err
 	}
 
 	err = ioutil.WriteFile(filename, personJSON, 0644)

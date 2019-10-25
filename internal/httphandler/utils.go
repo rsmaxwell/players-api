@@ -8,7 +8,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
-	"github.com/rsmaxwell/players-api/internal/response"
 )
 
 // messageResponse structure
@@ -17,9 +16,8 @@ type messageResponse struct {
 }
 
 var (
-	pkg = debug.NewPackage("httphandler")
-
-	functionMiddleware = debug.NewFunction(pkg, "Middleware")
+	pkg         = debug.NewPackage("httphandler")
+	contextPath = "/players-api"
 )
 
 // WriteResponse method
@@ -87,16 +85,4 @@ func SetupHandlers(r *mux.Router) {
 	s.HandleFunc("/queue", GetQueue).Methods(http.MethodGet)
 
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
-}
-
-// Middleware method
-func Middleware(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		f := functionMiddleware
-
-		rw2 := response.New(rw)
-
-		f.DebugRequest(req)
-		h.ServeHTTP(rw2, req)
-	})
 }

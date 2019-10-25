@@ -78,7 +78,7 @@ func TestUpdatePersonRole(t *testing.T) {
 			require.Nil(t, err, "err should be nothing")
 
 			// Create a request to pass to our handler.
-			req, err := http.NewRequest("PUT", "/person/"+test.id, bytes.NewBuffer(requestBody))
+			req, err := http.NewRequest("PUT", contextPath+"/person/"+test.id, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			// Pass the request to our handler

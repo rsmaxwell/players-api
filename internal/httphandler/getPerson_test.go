@@ -80,9 +80,11 @@ func TestGetPerson(t *testing.T) {
 
 			// Pass the request to our handler
 			router := mux.NewRouter()
+			router2 := Middleware(router)
+
 			SetupHandlers(router)
 			rw := httptest.NewRecorder()
-			router.ServeHTTP(rw, req)
+			router2.ServeHTTP(rw, req)
 			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 
 			// Check the response

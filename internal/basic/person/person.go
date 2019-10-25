@@ -41,7 +41,7 @@ var (
 	personBaseDir string
 	personListDir string
 
-	validate *validator.Validate
+	validate = validator.New()
 
 	pkg = debug.NewPackage("person")
 
@@ -67,7 +67,6 @@ var (
 )
 
 func init() {
-	validate = validator.New()
 
 	personBaseDir = common.RootDir + "/people"
 	personListDir = personBaseDir + "/list"

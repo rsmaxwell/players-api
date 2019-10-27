@@ -15,8 +15,7 @@ import (
 
 // UpdatePersonRoleRequest structure
 type UpdatePersonRoleRequest struct {
-	Token string `json:"token"`
-	Role  string `json:"role"`
+	Role string `json:"role"`
 }
 
 var (

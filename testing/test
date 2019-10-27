@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#ENDPOINT="https://server.rsmaxwell.co.uk/players-api"
-ENDPOINT="http://localhost:4201/players-api"
+ENDPOINT="https://server.rsmaxwell.co.uk/players-api"
+#ENDPOINT="http://localhost:4201/players-api"
 
 OPTIONS="--silent --cookie cookie-jar.txt --cookie-jar cookie-jar.txt --dump-header - -k"
 
-#------------------------------------------------------------------
+echo "------------------------------------------------------------------"
 echo "Register"
 
 COMMAND="/register"
@@ -19,6 +19,7 @@ cat > data.json <<EOT
     "password": "topsecret"
 }
 EOT
+cat data.json
 
 set -x
 curl ${OPTIONS} -X POST ${ENDPOINT}${COMMAND} \
@@ -26,7 +27,7 @@ curl ${OPTIONS} -X POST ${ENDPOINT}${COMMAND} \
 --data-binary @data.json
 set +x
 
-#------------------------------------------------------------------
+echo "------------------------------------------------------------------"
 echo "Login"
 
 COMMAND="/login"
@@ -34,12 +35,12 @@ USERID="007"
 PASSWORD="topsecret"
 
 set -x
-curl ${OPTIONS} -w "%{http_code}\n" -X GET -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -X GET -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --header "Accept: application/json"
 set +x
 
-#------------------------------------------------------------------
+echo "------------------------------------------------------------------"
 echo "Register"
 
 COMMAND="/register"
@@ -53,42 +54,72 @@ cat > data.json <<EOT
     "password": "wonder"
 }
 EOT
+cat data.json
 
 set -x
-curl ${OPTIONS} -w "%{http_code}\n" -X POST ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -X POST ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --data-binary @data.json
 set +x
 
-#------------------------------------------------------------------
+echo "------------------------------------------------------------------"
 echo "Update Person Role"
 
 COMMAND="/personrole/alice"
 
 cat > data.json <<EOT
 {
-    "token": "${token}",
-    "person": {
-        "role": "normal"
-    }
+    "role": "normal"
 }
 EOT
+cat data.json
 
 set -x
-curl ${OPTIONS} -w "%{http_code}\n" -X PUT ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -X PUT ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --header "Accept: application/json" \
 --data-binary @data.json
 set +x
 
-#------------------------------------------------------------------
+echo "------------------------------------------------------------------"
+echo "Update Person Player"
+
+COMMAND="/personplayer/alice"
+
+cat > data.json <<EOT
+{
+    "player": true
+}
+EOT
+cat data.json
+
+set -x
+curl ${OPTIONS} -X PUT ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--data-binary @data.json
+set +x
+
+echo "------------------------------------------------------------------"
+echo "Read Person - alice"
+
+COMMAND="/person/alice"
+
+set -x
+curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--output output.txt 
+set +x
+jq . output.txt
+
+echo "------------------------------------------------------------------"
 echo "Read People"
 
 COMMAND="/person"
 
 cat > data.json <<EOT
 {
-    "token": "${token}",
     "filter": [
         "admin",
         "normal",
@@ -96,25 +127,24 @@ cat > data.json <<EOT
     ]
 }
 EOT
+cat data.json
 
 set -x
-curl ${OPTIONS} -w "%{http_code}\n" -X GET ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --header "Accept: application/json" \
 --data-binary @data.json
 set +x
 
-
-
-#------------------------------------------------------------------
+echo "------------------------------------------------------------------"
 echo "Logout"
 
 COMMAND="/logout"
 
 set -x
-curl ${OPTIONS} -w "%{http_code}\n" -X GET ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --header "Accept: application/json"
 set +x
 
-#------------------------------------------------------------------
+echo "------------------------------------------------------------------"

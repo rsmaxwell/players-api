@@ -2,9 +2,7 @@ package model
 
 import (
 	"github.com/rsmaxwell/players-api/internal/basic/person"
-	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/debug"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 var (
@@ -12,15 +10,9 @@ var (
 )
 
 // DeletePerson method
-func DeletePerson(token, id string) error {
+func DeletePerson(id string) error {
 	f := functionDeletePerson
-	f.DebugVerbose("token: %s id:%s", token, id)
-
-	session := session.LookupToken(token)
-	if session == nil {
-		f.Dump("token not found")
-		return codeerror.NewUnauthorized("Not Authorised")
-	}
+	f.DebugVerbose("id:%s", id)
 
 	err := person.Remove(id)
 	if err != nil {

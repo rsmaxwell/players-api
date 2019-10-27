@@ -5,7 +5,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 var (
@@ -13,21 +12,16 @@ var (
 )
 
 // UpdatePersonRole method
-func UpdatePersonRole(token string, id string, role string) error {
+func UpdatePersonRole(userID string, id string, role string) error {
 	f := functionUpdatePersonRole
-	f.DebugVerbose("token: %s, id: %s, role: %s", token, id, role)
+	f.DebugVerbose("userID: %s, id: %s, role: %s", userID, id, role)
 
-	session := session.LookupToken(token)
-	if session == nil {
-		return codeerror.NewUnauthorized("Not Authorised")
-	}
-
-	p, err := person.Load(session.UserID)
+	p, err := person.Load(userID)
 	if err != nil {
 		return err
 	}
 
-	if !p.CanUpdatePersonRole(session.UserID, id) {
+	if !p.CanUpdatePersonRole(userID, id) {
 		f.Verbosef("Unauthorized")
 		common.MetricsData.ClientError++
 		return codeerror.NewUnauthorized("Not Authorised")

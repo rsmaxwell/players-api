@@ -32,7 +32,8 @@ type Metrics struct {
 	ServerError               int `json:"serverError"`
 }
 
-func homeDir() string {
+// HomeDir returns the home directory
+func HomeDir() string {
 
 	usr, err := user.Current()
 	if err == nil {
@@ -50,7 +51,7 @@ func homeDir() string {
 
 func init() {
 
-	home := homeDir()
+	home := HomeDir()
 
 	if flag.Lookup("test.v") == nil {
 		RootDir = home + "/players-api"

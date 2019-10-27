@@ -13,7 +13,6 @@ import (
 
 // PostMoveRequest structure
 type PostMoveRequest struct {
-	Token   string           `json:"token"`
 	Source  common.Reference `json:"source"`
 	Target  common.Reference `json:"target"`
 	Players []string         `json:"players"`
@@ -26,6 +25,19 @@ var (
 // PostMove method
 func PostMove(rw http.ResponseWriter, req *http.Request) {
 	f := functionPostMove
+
+	session, err := globalSessions.SessionStart(rw, req)
+	if err != nil {
+		WriteResponse(rw, http.StatusInternalServerError, err.Error())
+		common.MetricsData.ServerError++
+		return
+	}
+	defer session.SessionRelease(rw)
+	value := session.Get("id")
+	if value == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		return
+	}
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -45,7 +57,7 @@ func PostMove(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = model.PostMove(r.Token, &r.Source, &r.Target, r.Players)
+	err = model.PostMove(&r.Source, &r.Target, r.Players)
 	if err != nil {
 		errorHandler(rw, req, err)
 		common.MetricsData.ClientError++

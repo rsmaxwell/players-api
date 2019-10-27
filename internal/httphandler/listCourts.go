@@ -2,19 +2,12 @@ package httphandler
 
 import (
 	"encoding/json"
-	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
-
-// ListCourtsRequest structure
-type ListCourtsRequest struct {
-	Token string `json:"token"`
-}
 
 // ListCourtsResponse structure
 type ListCourtsResponse struct {
@@ -28,26 +21,22 @@ var (
 // ListCourts method
 func ListCourts(rw http.ResponseWriter, req *http.Request) {
 	f := functionListCourts
+	f.DebugVerbose("")
 
-	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
-	b, err := ioutil.ReadAll(limitedReader)
+	session, err := globalSessions.SessionStart(rw, req)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		WriteResponse(rw, http.StatusInternalServerError, err.Error())
+		common.MetricsData.ServerError++
+		return
+	}
+	defer session.SessionRelease(rw)
+	userID := session.Get("id")
+	if userID == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
 		return
 	}
 
-	f.DebugRequestBody(b)
-
-	var r ListCourtsRequest
-	err = json.Unmarshal(b, &r)
-	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
-		return
-	}
-
-	listOfCourts, err := model.ListCourts(r.Token)
+	listOfCourts, err := model.ListCourts()
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

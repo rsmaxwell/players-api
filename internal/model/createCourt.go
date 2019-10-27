@@ -3,12 +3,10 @@ package model
 import (
 	"fmt"
 
-	"github.com/rsmaxwell/players-api/internal/codeerror"
-	"github.com/rsmaxwell/players-api/internal/debug"
-
 	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/basic/person"
-	"github.com/rsmaxwell/players-api/internal/session"
+	"github.com/rsmaxwell/players-api/internal/codeerror"
+	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
 var (
@@ -16,14 +14,9 @@ var (
 )
 
 // CreateCourt method
-func CreateCourt(token string, c *court.Court) (string, error) {
+func CreateCourt(c *court.Court) (string, error) {
 	f := functionCreateCourt
-	f.DebugVerbose("token: %s court:%v", token, c)
-
-	session := session.LookupToken(token)
-	if session == nil {
-		return "", codeerror.NewUnauthorized("Not Authorised")
-	}
+	f.DebugVerbose("court:%v", c)
 
 	// Check there are not too many players on the court
 	info, err := court.GetCourtInfo()

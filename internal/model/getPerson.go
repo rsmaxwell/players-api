@@ -3,12 +3,10 @@ package model
 import (
 	"fmt"
 
-	"github.com/rsmaxwell/players-api/internal/common"
-	"github.com/rsmaxwell/players-api/internal/debug"
-
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
-	"github.com/rsmaxwell/players-api/internal/session"
+	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
 var (
@@ -16,14 +14,9 @@ var (
 )
 
 // GetPerson method
-func GetPerson(token, id string) (*person.Person, error) {
+func GetPerson(id string) (*person.Person, error) {
 	f := functionGetPerson
-	f.DebugVerbose("token: %s, id:%s", token, id)
-
-	session := session.LookupToken(token)
-	if session == nil {
-		return nil, codeerror.NewUnauthorized("Not Authorised")
-	}
+	f.DebugVerbose("id: %s", id)
 
 	p, err := person.Load(id)
 	if err != nil {

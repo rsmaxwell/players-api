@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
@@ -24,25 +25,43 @@ func TestPostMove(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get a valid token
+	// * Login to get valid session
 	// ***************************************************************
-	goodToken, err := getLoginToken(t, goodUserID, goodPassword)
+	req, err := http.NewRequest("GET", contextPath+"/login", nil)
 	require.Nil(t, err, "err should be nothing")
+
+	userID := "007"
+	password := "topsecret"
+	req.Header.Set("Authorization", model.BasicAuth(userID, password))
+
+	router := mux.NewRouter()
+	SetupHandlers(router)
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, req)
+
+	sess, err := globalSessions.SessionStart(rw, req)
+	require.Nil(t, err, "err should be nothing")
+	defer sess.SessionRelease(rw)
+
+	goodSID := sess.SessionID()
+	require.NotNil(t, goodSID, "err should be nothing")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
 		testName       string
-		token          string
+		setLoginCookie bool
+		sid            string
 		source         common.Reference
 		target         common.Reference
 		players        []string
 		expectedStatus int
 	}{
 		{
-			testName: "Good request",
-			token:    goodToken,
+			testName:       "Good request",
+			setLoginCookie: true,
+			sid:            goodSID,
 			source: common.Reference{
 				Type: "queue",
 				ID:   "",
@@ -55,22 +74,21 @@ func TestPostMove(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			testName: "Bad token",
-			token:    "junk",
-			source: common.Reference{
-				Type: "queue",
-				ID:   "",
-			},
-			target: common.Reference{
-				Type: "queue",
-				ID:   "1001",
-			},
-			players:        []string{"007", "bob", "john"},
+			testName:       "no login cookie",
+			setLoginCookie: false,
+			sid:            goodSID,
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
-			testName: "Bad player",
-			token:    goodToken,
+			testName:       "bad sid",
+			setLoginCookie: true,
+			sid:            "junk",
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			testName:       "Bad player",
+			setLoginCookie: true,
+			sid:            goodSID,
 			source: common.Reference{
 				Type: "queue",
 				ID:   "",
@@ -90,22 +108,35 @@ func TestPostMove(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
+			// Set up the handlers on the router
+			router := mux.NewRouter()
+			SetupHandlers(router)
+			rw := httptest.NewRecorder()
+
+			// Create a request
 			requestBody, err := json.Marshal(PostMoveRequest{
-				Token:   test.token,
 				Source:  test.source,
 				Target:  test.target,
 				Players: test.players,
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			// Create a request to pass to our handler.
 			req, err := http.NewRequest("POST", contextPath+"/move", bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
-			// Pass the request to our handler
-			router := mux.NewRouter()
-			SetupHandlers(router)
-			rw := httptest.NewRecorder()
+			// set a cookie with the value of the login sid
+			if test.setLoginCookie {
+				cookieLifeTime := 3 * 60 * 60
+				cookie := http.Cookie{
+					Name:    "players-api",
+					Value:   test.sid,
+					MaxAge:  cookieLifeTime,
+					Expires: time.Now().Add(time.Duration(cookieLifeTime) * time.Second),
+				}
+				req.AddCookie(&cookie)
+			}
+
+			// Serve the request
 			router.ServeHTTP(rw, req)
 			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 

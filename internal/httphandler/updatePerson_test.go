@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -22,25 +23,43 @@ func TestUpdatePerson(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get a valid token
+	// * Login to get valid session
 	// ***************************************************************
-	goodToken, err := getLoginToken(t, goodUserID, goodPassword)
+	req, err := http.NewRequest("GET", contextPath+"/login", nil)
 	require.Nil(t, err, "err should be nothing")
+
+	userID := "007"
+	password := "topsecret"
+	req.Header.Set("Authorization", model.BasicAuth(userID, password))
+
+	router := mux.NewRouter()
+	SetupHandlers(router)
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, req)
+
+	sess, err := globalSessions.SessionStart(rw, req)
+	require.Nil(t, err, "err should be nothing")
+	defer sess.SessionRelease(rw)
+
+	goodSID := sess.SessionID()
+	require.NotNil(t, goodSID, "err should be nothing")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
 		testName       string
-		token          string
+		setLoginCookie bool
+		sid            string
 		id             string
 		person         map[string]interface{}
 		expectedStatus int
 	}{
 		{
-			testName: "Good request",
-			token:    goodToken,
-			id:       goodUserID,
+			testName:       "Good request",
+			setLoginCookie: true,
+			sid:            goodSID,
+			id:             goodUserID,
 			person: map[string]interface{}{
 				"FirstName": "aaa",
 				"LastName":  "bbb",
@@ -51,9 +70,10 @@ func TestUpdatePerson(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			testName: "Bad token",
-			token:    "junk",
-			id:       goodUserID,
+			testName:       "no login cookie",
+			setLoginCookie: false,
+			sid:            goodSID,
+			id:             goodUserID,
 			person: map[string]interface{}{
 				"FirstName": "aaa",
 				"LastName":  "bbb",
@@ -63,6 +83,20 @@ func TestUpdatePerson(t *testing.T) {
 			},
 			expectedStatus: http.StatusUnauthorized,
 		},
+		{
+			testName:       "Bad userID",
+			setLoginCookie: true,
+			sid:            goodSID,
+			id:             "junk",
+			person: map[string]interface{}{
+				"FirstName": "aaa",
+				"LastName":  "bbb",
+				"Email":     "123.456@xxx.com",
+				"Player":    false,
+				"Password":  "another",
+			},
+			expectedStatus: http.StatusNotFound,
+		},
 	}
 
 	// ***************************************************************
@@ -71,20 +105,33 @@ func TestUpdatePerson(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
+			// Set up the handlers on the router
+			router := mux.NewRouter()
+			SetupHandlers(router)
+			rw := httptest.NewRecorder()
+
+			// Create a request
 			requestBody, err := json.Marshal(UpdatePersonRequest{
-				Token:  test.token,
 				Person: test.person,
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			// Create a request to pass to our handler.
 			req, err := http.NewRequest("PUT", contextPath+"/person/"+test.id, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
-			// Pass the request to our handler
-			router := mux.NewRouter()
-			SetupHandlers(router)
-			rw := httptest.NewRecorder()
+			// set a cookie with the value of the login sid
+			if test.setLoginCookie {
+				cookieLifeTime := 3 * 60 * 60
+				cookie := http.Cookie{
+					Name:    "players-api",
+					Value:   test.sid,
+					MaxAge:  cookieLifeTime,
+					Expires: time.Now().Add(time.Duration(cookieLifeTime) * time.Second),
+				}
+				req.AddCookie(&cookie)
+			}
+
+			// Serve the request
 			router.ServeHTTP(rw, req)
 			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 

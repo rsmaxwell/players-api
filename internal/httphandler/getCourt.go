@@ -2,8 +2,6 @@ package httphandler
 
 import (
 	"encoding/json"
-	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -12,11 +10,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
-
-// GetCourtRequest structure
-type GetCourtRequest struct {
-	Token string `json:"token"`
-}
 
 // GetCourtResponse structure
 type GetCourtResponse struct {
@@ -31,28 +24,23 @@ var (
 func GetCourt(rw http.ResponseWriter, req *http.Request) {
 	f := functionGetCourt
 
-	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
-	b, err := ioutil.ReadAll(limitedReader)
+	session, err := globalSessions.SessionStart(rw, req)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		WriteResponse(rw, http.StatusInternalServerError, err.Error())
+		common.MetricsData.ServerError++
 		return
 	}
-
-	f.DebugRequestBody(b)
-
-	var r GetCourtRequest
-	err = json.Unmarshal(b, &r)
-	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+	defer session.SessionRelease(rw)
+	userID := session.Get("id")
+	if userID == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
 		return
 	}
 
 	id := mux.Vars(req)["id"]
 	f.DebugVerbose("ID: %s", id)
 
-	c, err := model.GetCourt(r.Token, id)
+	c, err := model.GetCourt(id)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

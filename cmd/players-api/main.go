@@ -15,8 +15,10 @@ import (
 )
 
 var (
-	port         int
+	port int
+
 	pkg          = debug.NewPackage("main")
+	functionInit = debug.NewFunction(pkg, "init")
 	functionMain = debug.NewFunction(pkg, "main")
 )
 

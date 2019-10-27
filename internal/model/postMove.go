@@ -4,10 +4,8 @@ import (
 	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/basic/destination"
 	"github.com/rsmaxwell/players-api/internal/basic/queue"
-	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 var (
@@ -15,14 +13,9 @@ var (
 )
 
 // PostMove method
-func PostMove(token string, source, target *common.Reference, players []string) error {
+func PostMove(source, target *common.Reference, players []string) error {
 	f := functionPostMove
-	f.DebugVerbose("token: %s, source: %v, target: %v, players: %v", token, source, target, players)
-
-	session := session.LookupToken(token)
-	if session == nil {
-		return codeerror.NewUnauthorized("Not Authorised")
-	}
+	f.DebugVerbose("source: %v, target: %v, players: %v", source, target, players)
 
 	// **********************************************************
 	// * Load the source and target

@@ -5,7 +5,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 var (
@@ -13,17 +12,11 @@ var (
 )
 
 // UpdatePersonPlayer method
-func UpdatePersonPlayer(token string, id string, player bool) error {
+func UpdatePersonPlayer(userID string, id string, player bool) error {
 	f := functionUpdatePersonPlayer
-	f.DebugVerbose("token: %s, id: %s, player: %t", token, id, player)
+	f.DebugVerbose("userID: %s, id: %s, player: %t", userID, id, player)
 
-	session := session.LookupToken(token)
-	if session == nil {
-		f.Verbosef("Not Authorised")
-		return codeerror.NewUnauthorized("Not Authorised")
-	}
-
-	p, err := person.Load(session.UserID)
+	p, err := person.Load(userID)
 	if err != nil {
 		return err
 	}

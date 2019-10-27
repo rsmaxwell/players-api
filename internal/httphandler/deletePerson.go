@@ -1,9 +1,6 @@
 package httphandler
 
 import (
-	"encoding/json"
-	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -11,11 +8,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
-
-// DeletePersonRequest structure
-type DeletePersonRequest struct {
-	Token string `json:"token"`
-}
 
 var (
 	functionDeletePerson = debug.NewFunction(pkg, "DeletePerson")
@@ -25,28 +17,35 @@ var (
 func DeletePerson(rw http.ResponseWriter, req *http.Request) {
 	f := functionDeletePerson
 
-	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
-	b, err := ioutil.ReadAll(limitedReader)
+	session, err := globalSessions.SessionStart(rw, req)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		WriteResponse(rw, http.StatusInternalServerError, err.Error())
+		common.MetricsData.ServerError++
 		return
 	}
-
-	f.DebugRequestBody(b)
-
-	var r DeletePersonRequest
-	err = json.Unmarshal(b, &r)
-	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+	defer session.SessionRelease(rw)
+	value := session.Get("id")
+	if value == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		return
+	}
+	userID, ok := value.(string)
+	if !ok {
+		f.Dump("Unexpected type for userID: %T: %v", value, value)
+		WriteResponse(rw, http.StatusInternalServerError, "Not Authorized")
 		return
 	}
 
 	id := mux.Vars(req)["id"]
 	f.DebugVerbose("ID: %s", id)
 
-	err = model.DeletePerson(r.Token, id)
+	if userID == id {
+		f.DebugVerbose("Attempt delete self: %s", id)
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		return
+	}
+
+	err = model.DeletePerson(id)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

@@ -3,6 +3,7 @@
 #ENDPOINT="https://server.rsmaxwell.co.uk/players-api"
 ENDPOINT="http://localhost:4201/players-api"
 
+OPTIONS="--silent --cookie cookie-jar.txt --cookie-jar cookie-jar.txt --dump-header - -k"
 
 #------------------------------------------------------------------
 echo "Register"
@@ -20,7 +21,7 @@ cat > data.json <<EOT
 EOT
 
 set -x
-curl -k -X POST ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -X POST ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --data-binary @data.json
 set +x
@@ -33,17 +34,10 @@ USERID="007"
 PASSWORD="topsecret"
 
 set -x
-output=$(curl --silent -k -X GET -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -w "%{http_code}\n" -X GET -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
---header "Accept: application/json")
+--header "Accept: application/json"
 set +x
-
-token=$(echo ${output} | jq .token -r)
-
-echo "token: ${token}"
-
-
-
 
 #------------------------------------------------------------------
 echo "Register"
@@ -61,17 +55,15 @@ cat > data.json <<EOT
 EOT
 
 set -x
-curl -w "%{http_code}\n" -k -X POST ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -w "%{http_code}\n" -X POST ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --data-binary @data.json
 set +x
 
-
-
 #------------------------------------------------------------------
-echo "Update Person"
+echo "Update Person Role"
 
-COMMAND="/person/alice"
+COMMAND="/personrole/alice"
 
 cat > data.json <<EOT
 {
@@ -83,12 +75,11 @@ cat > data.json <<EOT
 EOT
 
 set -x
-curl -w "%{http_code}\n" -k -X PUT ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -w "%{http_code}\n" -X PUT ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --header "Accept: application/json" \
 --data-binary @data.json
 set +x
-
 
 #------------------------------------------------------------------
 echo "Read People"
@@ -107,10 +98,23 @@ cat > data.json <<EOT
 EOT
 
 set -x
-curl -w "%{http_code}\n" -k -X GET ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -w "%{http_code}\n" -X GET ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --header "Accept: application/json" \
 --data-binary @data.json
 set +x
 
 
+
+#------------------------------------------------------------------
+echo "Logout"
+
+COMMAND="/logout"
+
+set -x
+curl ${OPTIONS} -w "%{http_code}\n" -X GET ${ENDPOINT}${COMMAND} \
+--header "Content-Type: application/json" \
+--header "Accept: application/json"
+set +x
+
+#------------------------------------------------------------------

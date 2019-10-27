@@ -3,6 +3,7 @@ package httphandler
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -64,6 +65,12 @@ func TestRegister(t *testing.T) {
 			initialNumberOfPeople, err := person.Size()
 			require.Nil(t, err)
 
+			// Set up the handlers on the router
+			router := mux.NewRouter()
+			SetupHandlers(router)
+			rw := httptest.NewRecorder()
+
+			// Create a request
 			requestBody, err := json.Marshal(RegisterRequest{
 				UserID:    test.userID,
 				Password:  test.password,
@@ -75,42 +82,27 @@ func TestRegister(t *testing.T) {
 				log.Fatalln(err)
 			}
 
-			// Create a request to pass to our handler.
 			req, err := http.NewRequest("POST", contextPath+"/register", bytes.NewBuffer(requestBody))
 			require.Nil(t, err)
 
-			router := mux.NewRouter()
-			SetupHandlers(router)
-
-			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-			rw := httptest.NewRecorder()
-
-			// Our router satisfies http.Handler, so we can call its ServeHTTP method
-			// directly and pass in our ResponseRecorder and Request.
+			// Serve the request
 			router.ServeHTTP(rw, req)
+			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 
-			// Check the status code is what we expect.
-			if rw.Code != test.expectedStatus {
-				require.Equal(t, test.expectedStatus, rw.Code, "Unexpected status code")
-			}
+			// Check the response
+			if rw.Code == http.StatusOK {
+				finalNumberOfPeople, err := person.Size()
+				require.Nil(t, err)
+				require.Equal(t, initialNumberOfPeople+1, finalNumberOfPeople, "Person was not registered")
 
-			finalNumberOfPeople, err := person.Size()
-			require.Nil(t, err)
-
-			if rw.Code != http.StatusOK {
-				require.Equal(t, initialNumberOfPeople, finalNumberOfPeople, "Unexpected number of people")
-				return
-			}
-
-			require.Equal(t, initialNumberOfPeople+1, finalNumberOfPeople, "Person was not registered")
-
-			// Check the status of the new person
-			p, err := person.Load(test.userID)
-			require.Nil(t, err)
-			if initialNumberOfPeople == 0 {
-				require.Equal(t, person.RoleAdmin, p.Role, "Unexpected role")
-			} else {
-				require.Equal(t, person.RoleSuspended, p.Role, "Unexpected role")
+				// Check the status of the new person
+				p, err := person.Load(test.userID)
+				require.Nil(t, err)
+				if initialNumberOfPeople == 0 {
+					require.Equal(t, person.RoleAdmin, p.Role, "Unexpected role")
+				} else {
+					require.Equal(t, person.RoleSuspended, p.Role, "Unexpected role")
+				}
 			}
 		})
 	}

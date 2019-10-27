@@ -1,13 +1,12 @@
 package httphandler
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
@@ -21,31 +20,53 @@ func TestGetMetrics(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get a valid token
+	// * Login to get valid session
 	// ***************************************************************
-	goodToken, err := getLoginToken(t, goodUserID, goodPassword)
+	req, err := http.NewRequest("GET", contextPath+"/login", nil)
 	require.Nil(t, err, "err should be nothing")
+
+	userID := "007"
+	password := "topsecret"
+	req.Header.Set("Authorization", model.BasicAuth(userID, password))
+
+	router := mux.NewRouter()
+	SetupHandlers(router)
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, req)
+
+	sess, err := globalSessions.SessionStart(rw, req)
+	require.Nil(t, err, "err should be nothing")
+	defer sess.SessionRelease(rw)
+
+	goodSID := sess.SessionID()
+	require.NotNil(t, goodSID, "err should be nothing")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName              string
-		token                 string
-		expectedStatus        int
-		expectedClientSuccess int
+		testName       string
+		setLoginCookie bool
+		sid            string
+		expectedStatus int
 	}{
 		{
-			testName:              "Good request",
-			token:                 goodToken,
-			expectedStatus:        http.StatusOK,
-			expectedClientSuccess: 0,
+			testName:       "Good request",
+			setLoginCookie: true,
+			sid:            goodSID,
+			expectedStatus: http.StatusOK,
 		},
 		{
-			testName:              "Bad token",
-			token:                 "junk",
-			expectedStatus:        http.StatusUnauthorized,
-			expectedClientSuccess: 0,
+			testName:       "no login cookie",
+			setLoginCookie: false,
+			sid:            goodSID,
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			testName:       "bad sid",
+			setLoginCookie: true,
+			sid:            "junk",
+			expectedStatus: http.StatusUnauthorized,
 		},
 	}
 
@@ -55,19 +76,28 @@ func TestGetMetrics(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			requestBody, err := json.Marshal(GetMetricsRequest{
-				Token: test.token,
-			})
-			require.Nil(t, err, "err should be nothing")
-
-			// Create a request
-			req, err := http.NewRequest("GET", contextPath+"/metrics", bytes.NewBuffer(requestBody))
-			require.Nil(t, err, "err should be nothing")
-
-			// Pass the request to our handler
+			// Set up the handlers on the router
 			router := mux.NewRouter()
 			SetupHandlers(router)
 			rw := httptest.NewRecorder()
+
+			// Create a request
+			req, err := http.NewRequest("GET", contextPath+"/metrics", nil)
+			require.Nil(t, err, "err should be nothing")
+
+			// set a cookie with the value of the login sid
+			if test.setLoginCookie {
+				cookieLifeTime := 3 * 60 * 60
+				cookie := http.Cookie{
+					Name:    "players-api",
+					Value:   test.sid,
+					MaxAge:  cookieLifeTime,
+					Expires: time.Now().Add(time.Duration(cookieLifeTime) * time.Second),
+				}
+				req.AddCookie(&cookie)
+			}
+
+			// Serve the request
 			router.ServeHTTP(rw, req)
 			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 
@@ -75,11 +105,9 @@ func TestGetMetrics(t *testing.T) {
 			bytes, err := ioutil.ReadAll(rw.Body)
 			require.Nil(t, err, "err should be nothing")
 
-			if rw.Code == http.StatusOK {
-				var response GetMetricsResponse
-				err = json.Unmarshal(bytes, &response)
-				require.Nil(t, err, "err should be nothing")
-				require.Equal(t, test.expectedClientSuccess, response.Data.ClientSuccess, fmt.Sprintf("Unexpected metrics: expected: %v, actual:   %v", test.expectedClientSuccess, response.Data.ClientSuccess))
+			data := string(bytes)
+			if len(data) <= 0 {
+				require.Fail(t, "no metrics were returned")
 			}
 		})
 	}

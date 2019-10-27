@@ -1,23 +1,19 @@
 package httphandler
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/rsmaxwell/players-api/internal/basic/court"
-	"github.com/rsmaxwell/players-api/internal/basic/peoplecontainer"
-	"github.com/rsmaxwell/players-api/internal/model"
-
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
+
+	"github.com/rsmaxwell/players-api/internal/model"
 )
 
-func TestCreateCourt(t *testing.T) {
+func TestLogout(t *testing.T) {
 
 	teardown := model.SetupFull(t)
 	defer teardown(t)
@@ -51,32 +47,24 @@ func TestCreateCourt(t *testing.T) {
 		testName       string
 		setLoginCookie bool
 		sid            string
-		name           string
-		players        []string
 		expectedStatus int
 	}{
 		{
 			testName:       "Good request",
 			setLoginCookie: true,
 			sid:            goodSID,
-			name:           "Court 1",
-			players:        []string{},
 			expectedStatus: http.StatusOK,
 		},
 		{
 			testName:       "no login cookie",
 			setLoginCookie: false,
 			sid:            goodSID,
-			name:           "Court 2",
-			players:        []string{},
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			testName:       "bad sid",
 			setLoginCookie: true,
 			sid:            "junk",
-			name:           "Court 3",
-			players:        []string{},
 			expectedStatus: http.StatusUnauthorized,
 		},
 	}
@@ -87,26 +75,13 @@ func TestCreateCourt(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			initialNumberOfCourts, err := court.Size()
-			require.Nil(t, err, "err should be nothing")
-
-			requestBody, err := json.Marshal(CreateCourtRequest{
-				Court: court.Court{
-					Container: peoplecontainer.PeopleContainer{
-						Name:    test.name,
-						Players: test.players,
-					},
-				},
-			})
-			require.Nil(t, err, "err should be nothing")
-
 			// Set up the handlers on the router
 			router := mux.NewRouter()
 			SetupHandlers(router)
 			rw := httptest.NewRecorder()
 
 			// Create a request
-			req, err := http.NewRequest("POST", contextPath+"/court", bytes.NewBuffer(requestBody))
+			req, err := http.NewRequest("GET", contextPath+"/logout", nil)
 			require.Nil(t, err, "err should be nothing")
 
 			// set a cookie with the value of the login sid
@@ -124,16 +99,6 @@ func TestCreateCourt(t *testing.T) {
 			// Serve the request
 			router.ServeHTTP(rw, req)
 			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
-
-			// Check the response
-			finalNumberOfCourts, err := court.Size()
-			require.Nil(t, err, "err should be nothing")
-
-			if rw.Code == http.StatusOK {
-				require.Equal(t, initialNumberOfCourts+1, finalNumberOfCourts, "Court was not registered")
-			} else {
-				require.Equal(t, initialNumberOfCourts, finalNumberOfCourts, "Unexpected number of courts")
-			}
 		})
 	}
 }

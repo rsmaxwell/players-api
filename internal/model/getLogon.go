@@ -4,37 +4,31 @@ import (
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/debug"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 var (
-	functionLogin = debug.NewFunction(pkg, "Login")
+	functionAuthenticate = debug.NewFunction(pkg, "Authenticate")
 )
 
-// Login method
-func Login(id, password string) (string, error) {
-	f := functionLogin
+// Authenticate method
+func Authenticate(id, password string) error {
+	f := functionAuthenticate
 	f.DebugVerbose("id: %s, password:%s", id, "********")
 
 	p, err := person.Load(id)
 	if err != nil {
-		return "", codeerror.NewUnauthorized("Invalid userID and/or password")
+		return codeerror.NewUnauthorized("Not Authorized")
 	}
 
 	if !p.CheckPassword(password) {
 		f.Dump("password check failed")
-		return "", codeerror.NewUnauthorized("Invalid userID and/or password")
+		return codeerror.NewUnauthorized("Not Authorized")
 	}
 
 	if !p.CanLogin() {
 		f.Dump("person not authorized to login")
-		return "", codeerror.NewUnauthorized("Not Authorized")
+		return codeerror.NewUnauthorized("Not Authorized")
 	}
 
-	token, err := session.New(id)
-	if err != nil {
-		return "", err
-	}
-
-	return token, nil
+	return nil
 }

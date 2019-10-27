@@ -1,23 +1,12 @@
 package main
 
-import (
-	"fmt"
-
-	"github.com/rsmaxwell/players-api/internal/session"
-)
-
-// createTestdataLoggedon function
-func createTestdataLoggedon() error {
+// createTestdataLoggedin function
+func createTestdataLoggedin() error {
 
 	err := clearModel()
 	if err != nil {
 		return err
 	}
-
-	var (
-		myUserID   = "007"
-		myPassword = "topsecret"
-	)
 
 	datapeople := []struct {
 		id        string
@@ -34,16 +23,6 @@ func createTestdataLoggedon() error {
 		if err != nil {
 			return err
 		}
-	}
-
-	myToken, err := Login(myUserID, myPassword)
-	if err != nil {
-		return err
-	}
-
-	mySession := session.LookupToken(myToken)
-	if mySession == nil {
-		return fmt.Errorf("Failed to lookup token")
 	}
 
 	return nil

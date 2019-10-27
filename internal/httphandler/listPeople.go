@@ -13,7 +13,6 @@ import (
 
 // ListPeopleRequest structure
 type ListPeopleRequest struct {
-	Token  string   `json:"token"`
 	Filter []string `json:"filter"`
 }
 
@@ -29,6 +28,19 @@ var (
 // ListPeople method
 func ListPeople(rw http.ResponseWriter, req *http.Request) {
 	f := functionListPeople
+
+	session, err := globalSessions.SessionStart(rw, req)
+	if err != nil {
+		WriteResponse(rw, http.StatusInternalServerError, err.Error())
+		common.MetricsData.ServerError++
+		return
+	}
+	defer session.SessionRelease(rw)
+	value := session.Get("id")
+	if value == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		return
+	}
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -50,7 +62,7 @@ func ListPeople(rw http.ResponseWriter, req *http.Request) {
 
 	f.DebugVerbose("Filter:    %s", r.Filter)
 
-	listOfPeople, err := model.ListPeople(r.Token, r.Filter)
+	listOfPeople, err := model.ListPeople(r.Filter)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

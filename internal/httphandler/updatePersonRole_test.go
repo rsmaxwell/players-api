@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -22,46 +23,93 @@ func TestUpdatePersonRole(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get a valid token
+	// * Login to get valid session
 	// ***************************************************************
-	goodToken, err := getLoginToken(t, goodUserID, goodPassword)
+	req, err := http.NewRequest("GET", contextPath+"/login", nil)
 	require.Nil(t, err, "err should be nothing")
+
+	userID := "007"
+	password := "topsecret"
+	req.Header.Set("Authorization", model.BasicAuth(userID, password))
+
+	router := mux.NewRouter()
+	SetupHandlers(router)
+	rw := httptest.NewRecorder()
+	router.ServeHTTP(rw, req)
+
+	sess, err := globalSessions.SessionStart(rw, req)
+	require.Nil(t, err, "err should be nothing")
+	defer sess.SessionRelease(rw)
+
+	goodSID := sess.SessionID()
+	require.NotNil(t, goodSID, "err should be nothing")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
 		testName       string
-		token          string
+		setLoginCookie bool
+		sid            string
 		id             string
-		person         map[string]interface{}
+		role           string
 		expectedStatus int
 	}{
 		{
-			testName: "Good request",
-			token:    goodToken,
-			id:       goodUserID,
-			person: map[string]interface{}{
-				"FirstName": "aaa",
-				"Lastname":  "bbb",
-				"Email":     "123.456@xxx.com",
-				"Player":    false,
-				"Password":  "amother",
-			},
+			testName:       "Good request",
+			setLoginCookie: true,
+			sid:            goodSID,
+			id:             anotherUserID,
+			role:           person.RoleNormal,
 			expectedStatus: http.StatusOK,
 		},
 		{
-			testName: "Bad token",
-			token:    "junk",
-			id:       goodUserID,
-			person: map[string]interface{}{
-				"FirstName": "aaa",
-				"Lastname":  "bbb",
-				"Email":     "123.456@xxx.com",
-				"Player":    false,
-				"Password":  "amother",
-			},
+			testName:       "no login cookie",
+			setLoginCookie: false,
+			sid:            goodSID,
+			id:             anotherUserID,
+			role:           person.RoleNormal,
 			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			testName:       "Bad userID",
+			setLoginCookie: true,
+			sid:            goodSID,
+			id:             "junk",
+			role:           person.RoleNormal,
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			testName:       "Bad Role",
+			setLoginCookie: true,
+			sid:            goodSID,
+			id:             anotherUserID,
+			role:           "junk",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			testName:       "Admin Role",
+			setLoginCookie: true,
+			sid:            goodSID,
+			id:             anotherUserID,
+			role:           person.RoleAdmin,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			testName:       "Normal Role",
+			setLoginCookie: true,
+			sid:            goodSID,
+			id:             anotherUserID,
+			role:           person.RoleNormal,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			testName:       "Suspended Role",
+			setLoginCookie: true,
+			sid:            goodSID,
+			id:             anotherUserID,
+			role:           person.RoleSuspended,
+			expectedStatus: http.StatusOK,
 		},
 	}
 
@@ -71,63 +119,41 @@ func TestUpdatePersonRole(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			requestBody, err := json.Marshal(UpdatePersonRequest{
-				Token:  test.token,
-				Person: test.person,
-			})
-			require.Nil(t, err, "err should be nothing")
-
-			// Create a request to pass to our handler.
-			req, err := http.NewRequest("PUT", contextPath+"/person/"+test.id, bytes.NewBuffer(requestBody))
-			require.Nil(t, err, "err should be nothing")
-
-			// Pass the request to our handler
+			// Set up the handlers on the router
 			router := mux.NewRouter()
 			SetupHandlers(router)
 			rw := httptest.NewRecorder()
+
+			// Create a request
+			requestBody, err := json.Marshal(UpdatePersonRoleRequest{
+				Role: test.role,
+			})
+			require.Nil(t, err, "err should be nothing")
+
+			req, err := http.NewRequest("PUT", contextPath+"/personrole/"+test.id, bytes.NewBuffer(requestBody))
+			require.Nil(t, err, "err should be nothing")
+
+			// set a cookie with the value of the login sid
+			if test.setLoginCookie {
+				cookieLifeTime := 3 * 60 * 60
+				cookie := http.Cookie{
+					Name:    "players-api",
+					Value:   test.sid,
+					MaxAge:  cookieLifeTime,
+					Expires: time.Now().Add(time.Duration(cookieLifeTime) * time.Second),
+				}
+				req.AddCookie(&cookie)
+			}
+
+			// Serve the request
 			router.ServeHTTP(rw, req)
 			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 
 			// Check the person was actually updated
 			if rw.Code == http.StatusOK {
-				person, err := person.Load(test.id)
+				p, err := person.Load(test.id)
 				require.Nil(t, err, "err should be nothing")
-
-				if i, ok := test.person["FirstName"]; ok {
-					value, ok := i.(string)
-					if !ok {
-						t.Errorf("The type of 'test.person[\"FirstName\"]' should be a string")
-					}
-					person.FirstName = value
-					assert.Equal(t, person.FirstName, value, "The Person firstname was not updated correctly")
-				}
-
-				if i, ok := test.person["LastName"]; ok {
-					value, ok := i.(string)
-					if !ok {
-						t.Errorf("The type of 'test.person[\"LastName\"]' should be a string")
-					}
-					person.LastName = value
-					assert.Equal(t, person.FirstName, value, "The Person lastname was not updated correctly")
-				}
-
-				if i, ok := test.person["Email"]; ok {
-					value, ok := i.(string)
-					if !ok {
-						t.Errorf("The type of 'test.person[\"Email\"]' should be a string")
-					}
-					person.Email = value
-					assert.Equal(t, person.Email, value, "The Person email was not updated correctly")
-				}
-
-				if i, ok := test.person["Player"]; ok {
-					value, ok := i.(bool)
-					if !ok {
-						t.Errorf("The type of 'test.person[\"Player\"]' should be a boolean")
-					}
-					person.Player = value
-					assert.Equal(t, person.Player, value, "The Person Player was not updated correctly")
-				}
+				assert.Equal(t, p.Role, test.role, "The Person Role was not updated correctly")
 			}
 		})
 	}

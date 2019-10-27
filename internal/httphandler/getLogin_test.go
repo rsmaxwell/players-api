@@ -1,7 +1,6 @@
 package httphandler
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/model"
-	"github.com/rsmaxwell/players-api/internal/session"
 	"github.com/stretchr/testify/require"
 
 	"github.com/gorilla/mux"
@@ -63,35 +61,14 @@ func TestLogin(t *testing.T) {
 
 			router := mux.NewRouter()
 			SetupHandlers(router)
-
-			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			rw := httptest.NewRecorder()
-
-			// Our router satisfies http.Handler, so we can call its ServeHTTP method
-			// directly and pass in our ResponseRecorder and Request.
 			router.ServeHTTP(rw, req)
-
-			// Check the status code is what we expect.
 			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
 
 			if rw.Code == http.StatusOK {
-				// Check the response is what we expect.
-				bytes, err := ioutil.ReadAll(rw.Body)
+				_, err := ioutil.ReadAll(rw.Body)
 				if err != nil {
 					log.Fatalln(err)
-				}
-
-				var response LogonResponse
-
-				err = json.Unmarshal(bytes, &response)
-				if err != nil {
-					log.Fatalln(err)
-				}
-
-				// Check the response contains a valid token.
-				session := session.LookupToken(response.Token)
-				if session == nil {
-					t.Errorf("Invalid token returned: token:%s", response.Token)
 				}
 			}
 		})

@@ -2,6 +2,7 @@ package httphandler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 
 // UpdatePersonRequest structure
 type UpdatePersonRequest struct {
-	Token  string                 `json:"token"`
 	Person map[string]interface{} `json:"person"`
 }
 
@@ -26,6 +26,26 @@ var (
 // UpdatePerson method
 func UpdatePerson(rw http.ResponseWriter, req *http.Request) {
 	f := functionUpdatePerson
+
+	session, err := globalSessions.SessionStart(rw, req)
+	if err != nil {
+		WriteResponse(rw, http.StatusInternalServerError, err.Error())
+		common.MetricsData.ServerError++
+		return
+	}
+	defer session.SessionRelease(rw)
+	value := session.Get("id")
+	if value == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		return
+	}
+	userID, ok := value.(string)
+	if !ok {
+		message := fmt.Sprintf("The type of 'id' is Unexpected: %T", value)
+		f.Dump(message)
+		WriteResponse(rw, http.StatusInternalServerError, message)
+		return
+	}
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -48,10 +68,9 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request) {
 	id := mux.Vars(req)["id"]
 
 	f.DebugVerbose("ID:     %s", id)
-	f.DebugVerbose("Token:  %s", r.Token)
 	f.DebugVerbose("Person: %v", r.Person)
 
-	err = model.UpdatePerson(r.Token, id, r.Person)
+	err = model.UpdatePerson(userID, id, r.Person)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

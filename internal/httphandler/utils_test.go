@@ -1,8 +1,6 @@
 package httphandler
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,7 +18,7 @@ var (
 	anotherUserID = "bob"
 )
 
-func getLoginToken(t *testing.T, id, password string) (string, error) {
+func getLoginToken(t *testing.T, id, password string) error {
 
 	// Create a  request to pass to our handler.
 	req, err := http.NewRequest("GET", contextPath+"/login", nil)
@@ -35,13 +33,5 @@ func getLoginToken(t *testing.T, id, password string) (string, error) {
 	router.ServeHTTP(rw, req)
 	require.Equal(t, http.StatusOK, rw.Code, "Error logging in: got %v want %v", http.StatusOK, rw.Code)
 
-	// Read the token from the reply
-	bytes, err := ioutil.ReadAll(rw.Body)
-	require.Nil(t, err, "err should be nothing")
-
-	var response LogonResponse
-	err = json.Unmarshal(bytes, &response)
-	require.Nil(t, err, "err should be nothing")
-
-	return response.Token, nil
+	return nil
 }

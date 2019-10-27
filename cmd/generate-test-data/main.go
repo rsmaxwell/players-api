@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,7 +11,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/common"
 
 	"github.com/rsmaxwell/players-api/internal/model"
-	"github.com/rsmaxwell/players-api/internal/session"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -87,7 +85,7 @@ func createBackupOne() error {
 
 func createBackupLogon() error {
 
-	err := createTestdataLoggedon()
+	err := createTestdataLoggedin()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
@@ -139,26 +137,6 @@ func Register(id, password, firstName, lastName, email string) error {
 	}
 
 	return nil
-}
-
-// Login function
-func Login(user, pass string) (string, error) {
-
-	p, err := person.Load(user)
-	if err != nil {
-		return "", errors.New("Invalid Userid or Password")
-	}
-
-	if !p.CheckPassword(pass) {
-		return "", errors.New("Invalid Userid or Password")
-	}
-
-	token, err := session.New(user)
-	if err != nil {
-		return "", err
-	}
-
-	return token, nil
 }
 
 // CreateCourt function

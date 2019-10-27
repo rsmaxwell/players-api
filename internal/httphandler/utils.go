@@ -3,7 +3,10 @@ package httphandler
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 
+	"github.com/astaxie/beego/session"
 	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
@@ -21,8 +24,37 @@ var (
 
 	pkg = debug.NewPackage("httphandler")
 
+	functionInit       = debug.NewFunction(pkg, "init")
 	functionMiddleware = debug.NewFunction(pkg, "Middleware")
+
+	globalSessions *session.Manager
 )
+
+func init() {
+	f := functionInit
+
+	home := strings.Replace(common.HomeDir(), "\\", "/", -1)
+	sessionDir := home + "/players-api/sessions"
+
+	err := os.MkdirAll(sessionDir, 0755)
+	if err != nil {
+		f.Fatalf(err.Error())
+	}
+
+	cfg := session.ManagerConfig{}
+	cfg.CookieName = "players-api"
+	cfg.Gclifetime = 60
+	cfg.ProviderConfig = sessionDir
+	cfg.EnableSetCookie = true
+	cfg.CookieLifeTime = 3 * 60 * 60
+
+	globalSessions, err = session.NewManager("file", &cfg)
+	if err != nil {
+		f.Fatalf(err.Error())
+	}
+
+	go globalSessions.GC()
+}
 
 // WriteResponse method
 func WriteResponse(w http.ResponseWriter, httpStatus int, message string) {
@@ -72,6 +104,7 @@ func SetupHandlers(r *mux.Router) {
 
 	s.HandleFunc("/register", Register).Methods(http.MethodPost)
 	s.HandleFunc("/login", Login).Methods(http.MethodGet)
+	s.HandleFunc("/logout", Logout).Methods(http.MethodGet)
 	s.HandleFunc("/court", ListCourts).Methods(http.MethodGet)
 	s.HandleFunc("/court/{id}", GetCourt).Methods(http.MethodGet)
 	s.HandleFunc("/court", CreateCourt).Methods(http.MethodPost)

@@ -2,10 +2,8 @@ package model
 
 import (
 	"github.com/rsmaxwell/players-api/internal/basic/court"
-	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
-	"github.com/rsmaxwell/players-api/internal/session"
 )
 
 var (
@@ -13,15 +11,9 @@ var (
 )
 
 // GetCourt method
-func GetCourt(token, id string) (*court.Court, error) {
+func GetCourt(id string) (*court.Court, error) {
 	f := functionGetCourt
-	f.DebugVerbose("token: %s id:%s", token, id)
-
-	session := session.LookupToken(token)
-	if session == nil {
-		f.Dump("token not found")
-		return nil, codeerror.NewUnauthorized("Not Authorised")
-	}
+	f.DebugVerbose("id:%s", id)
 
 	ref := &common.Reference{Type: "court", ID: id}
 	court, err := court.Load(ref)

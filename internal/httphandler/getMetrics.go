@@ -2,20 +2,12 @@ package httphandler
 
 import (
 	"encoding/json"
-	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 
+	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
-	"github.com/rsmaxwell/players-api/internal/model"
 )
-
-// GetMetricsRequest structure
-type GetMetricsRequest struct {
-	Token string `json:"token"`
-}
 
 // GetMetricsResponse structure
 type GetMetricsResponse struct {
@@ -30,26 +22,35 @@ var (
 func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 	f := functionGetMetrics
 
-	limitedReader := io.LimitReader(req.Body, 100*1024)
-	b, err := ioutil.ReadAll(limitedReader)
+	session, err := globalSessions.SessionStart(rw, req)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, fmt.Sprintf("Too much data posted"))
-		common.MetricsData.ClientError++
+		WriteResponse(rw, http.StatusInternalServerError, err.Error())
+		common.MetricsData.ServerError++
+		return
+	}
+	defer session.SessionRelease(rw)
+	value := session.Get("id")
+	if value == nil {
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		return
+	}
+	userID, ok := value.(string)
+	if !ok {
+		f.Dump("Unexpected type for userID: %t, %v", value, value)
+		WriteResponse(rw, http.StatusInternalServerError, "Not Authorized")
 		return
 	}
 
-	f.DebugRequestBody(b)
-
-	var r GetMetricsRequest
-	err = json.Unmarshal(b, &r)
+	p, err := person.Load(userID)
 	if err != nil {
-		errorHandler(rw, req, err)
+		f.Dump("Could not load the logged on user: %s", userID)
+		WriteResponse(rw, http.StatusInternalServerError, "Not Authorized")
 		return
 	}
 
-	err = model.GetMetrics(r.Token)
-	if err != nil {
-		errorHandler(rw, req, err)
+	if !p.CanGetMetrics() {
+		f.DebugVerbose("unauthorized person[%s] attempted to get metrics", userID)
+		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
 		return
 	}
 

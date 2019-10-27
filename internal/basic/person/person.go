@@ -45,7 +45,6 @@ var (
 
 	pkg = debug.NewPackage("person")
 
-	functionMakeFilename          = debug.NewFunction(pkg, "makeFilename")
 	functionCreateFileStructure   = debug.NewFunction(pkg, "createFileStructure")
 	functionCheckPassword         = debug.NewFunction(pkg, "CheckPassword")
 	functionUpdate                = debug.NewFunction(pkg, "Update")
@@ -77,18 +76,10 @@ func init() {
 
 // makeFilename function
 func makeFilename(id string) (string, error) {
-	f := functionMakeFilename
 
 	err := common.CheckCharactersInID(id)
 	if err != nil {
 		return "", err
-	}
-
-	err = createFileStructure()
-	if err != nil {
-		message := fmt.Sprintf("could not create people file structure: %v", err)
-		f.Dump(message)
-		return "", codeerror.NewInternalServerError(message)
 	}
 
 	filename := personListDir + "/" + id + ".json"
@@ -270,9 +261,7 @@ func UpdateRole(id string, value string) error {
 
 	err = p.Save(id)
 	if err != nil {
-		message := fmt.Sprintf("could not save person[%s]: %v", id, err)
-		f.Dump(message)
-		return codeerror.NewInternalServerError(message)
+		return err
 	}
 
 	return nil
@@ -444,7 +433,7 @@ func (p *Person) Save(id string) error {
 	err = validate.Struct(p)
 	if err != nil {
 		message := fmt.Sprintf("validation failed for person[%s]: %v", id, err)
-		f.Dump(message)
+		f.DebugVerbose(message)
 		return codeerror.NewBadRequest(message)
 	}
 

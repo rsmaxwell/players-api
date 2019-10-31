@@ -6,7 +6,6 @@
 #    REPOSITORY="internal"
 #    GROUPID="com.example.${JOB_NAME}"
 
-set -x
 GOARCH=$(go env GOARCH)
 GOOS=$(go env GOOS)
 
@@ -19,4 +18,3 @@ FILENAME=${JOB_NAME}-${GOARCH}-${GOOS}-${BUILD_ID}.${PACKAGING}
 cd ${WORKSPACE}/bin
 zip ${FILENAME} *
 mvn --batch-mode deploy:deploy-file -DgroupId=${GROUPID} -DartifactId=${ARTIFACTID} -Dversion=${VERSION} -Dpackaging=${PACKAGING} -Dfile=${FILENAME} -DrepositoryId=${REPOSITORYID} -Durl=${URL}
-

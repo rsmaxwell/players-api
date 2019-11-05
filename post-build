@@ -1,20 +1,27 @@
 #!/bin/bash
 
-# Requires the following environment variables to be set:
-#    REPOSITORY_URL="https://example.com/archiva/repository"
-#    REPOSITORYID="internal"      # as in the settings.xml
-#    REPOSITORY="internal"
-#    GROUPID="com.example.${JOB_NAME}"
+REPOSITORY_URL="https://server.rsmaxwell.co.uk/archiva/repository"
+REPOSITORYID="internal"
+REPOSITORY="internal"
+GROUPID="com.rsmaxwell.players-api"
+NAME="players-api"
+PACKAGING="zip"
 
 GOARCH=$(go env GOARCH)
 GOOS=$(go env GOOS)
 
-PACKAGING=zip
 URL=${REPOSITORY_URL}/${REPOSITORY}/
 ARTIFACTID=${JOB_NAME}-${GOARCH}-${GOOS}
-VERSION=${BUILD_ID}
 FILENAME=${JOB_NAME}-${GOARCH}-${GOOS}-${BUILD_ID}.${PACKAGING}
 
 cd ${WORKSPACE}/bin
 zip ${FILENAME} *
-mvn --batch-mode deploy:deploy-file -DgroupId=${GROUPID} -DartifactId=${ARTIFACTID} -Dversion=${VERSION} -Dpackaging=${PACKAGING} -Dfile=${FILENAME} -DrepositoryId=${REPOSITORYID} -Durl=${URL}
+
+mvn --batch-mode deploy:deploy-file \
+	-DgroupId=${GROUPID} \
+	-DartifactId=${ARTIFACTID} \
+	-Dversion=${BUILD_ID} \
+	-Dpackaging=${PACKAGING} \
+	-Dfile=${FILENAME} \
+	-DrepositoryId=${REPOSITORYID} \
+	-Durl=${URL}

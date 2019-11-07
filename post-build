@@ -27,7 +27,7 @@ ls -al
 cat version.json
 jq . version.json
 
-zip ${FILENAME} ../bin/players-api version.json
+zip ${FILENAME} ${WORKSPACE}/bin/players-api version.json
 result=$?
 if [ ! ${result} == 0 ]; then
     echo "Error: $0[${LINENO}]"

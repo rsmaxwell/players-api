@@ -1,9 +1,9 @@
 #!/bin/bash
 
 REPOSITORY_URL="https://server.rsmaxwell.co.uk/archiva/repository"
-REPOSITORYID="internal"
-REPOSITORY="internal"
-GROUPID="com.rsmaxwell.players-api"
+REPOSITORYID="build"
+REPOSITORY="build"
+GROUPID="com.rsmaxwell.players"
 NAME="players-api"
 PACKAGING="zip"
 
@@ -24,4 +24,17 @@ mvn --batch-mode deploy:deploy-file \
 	-Dpackaging=${PACKAGING} \
 	-Dfile=${FILENAME} \
 	-DrepositoryId=${REPOSITORYID} \
-	-Durl=${URL}
+	-Durl=${URL}  1>stdout.txt 2>stderr.txt
+
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    echo "----[ stdout ]--------------------------"
+    cat stdout.txt
+    echo "----[ stderr ]--------------------------"
+    cat stderr.txt
+    echo "----------------------------------------"
+    exit 1
+fi
+

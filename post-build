@@ -14,6 +14,8 @@ URL=${REPOSITORY_URL}/${REPOSITORY}/
 ARTIFACTID=${JOB_NAME}-${GOARCH}-${GOOS}
 FILENAME=${JOB_NAME}-${GOARCH}-${GOOS}-${BUILD_ID}.${PACKAGING}
 
+BUILD_DATE=$(date "+%Y/%m/%d %H:%M:%S")
+
 echo '{}'   | jq --arg foo "${BUILD_ID}"   '. + {version: $foo}' > f1.json
 cat f1.json | jq --arg foo "${BUILD_DATE}" '. + {buildDate: $foo}' > f2.json
 cat f2.json | jq --arg foo "${GIT_COMMIT}" '. + {gitCommit: $foo}' > f3.json

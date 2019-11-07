@@ -15,7 +15,20 @@ ARTIFACTID=${JOB_NAME}-${GOARCH}-${GOOS}
 FILENAME=${JOB_NAME}-${GOARCH}-${GOOS}-${BUILD_ID}.${PACKAGING}
 
 cd ${WORKSPACE}/bin
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
 zip ${FILENAME} *
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
 
 mvn --batch-mode deploy:deploy-file \
 	-DgroupId=${GROUPID} \

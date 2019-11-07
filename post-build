@@ -14,15 +14,18 @@ URL=${REPOSITORY_URL}/${REPOSITORY}/
 ARTIFACTID=${JOB_NAME}-${GOARCH}-${GOOS}
 FILENAME=${JOB_NAME}-${GOARCH}-${GOOS}-${BUILD_ID}.${PACKAGING}
 
-cd ${WORKSPACE}/bin
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result: ${result}"
-    exit 1
-fi
+echo '{}'   | jq --arg foo "${BUILD_ID}"   '. + {version: $foo}' > f1.json
+cat f1.json | jq --arg foo "${BUILD_DATE}" '. + {buildDate: $foo}' > f2.json
+cat f2.json | jq --arg foo "${GIT_COMMIT}" '. + {gitCommit: $foo}' > f3.json
+cat f3.json | jq --arg foo "${GIT_BRANCH}" '. + {gitBranch: $foo}' > f4.json
+cat f4.json | jq --arg foo "${GIT_URL}"    '. + {gitURL: $foo}' > version.json
 
-zip ${FILENAME} *
+pwd
+ls -al
+cat version.json
+jq . version.json
+
+zip ${FILENAME} ../bin/players-api version.json
 result=$?
 if [ ! ${result} == 0 ]; then
     echo "Error: $0[${LINENO}]"

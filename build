@@ -45,8 +45,7 @@ x=$(echo "${x}" | jq --arg foo "${GIT_URL}"    '. + {gitURL: $foo}')
 
 echo "${x}" > ${WORKSPACE}/bin/version.json
 
-echo "---[ build info ]------------------"
-ls -al ${WORKSPACE}/bin
+echo "---[ ${WORKSPACE}/bin/version.json ]------------------"
 jq . ${WORKSPACE}/bin/version.json
 
 #******************************************************************

@@ -30,14 +30,6 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
-
-
-echo "---[ build info ]------------------"
-ls -al ${WORKSPACE}/bin
-jq . ${WORKSPACE}/bin/version.json
-
-
-
 zip ${FILENAME} players-api version.json
 result=$?
 if [ ! ${result} == 0 ]; then

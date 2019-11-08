@@ -2,8 +2,28 @@
 
 export GOPATH=${WORKSPACE}
 
-rm -rf ${WORKSPACE}/bin/*
+#******************************************************************
+# Clean the 'bin' directory
+#******************************************************************
+rm -rf ${WORKSPACE}/bin
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
 
+mkdir -p ${WORKSPACE}/bin
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
+#******************************************************************
+# Write out build info
+#******************************************************************
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 find . -name "version.go" | while read versionfile; do
@@ -17,27 +37,20 @@ find . -name "version.go" | while read versionfile; do
     sed -i "s@<GIT_URL>@${GIT_URL}@g"       ${versionfile}
 done
 
-mkdir -p ${WORKSPACE}/bin
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result: ${result}"
-    exit 1
-fi
+x=$(echo "{}"   | jq --arg foo "${BUILD_ID}"   '. + {version: $foo}')
+x=$(echo "${x}" | jq --arg foo "${TIMESTAMP}"  '. + {buildDate: $foo}')
+x=$(echo "${x}" | jq --arg foo "${GIT_COMMIT}" '. + {gitCommit: $foo}')
+x=$(echo "${x}" | jq --arg foo "${GIT_BRANCH}" '. + {gitBranch: $foo}')
+x=$(echo "${x}" | jq --arg foo "${GIT_URL}"    '. + {gitURL: $foo}')
 
-echo '{}' | jq --arg foo "${BUILD_ID}"   '. + {version: $foo}'   > temp1
-cat temp1 | jq --arg foo "${TIMESTAMP}"  '. + {buildDate: $foo}' > temp2
-cat temp2 | jq --arg foo "${GIT_COMMIT}" '. + {gitCommit: $foo}' > temp3
-cat temp3 | jq --arg foo "${GIT_BRANCH}" '. + {gitBranch: $foo}' > temp4
-cat temp4 | jq --arg foo "${GIT_URL}"    '. + {gitURL: $foo}'    > ${WORKSPACE}/bin/version.json
+echo "${x}" > ${WORKSPACE}/bin/version.json
 
-rm -rf temp*
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result: ${result}"
-    exit 1
-fi
+echo "---[ build info ]------------------"
+ls -al ${WORKSPACE}/bin
+jq . ${WORKSPACE}/bin/version.json
 
+#******************************************************************
+# Start the build 
+#******************************************************************
 go get -d ./...
 go install ./...

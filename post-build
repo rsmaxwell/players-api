@@ -30,13 +30,13 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
-rm -rf ${FILENAME} temp*.json version.json
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result: ${result}"
-    exit 1
-fi
+
+
+echo "---[ build info ]------------------"
+ls -al ${WORKSPACE}/bin
+jq . ${WORKSPACE}/bin/version.json
+
+
 
 zip ${FILENAME} players-api version.json
 result=$?

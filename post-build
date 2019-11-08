@@ -40,12 +40,6 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
-echo '{}' | jq --arg foo "${BUILD_ID}"   '. + {version: $foo}'   > temp1
-cat temp1 | jq --arg foo "${BUILD_DATE}" '. + {buildDate: $foo}' > temp2
-cat temp2 | jq --arg foo "${GIT_COMMIT}" '. + {gitCommit: $foo}' > temp3
-cat temp3 | jq --arg foo "${GIT_BRANCH}" '. + {gitBranch: $foo}' > temp4
-cat temp4 | jq --arg foo "${GIT_URL}"    '. + {gitURL: $foo}'    > version.json
-
 zip ${FILENAME} players-api version.json
 result=$?
 if [ ! ${result} == 0 ]; then

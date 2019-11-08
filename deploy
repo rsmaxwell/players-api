@@ -14,6 +14,9 @@ URL=${REPOSITORY_URL}/${REPOSITORY}/
 ARTIFACTID=${JOB_NAME}-${GOARCH}-${GOOS}
 FILENAME=${JOB_NAME}-${GOARCH}-${GOOS}-${BUILD_ID}.${PACKAGING}
 
+CLASSIFIER_TEST="test"
+FILENAME_TEST=${JOB_NAME}-${GOARCH}-${GOOS}-${BUILD_ID}-${CLASSIFIER_TEST}.${PACKAGING}
+
 currentDir=$(pwd)
 result=$?
 if [ ! ${result} == 0 ]; then
@@ -42,6 +45,31 @@ mvn --batch-mode deploy:deploy-file \
 	-DgroupId=${GROUPID} \
 	-DartifactId=${ARTIFACTID} \
 	-Dversion=${BUILD_ID} \
+	-Dclassifier=${CLASSIFIER_TEST}
+	-Dpackaging=${PACKAGING} \
+	-Dfile=${FILENAME_TEST} \
+	-DrepositoryId=${REPOSITORYID} \
+	-Durl=${URL}  1>stdout.txt 2>stderr.txt
+
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    echo "----[ stdout ]--------------------------"
+    cat stdout.txt
+    echo "----[ stderr ]--------------------------"
+    cat stderr.txt
+    echo "----------------------------------------"
+    exit 1
+fi
+
+
+
+mvn --batch-mode deploy:deploy-file \
+	-DgroupId=${GROUPID} \
+	-DartifactId=${ARTIFACTID} \
+	-Dversion=${BUILD_ID} \
+	-Dclassifier=${CLASSIFIER} \
 	-Dpackaging=${PACKAGING} \
 	-Dfile=${FILENAME} \
 	-DrepositoryId=${REPOSITORYID} \

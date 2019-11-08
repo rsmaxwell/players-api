@@ -33,6 +33,9 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
+#****************************************************************
+#* Deploy the main executable
+#****************************************************************
 zip ${FILENAME} players-api version.json
 result=$?
 if [ ! ${result} == 0 ]; then
@@ -45,9 +48,8 @@ mvn --batch-mode deploy:deploy-file \
 	-DgroupId=${GROUPID} \
 	-DartifactId=${ARTIFACTID} \
 	-Dversion=${BUILD_ID} \
-	-Dclassifier=${CLASSIFIER_TEST} \
 	-Dpackaging=${PACKAGING} \
-	-Dfile=${FILENAME_TEST} \
+	-Dfile=${FILENAME} \
 	-DrepositoryId=${REPOSITORYID} \
 	-Durl=${URL}  1>stdout.txt 2>stderr.txt
 
@@ -63,15 +65,25 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
-
+#****************************************************************
+#* Deploy the test utilities
+#****************************************************************
+zip ${FILENAME_TEST} generate-test-data version.json
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
 
 mvn --batch-mode deploy:deploy-file \
 	-DgroupId=${GROUPID} \
 	-DartifactId=${ARTIFACTID} \
 	-Dversion=${BUILD_ID} \
+	-Dclassifier=${CLASSIFIER_TEST} \
 	-Dclassifier=${CLASSIFIER} \
 	-Dpackaging=${PACKAGING} \
-	-Dfile=${FILENAME} \
+	-Dfile=${FILENAME_TEST} \
 	-DrepositoryId=${REPOSITORYID} \
 	-Durl=${URL}  1>stdout.txt 2>stderr.txt
 

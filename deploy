@@ -81,7 +81,6 @@ mvn --batch-mode deploy:deploy-file \
 	-DartifactId=${ARTIFACTID} \
 	-Dversion=${BUILD_ID} \
 	-Dclassifier=${CLASSIFIER_TEST} \
-	-Dclassifier=${CLASSIFIER} \
 	-Dpackaging=${PACKAGING} \
 	-Dfile=${FILENAME_TEST} \
 	-DrepositoryId=${REPOSITORYID} \

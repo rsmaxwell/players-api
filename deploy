@@ -45,7 +45,7 @@ mvn --batch-mode deploy:deploy-file \
 	-DgroupId=${GROUPID} \
 	-DartifactId=${ARTIFACTID} \
 	-Dversion=${BUILD_ID} \
-	-Dclassifier=${CLASSIFIER_TEST}
+	-Dclassifier=${CLASSIFIER_TEST} \
 	-Dpackaging=${PACKAGING} \
 	-Dfile=${FILENAME_TEST} \
 	-DrepositoryId=${REPOSITORYID} \

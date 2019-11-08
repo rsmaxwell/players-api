@@ -14,8 +14,6 @@ URL=${REPOSITORY_URL}/${REPOSITORY}/
 ARTIFACTID=${JOB_NAME}-${GOARCH}-${GOOS}
 FILENAME=${JOB_NAME}-${GOARCH}-${GOOS}-${BUILD_ID}.${PACKAGING}
 
-BUILD_DATE=$(date "+%Y/%m/%d %H:%M:%S")
-
 currentDir=$(pwd)
 result=$?
 if [ ! ${result} == 0 ]; then

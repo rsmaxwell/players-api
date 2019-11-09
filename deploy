@@ -61,8 +61,7 @@ mvn --batch-mode deploy:deploy-file \
 	-Dpackaging=${PACKAGING} \
 	-Dfiles=${FILENAME_TEST} \
 	-Dclassifiers=test \
-	-Dtypes=zip    
-
+	-Dtypes=zip \
     1>stdout.txt 2>stderr.txt
 
 result=$?

@@ -9,7 +9,16 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 )
+
+// this logs the function name as well.
+func handleError(err error) {
+	if err != nil {
+		pc, fn, line, _ := runtime.Caller(1)
+		log.Printf("[error] in %s[%s:%d] %v", runtime.FuncForPC(pc).Name(), fn, line, err)
+	}
+}
 
 // Dir synchronises a directory with a reference directory
 func Dir(reference, copy string) error {
@@ -17,11 +26,13 @@ func Dir(reference, copy string) error {
 	// Check the reference is a directory
 	fi, err := os.Stat(reference)
 	if err != nil {
+		handleError(err)
 		return err
 	}
 
 	mode := fi.Mode()
 	if !mode.IsDir() {
+		handleError(err)
 		return err
 	}
 
@@ -29,19 +40,23 @@ func Dir(reference, copy string) error {
 	fi, err = os.Stat(copy)
 	if err != nil {
 		if os.IsNotExist(err) {
-			err = os.MkdirAll(copy, 777)
+			err = os.MkdirAll(copy, 755)
 			if err != nil {
+				handleError(err)
 				return err
 			}
 
 			fi, err = os.Stat(copy)
 			if err != nil {
 				if os.IsNotExist(err) {
+					handleError(err)
 					return err
 				}
+				handleError(err)
 				return err
 			}
 		} else {
+			handleError(err)
 			return err
 		}
 	}
@@ -49,11 +64,13 @@ func Dir(reference, copy string) error {
 	if !fi.Mode().IsDir() {
 		err = os.RemoveAll(copy)
 		if err != nil {
+			handleError(err)
 			return err
 		}
 
-		err = os.MkdirAll(copy, 777)
+		err = os.MkdirAll(copy, 755)
 		if err != nil {
+			handleError(err)
 			return err
 		}
 	}
@@ -61,6 +78,7 @@ func Dir(reference, copy string) error {
 	// Make sure all the files in the 'copy' also exists in the 'reference'
 	files, err := ioutil.ReadDir(copy)
 	if err != nil {
+		handleError(err)
 		return err
 	}
 
@@ -74,15 +92,17 @@ func Dir(reference, copy string) error {
 			if os.IsNotExist(err) {
 				err = os.RemoveAll(copy2)
 				if err != nil {
+					handleError(err)
 					return err
 				}
 			} else {
+				handleError(err)
 				return err
 			}
 		}
 	}
 
-	// Synchronise all the file in the 'reference' with the 'copy'
+	// Synchronise all the files in the 'reference' with the 'copy'
 	files, err = ioutil.ReadDir(reference)
 	if err != nil {
 		log.Fatal(err)
@@ -95,6 +115,7 @@ func Dir(reference, copy string) error {
 
 		fi, err := os.Stat(reference2)
 		if err != nil {
+			handleError(err)
 			return err
 		}
 
@@ -102,11 +123,13 @@ func Dir(reference, copy string) error {
 		case mode.IsDir():
 			err = Dir(reference2, copy2)
 			if err != nil {
+				handleError(err)
 				return err
 			}
 		case mode.IsRegular():
 			err = file(reference2, copy2)
 			if err != nil {
+				handleError(err)
 				return err
 			}
 		}
@@ -122,26 +145,30 @@ func file(reference, copy string) error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			_, err = copyfile(reference, copy)
-			return err
-		} else {
+			handleError(err)
 			return err
 		}
+		handleError(err)
+		return err
 	}
 
 	// If the hashes of the files do not match, then copy the reference file
 	hashref, err := hashfile(reference)
 	if err != nil {
+		handleError(err)
 		return err
 	}
 
 	hashcopy, err := hashfile(copy)
 	if err != nil {
+		handleError(err)
 		return err
 	}
 
 	if bytes.Compare(hashref, hashcopy) != 0 {
 		_, err = copyfile(reference, copy)
 		if err != nil {
+			handleError(err)
 			return err
 		}
 	}
@@ -152,12 +179,14 @@ func file(reference, copy string) error {
 func hashfile(filename string) ([]byte, error) {
 	f, err := os.Open(filename)
 	if err != nil {
+		handleError(err)
 		return nil, err
 	}
 	defer f.Close()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
+		handleError(err)
 		return nil, err
 	}
 
@@ -167,6 +196,7 @@ func hashfile(filename string) ([]byte, error) {
 func copyfile(reference, copy string) (int64, error) {
 	sourceFileStat, err := os.Stat(reference)
 	if err != nil {
+		handleError(err)
 		return 0, err
 	}
 
@@ -176,15 +206,22 @@ func copyfile(reference, copy string) (int64, error) {
 
 	source, err := os.Open(reference)
 	if err != nil {
+		handleError(err)
 		return 0, err
 	}
 	defer source.Close()
 
 	destination, err := os.Create(copy)
 	if err != nil {
+		handleError(err)
 		return 0, err
 	}
 	defer destination.Close()
 	nBytes, err := io.Copy(destination, source)
-	return nBytes, err
+	if err != nil {
+		handleError(err)
+		return 0, err
+	}
+
+	return nBytes, nil
 }

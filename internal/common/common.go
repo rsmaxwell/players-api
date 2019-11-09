@@ -1,7 +1,6 @@
 package common
 
 import (
-	"flag"
 	"os"
 	"os/user"
 	"runtime"
@@ -51,13 +50,12 @@ func HomeDir() string {
 
 func init() {
 
-	home := HomeDir()
-
-	if flag.Lookup("test.v") == nil {
-		RootDir = home + "/players-api"
-	} else {
-		RootDir = home + "/players-api-test"
+	home, ok := os.LookupEnv("PLAYERS_API_HOME")
+	if !ok {
+		home = HomeDir()
 	}
+
+	RootDir = home + "/players-api"
 }
 
 // CheckCharactersInID checks the characters are valid for an ID

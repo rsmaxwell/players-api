@@ -31,24 +31,27 @@ type Metrics struct {
 	ServerError               int `json:"serverError"`
 }
 
-func init() {
+// HomeDir returns the home directory
+func HomeDir() string {
+	usr, err := user.Current()
+	if err == nil {
+		return usr.HomeDir
+	}
+	env := "HOME"
+	if runtime.GOOS == "windows" {
+		env = "USERPROFILE"
+	} else if runtime.GOOS == "plan9" {
+		env = "home"
+	}
+	return os.Getenv(env)
+}
 
+func init() {
 	dir, ok := os.LookupEnv("PLAYERS_API_ROOTDIR")
 	if ok {
 		RootDir = dir
 	} else {
-		usr, err := user.Current()
-		if err == nil {
-			RootDir = usr.HomeDir + "/players-api"
-		} else {
-			env := "HOME"
-			if runtime.GOOS == "windows" {
-				env = "USERPROFILE"
-			} else if runtime.GOOS == "plan9" {
-				env = "home"
-			}
-			RootDir = os.Getenv(env) + "/players-api"
-		}
+		RootDir = HomeDir() + "/players-api"
 	}
 }
 

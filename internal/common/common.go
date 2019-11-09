@@ -31,36 +31,25 @@ type Metrics struct {
 	ServerError               int `json:"serverError"`
 }
 
-// HomeDir returns the home directory
-func HomeDir() string {
-
-	usr, err := user.Current()
-	if err == nil {
-		return usr.HomeDir
-	}
-
-	env := "HOME"
-	if runtime.GOOS == "windows" {
-		env = "USERPROFILE"
-	} else if runtime.GOOS == "plan9" {
-		env = "home"
-	}
-	return os.Getenv(env)
-}
-
 func init() {
 
-	home, ok := os.LookupEnv("PLAYERS_API_HOME")
-	if !ok {
-		home = HomeDir()
+	dir, ok := os.LookupEnv("PLAYERS_API_ROOTDIR")
+	if ok {
+		RootDir = dir
+	} else {
+		usr, ok := user.Current()
+		if ok {
+			RootDir = usr.HomeDir + "/players-api"
+		} else {
+			env := "HOME"
+			if runtime.GOOS == "windows" {
+				env = "USERPROFILE"
+			} else if runtime.GOOS == "plan9" {
+				env = "home"
+			}
+			RootDir = os.Getenv(env) + "/players-api"
+		}
 	}
-
-	dirname, ok := os.LookupEnv("PLAYERS_API_DIRNAME")
-	if !ok {
-		dirname = "/players-api"
-	}
-
-	RootDir = home + dirname
 }
 
 // CheckCharactersInID checks the characters are valid for an ID

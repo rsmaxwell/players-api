@@ -25,7 +25,7 @@ var (
 func main() {
 	f := functionMain
 
-	f.Infof("Players API: BuildID: %s", version.BuildID())
+	f.Infof("Players API: Version: %s", version.Version())
 	f.Verbosef("    BuildDate: %s", version.BuildDate())
 	f.Verbosef("    GitCommit: %s", version.GitCommit())
 	f.Verbosef("    GitBranch: %s", version.GitBranch())

@@ -8,6 +8,7 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/basic/person"
+	"github.com/rsmaxwell/players-api/internal/basic/version"
 	"github.com/rsmaxwell/players-api/internal/common"
 
 	"github.com/rsmaxwell/players-api/internal/model"
@@ -20,7 +21,7 @@ var (
 
 func main() {
 
-	log.Printf("Generate-test-data for Players Server: 2019-10-03 08:55\n")
+	log.Printf("Generate-test-data for Players-Api: version: %s\n", version.Version())
 
 	err := createBackupEmpty()
 	if err != nil {

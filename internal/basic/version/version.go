@@ -1,7 +1,7 @@
 package version
 
-// BuildID function
-func BuildID() string {
+// Version function
+func Version() string {
 	return "<BUILD_ID>"
 }
 

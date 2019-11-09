@@ -80,21 +80,21 @@ func Backup(name string) error {
 	reference := common.RootDir
 	copy := common.RootDir + "-backup/" + name
 
-	listdir("Backup: before:", filepath.Dir(common.RootDir))
+	listdir("Backup(1)", filepath.Dir(common.RootDir))
 
 	err := os.MkdirAll(copy, 0755)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Backup: after\n")
+	listdir("Backup(2)", filepath.Dir(common.RootDir))
 
 	err = sync.Dir(reference, copy)
 	if err != nil {
 		return err
 	}
 
-	listdir("Backup: after:", filepath.Dir(common.RootDir))
+	listdir("Backup(3)", filepath.Dir(common.RootDir))
 
 	return nil
 }

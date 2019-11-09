@@ -2,7 +2,10 @@ package model
 
 import (
 	"encoding/base64"
+	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/rsmaxwell/players-api/internal/common"
@@ -57,21 +60,41 @@ func SetupFull(t *testing.T) func(t *testing.T) {
 	}
 }
 
+func listdir(title string, root string) error {
+
+	log.Printf("%s: %s\n", title, root)
+
+	fileInfo, err := ioutil.ReadDir(root)
+	if err != nil {
+		return err
+	}
+	for _, file := range fileInfo {
+		log.Printf("    %t  %o  %s\n", file.IsDir(), file.Mode(), file.Name())
+	}
+	return nil
+}
+
 // Backup function
 func Backup(name string) error {
 
 	reference := common.RootDir
-
 	copy := common.RootDir + "-backup/" + name
+
+	listdir("Backup: before:", filepath.Dir(common.RootDir))
+
 	err := os.MkdirAll(copy, 0755)
 	if err != nil {
 		return err
 	}
 
+	log.Printf("Backup: after\n")
+
 	err = sync.Dir(reference, copy)
 	if err != nil {
 		return err
 	}
+
+	listdir("Backup: after:", filepath.Dir(common.RootDir))
 
 	return nil
 }

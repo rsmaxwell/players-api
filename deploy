@@ -32,6 +32,37 @@ if [ ! ${result} == 0 ]; then
     echo "result: ${result}"
     exit 1
 fi
+#****************************************************************
+#* Deploy the main executable
+#****************************************************************
+zip ${FILENAME} players-api version.json
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
+mvn --batch-mode deploy:deploy-file \
+	-DgroupId=${GROUPID} \
+	-DartifactId=${ARTIFACTID} \
+	-Dversion=${BUILD_ID} \
+	-Dpackaging=${PACKAGING} \
+	-Dfile=${FILENAME} \
+	-DrepositoryId=${REPOSITORYID} \
+	-Durl=${URL}  1>stdout.txt 2>stderr.txt
+
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    echo "----[ stdout ]--------------------------"
+    cat stdout.txt
+    echo "----[ stderr ]--------------------------"
+    cat stderr.txt
+    echo "----------------------------------------"
+    exit 1
+fi
 
 #****************************************************************
 #* Deploy the test utilities
@@ -51,38 +82,6 @@ mvn --batch-mode deploy:deploy-file \
 	-Dclassifier=${CLASSIFIER_TEST} \
 	-Dpackaging=${PACKAGING} \
 	-Dfile=${FILENAME_TEST} \
-	-DrepositoryId=${REPOSITORYID} \
-	-Durl=${URL}  1>stdout.txt 2>stderr.txt
-
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result: ${result}"
-    echo "----[ stdout ]--------------------------"
-    cat stdout.txt
-    echo "----[ stderr ]--------------------------"
-    cat stderr.txt
-    echo "----------------------------------------"
-    exit 1
-fi
-
-#****************************************************************
-#* Deploy the main executable
-#****************************************************************
-zip ${FILENAME} players-api version.json
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result: ${result}"
-    exit 1
-fi
-
-mvn --batch-mode deploy:deploy-file \
-	-DgroupId=${GROUPID} \
-	-DartifactId=${ARTIFACTID} \
-	-Dversion=${BUILD_ID} \
-	-Dpackaging=${PACKAGING} \
-	-Dfile=${FILENAME} \
 	-DrepositoryId=${REPOSITORYID} \
 	-Durl=${URL}  1>stdout.txt 2>stderr.txt
 

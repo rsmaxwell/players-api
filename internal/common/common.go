@@ -55,7 +55,12 @@ func init() {
 		home = HomeDir()
 	}
 
-	RootDir = home + "/players-api"
+	dirname, ok := os.LookupEnv("PLAYERS_API_DIRNAME")
+	if !ok {
+		dirname = "/players-api"
+	}
+
+	RootDir = home + dirname
 }
 
 // CheckCharactersInID checks the characters are valid for an ID

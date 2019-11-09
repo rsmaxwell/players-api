@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/base64"
+	"os"
 	"testing"
 
 	"github.com/rsmaxwell/players-api/internal/common"
@@ -60,9 +61,14 @@ func SetupFull(t *testing.T) func(t *testing.T) {
 func Backup(name string) error {
 
 	reference := common.RootDir
-	copy := common.RootDir + "-backup/" + name
 
-	err := sync.Dir(reference, copy)
+	copy := common.RootDir + "-backup/" + name
+	err := os.MkdirAll(copy, 0755)
+	if err != nil {
+		return err
+	}
+
+	err = sync.Dir(reference, copy)
 	if err != nil {
 		return err
 	}

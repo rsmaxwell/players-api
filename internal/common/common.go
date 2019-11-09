@@ -37,8 +37,8 @@ func init() {
 	if ok {
 		RootDir = dir
 	} else {
-		usr, ok := user.Current()
-		if ok {
+		usr, err := user.Current()
+		if err == nil {
 			RootDir = usr.HomeDir + "/players-api"
 		} else {
 			env := "HOME"

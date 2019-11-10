@@ -91,7 +91,7 @@ func NewFunction(pkg *Package, name string) *Function {
 
 	d := &Function{pkg: pkg, name: name, level: defaultFunctionLevel}
 
-	value, ok := os.LookupEnv("DEBUG_FUNCTION_LEVEL_" + pkg.name + "." + name)
+	value, ok := os.LookupEnv("DEBUG_FUNCTION_LEVEL_" + pkg.name + "_" + name)
 	if ok {
 		number, err := strconv.Atoi(value)
 		if err == nil {

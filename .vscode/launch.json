@@ -19,7 +19,7 @@
                 "DEBUG_DEFAULT_PACKAGE_LEVEL":"50", 
                 "DEBUG_DEFAULT_FUNCTION_LEVEL":"50",
                 "DEBUG_PACKAGE_LEVEL_main":"50", 
-                "DEBUG_FUNCTION_LEVEL_main.main":"50"
+                "DEBUG_FUNCTION_LEVEL_main_main":"50"
             },
             "args": [],
             "showLog": true

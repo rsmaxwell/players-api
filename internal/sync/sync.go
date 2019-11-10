@@ -206,14 +206,15 @@ func handleFile(reference, copy string) error {
 		f.Dump("could not hash reference file [%s]\n%v", reference, err)
 		return err
 	}
-	f.DebugVerbose("hash of the reference:[%v]", hashref)
 
 	hashcopy, err := hashfile(copy)
 	if err != nil {
 		f.Dump("could not hash copy file [%s]\n%v", copy, err)
 		return err
 	}
-	f.DebugVerbose("hash of the copy:[%v]     ", hashcopy)
+
+	f.DebugVerbose("hash of the reference:%v", hashref)
+	f.DebugVerbose("hash of the copy:     %v", hashcopy)
 
 	if bytes.Compare(hashref, hashcopy) == 0 {
 		f.DebugVerbose("hashes match, nothing to do!")

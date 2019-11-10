@@ -44,7 +44,7 @@ func HandleDir(reference, copy string) error {
 	fi, err = os.Stat(copy)
 	if err != nil {
 		if os.IsNotExist(err) {
-			err = os.MkdirAll(copy, 755)
+			err = os.MkdirAll(copy, 0755)
 			if err != nil {
 				f.Dump("error creating directory [%s]\n%v", copy, err)
 				return err
@@ -72,7 +72,7 @@ func HandleDir(reference, copy string) error {
 			return err
 		}
 
-		err = os.MkdirAll(copy, 755)
+		err = os.MkdirAll(copy, 0755)
 		if err != nil {
 			f.Dump("could not make directory [%s]\n%v", copy, err)
 			return err

@@ -201,24 +201,24 @@ func handleFile(reference, copy string) error {
 	}
 
 	// If the hashes of the files do not match, then copy the reference file
-	f.DebugVerbose("hashing the reference(\"%s\")", reference)
 	hashref, err := hashfile(reference)
 	if err != nil {
 		f.Dump("could not hash reference file [%s]\n%v", reference, err)
 		return err
 	}
+	f.DebugVerbose("hash of the reference:[%v]", hashref)
 
-	f.DebugVerbose("hashing the copy(\"%s\")", reference)
 	hashcopy, err := hashfile(copy)
 	if err != nil {
 		f.Dump("could not hash copy file [%s]\n%v", copy, err)
 		return err
 	}
+	f.DebugVerbose("hash of the copy:[%v]     ", hashcopy)
 
-	f.DebugVerbose("comparing the hash of the reference(%v) with the copy(%v)", hashref, hashcopy)
-	if bytes.Compare(hashref, hashcopy) != 0 {
-
-		f.DebugVerbose("hashed do not match, copying the reference file(%s) to the copy(%s)", reference, copy)
+	if bytes.Compare(hashref, hashcopy) == 0 {
+		f.DebugVerbose("hashes match, nothing to do!")
+	} else {
+		f.DebugVerbose("hashes do not match, copying the reference file to the copy")
 		_, err = copyfile(reference, copy)
 		if err != nil {
 			f.Dump("could not compare file [%s] with [%s]\n%v", reference, copy, err)

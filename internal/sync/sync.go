@@ -6,34 +6,37 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
-	"runtime"
+
+	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
-// this logs the function name as well.
-func handleError(err error) {
-	if err != nil {
-		pc, fn, line, _ := runtime.Caller(1)
-		log.Printf("[error] in %s\n[%s:%d]\n%v", runtime.FuncForPC(pc).Name(), fn, line, err)
-	}
-}
+var (
+	pkg = debug.NewPackage("sync")
 
-// Dir synchronises a directory with a reference directory
-func Dir(reference, copy string) error {
-	log.Printf("Dir: reference: [%s], copy:[%s]\n", reference, copy)
+	functionHandleDir  = debug.NewFunction(pkg, "HandleDir")
+	functionHandleFile = debug.NewFunction(pkg, "handleFile")
+	functionHashfile   = debug.NewFunction(pkg, "hashfile")
+	functionCopyfile   = debug.NewFunction(pkg, "copyfile")
+)
+
+// HandleDir synchronises a directory with a reference directory
+func HandleDir(reference, copy string) error {
+	f := functionHandleDir
+	f.Infof("reference: [%s], copy:[%s]\n", reference, copy)
 
 	// Check the reference is a directory
 	fi, err := os.Stat(reference)
 	if err != nil {
-		handleError(err)
+		f.Dump("could not stat file [%s]: %v", reference, err)
 		return err
 	}
 
 	mode := fi.Mode()
 	if !mode.IsDir() {
-		handleError(err)
+		err := fmt.Errorf("expected file [%s] to be a directory", reference)
+		f.Dump("%v", err)
 		return err
 	}
 
@@ -43,21 +46,21 @@ func Dir(reference, copy string) error {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(copy, 755)
 			if err != nil {
-				handleError(err)
+				f.Dump("error creating directory [%s]: %v", copy, err)
 				return err
 			}
 
 			fi, err = os.Stat(copy)
 			if err != nil {
 				if os.IsNotExist(err) {
-					handleError(err)
+					f.Dump("could not find copy file [%s]: %v", copy, err)
 					return err
 				}
-				handleError(err)
+				f.Dump("unexpected error on file [%s]: %v", copy, err)
 				return err
 			}
 		} else {
-			handleError(err)
+			f.Dump("unexpected error on file [%s]: %v", copy, err)
 			return err
 		}
 	}
@@ -65,13 +68,13 @@ func Dir(reference, copy string) error {
 	if !fi.Mode().IsDir() {
 		err = os.RemoveAll(copy)
 		if err != nil {
-			handleError(err)
+			f.Dump("could not remove file [%s]: %v", copy, err)
 			return err
 		}
 
 		err = os.MkdirAll(copy, 755)
 		if err != nil {
-			handleError(err)
+			f.Dump("could not make directory [%s]: %v", copy, err)
 			return err
 		}
 	}
@@ -79,25 +82,25 @@ func Dir(reference, copy string) error {
 	// Make sure all the files in the 'copy' also exists in the 'reference'
 	files, err := ioutil.ReadDir(copy)
 	if err != nil {
-		handleError(err)
+		f.Dump("could not read directory [%s]: %v", copy, err)
 		return err
 	}
 
-	for _, f := range files {
+	for _, file := range files {
 
-		reference2 := filepath.Join(reference, f.Name())
-		copy2 := filepath.Join(copy, f.Name())
+		reference2 := filepath.Join(reference, file.Name())
+		copy2 := filepath.Join(copy, file.Name())
 
 		_, err := os.Stat(reference2)
 		if err != nil {
 			if os.IsNotExist(err) {
 				err = os.RemoveAll(copy2)
 				if err != nil {
-					handleError(err)
+					f.Dump("could not remove file [%s]: %v", copy2, err)
 					return err
 				}
 			} else {
-				handleError(err)
+				f.Dump("could not stat file [%s]: %v", reference2, err)
 				return err
 			}
 		}
@@ -106,31 +109,32 @@ func Dir(reference, copy string) error {
 	// Synchronise all the files in the 'reference' with the 'copy'
 	files, err = ioutil.ReadDir(reference)
 	if err != nil {
-		log.Fatal(err)
+		f.Dump("could not read directory [%s]: %v", reference, err)
+		return err
 	}
 
-	for _, f := range files {
+	for _, file := range files {
 
-		reference2 := filepath.Join(reference, f.Name())
-		copy2 := filepath.Join(copy, f.Name())
+		reference2 := filepath.Join(reference, file.Name())
+		copy2 := filepath.Join(copy, file.Name())
 
 		fi, err := os.Stat(reference2)
 		if err != nil {
-			handleError(err)
+			f.Dump("could not stat directory [%s]: %v", reference2, err)
 			return err
 		}
 
 		switch mode := fi.Mode(); {
 		case mode.IsDir():
-			err = Dir(reference2, copy2)
+			err = HandleDir(reference2, copy2)
 			if err != nil {
-				handleError(err)
+				f.Dump("could not copy [%s] to [%s]: %v", reference2, copy2, err)
 				return err
 			}
 		case mode.IsRegular():
-			err = file(reference2, copy2)
+			err = handleFile(reference2, copy2)
 			if err != nil {
-				handleError(err)
+				f.Dump("could not get file info for [%s] to [%s]: %v", reference2, copy2, err)
 				return err
 			}
 		}
@@ -139,38 +143,39 @@ func Dir(reference, copy string) error {
 	return nil
 }
 
-func file(reference, copy string) error {
-	log.Printf("file: reference: [%s], copy:[%s]\n", reference, copy)
+func handleFile(reference, copy string) error {
+	f := functionHandleFile
+	f.Infof("reference: [%s], copy:[%s]\n", reference, copy)
 
 	// If the 'copy' does not exist, then copy the reference file
 	_, err := os.Stat(copy)
 	if err != nil {
 		if os.IsNotExist(err) {
 			_, err = copyfile(reference, copy)
-			handleError(err)
+			f.Dump("could not stat file [%s]: %v", copy, err)
 			return err
 		}
-		handleError(err)
+		f.Dump("unexpected error stating file [%s]: %v", copy, err)
 		return err
 	}
 
 	// If the hashes of the files do not match, then copy the reference file
 	hashref, err := hashfile(reference)
 	if err != nil {
-		handleError(err)
+		f.Dump("could not hash reference file [%s]: %v", reference, err)
 		return err
 	}
 
 	hashcopy, err := hashfile(copy)
 	if err != nil {
-		handleError(err)
+		f.Dump("could not hash copy file [%s]: %v", copy, err)
 		return err
 	}
 
 	if bytes.Compare(hashref, hashcopy) != 0 {
 		_, err = copyfile(reference, copy)
 		if err != nil {
-			handleError(err)
+			f.Dump("could not compare file [%s] with [%s]: %v", reference, copy, err)
 			return err
 		}
 	}
@@ -179,16 +184,19 @@ func file(reference, copy string) error {
 }
 
 func hashfile(filename string) ([]byte, error) {
-	f, err := os.Open(filename)
+	f := functionHashfile
+	f.Infof("filename: [%s]\n", filename)
+
+	file, err := os.Open(filename)
 	if err != nil {
-		handleError(err)
+		f.Dump("could not open file [%s]: %v", filename, err)
 		return nil, err
 	}
-	defer f.Close()
+	defer file.Close()
 
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		handleError(err)
+	if _, err := io.Copy(h, file); err != nil {
+		f.Dump("could not copy file [%s]: %v", filename, err)
 		return nil, err
 	}
 
@@ -196,9 +204,12 @@ func hashfile(filename string) ([]byte, error) {
 }
 
 func copyfile(reference, copy string) (int64, error) {
+	f := functionCopyfile
+	f.Infof("reference: [%s], copy: [%s]\n", reference, copy)
+
 	sourceFileStat, err := os.Stat(reference)
 	if err != nil {
-		handleError(err)
+		f.Dump("could not stat file [%s]: %v", reference, err)
 		return 0, err
 	}
 
@@ -208,20 +219,20 @@ func copyfile(reference, copy string) (int64, error) {
 
 	source, err := os.Open(reference)
 	if err != nil {
-		handleError(err)
+		f.Dump("could not open file [%s]: %v", reference, err)
 		return 0, err
 	}
 	defer source.Close()
 
 	destination, err := os.Create(copy)
 	if err != nil {
-		handleError(err)
+		f.Dump("could not create file [%s]: %v", copy, err)
 		return 0, err
 	}
 	defer destination.Close()
 	nBytes, err := io.Copy(destination, source)
 	if err != nil {
-		handleError(err)
+		f.Dump("could not copy file [%v] to [%v]: %v", destination, source, err)
 		return 0, err
 	}
 

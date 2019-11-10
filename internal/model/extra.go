@@ -29,7 +29,7 @@ var (
 // BasicAuth function
 func BasicAuth(username, password string) string {
 	f := functionBasicAuth
-	f.Infof("username: [%s], password:[%s]\n", username, password)
+	f.DebugInfo("username: [%s], password:[%s]\n", username, password)
 
 	auth := username + ":" + password
 	return "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
@@ -38,7 +38,7 @@ func BasicAuth(username, password string) string {
 // SetupEmpty function
 func SetupEmpty(t *testing.T) func(t *testing.T) {
 	f := functionSetupEmpty
-	f.Infof("\n")
+	f.DebugInfo("\n")
 
 	err := Restore("empty")
 	require.Nil(t, err, "err should be nothing")
@@ -50,7 +50,7 @@ func SetupEmpty(t *testing.T) func(t *testing.T) {
 // SetupOne function
 func SetupOne(t *testing.T) func(t *testing.T) {
 	f := functionSetupOne
-	f.Infof("\n")
+	f.DebugInfo("\n")
 
 	err := Restore("one")
 	require.Nil(t, err, "err should be nothing")
@@ -62,7 +62,7 @@ func SetupOne(t *testing.T) func(t *testing.T) {
 // SetupLoggedin function
 func SetupLoggedin(t *testing.T) func(t *testing.T) {
 	f := functionSetupLoggedin
-	f.Infof("\n")
+	f.DebugInfo("\n")
 
 	err := Restore("logon")
 	require.Nil(t, err, "err should be nothing")
@@ -74,7 +74,7 @@ func SetupLoggedin(t *testing.T) func(t *testing.T) {
 // SetupFull function
 func SetupFull(t *testing.T) func(t *testing.T) {
 	f := functionSetupFull
-	f.Infof("\n")
+	f.DebugInfo("\n")
 
 	err := Restore("full")
 	require.Nil(t, err, "err should be nothing")
@@ -85,13 +85,13 @@ func SetupFull(t *testing.T) func(t *testing.T) {
 
 func listdir(title string, root string) error {
 	f := functionListdir
-	f.Infof("\n")
+	f.DebugInfo("\n")
 
 	log.Printf("%s: %s\n", title, root)
 
 	fileInfo, err := ioutil.ReadDir(root)
 	if err != nil {
-		f.Dump("could not make the read the root directory [%s]: %v", root, err)
+		f.Dump("could not make the read the root directory [%s]\n%v", root, err)
 		return err
 	}
 	for _, file := range fileInfo {
@@ -103,7 +103,7 @@ func listdir(title string, root string) error {
 // Backup function
 func Backup(name string) error {
 	f := functionBackup
-	f.Infof("name: %s\n", name)
+	f.DebugInfo("name: %s\n", name)
 
 	reference := common.RootDir
 	copy := common.RootDir + "-backup/" + name
@@ -112,7 +112,7 @@ func Backup(name string) error {
 
 	err := os.MkdirAll(copy, 0755)
 	if err != nil {
-		f.Dump("could not make the copy directory [%s]: %v", copy, err)
+		f.Dump("could not make the copy directory [%s]\n%v", copy, err)
 		return err
 	}
 
@@ -120,7 +120,7 @@ func Backup(name string) error {
 
 	err = sync.HandleDir(reference, copy)
 	if err != nil {
-		f.Dump("could not sync [%s] with [%s]: %v", reference, copy, err)
+		f.Dump("could not sync [%s] with [%s]\n%v", reference, copy, err)
 		return err
 	}
 
@@ -132,14 +132,14 @@ func Backup(name string) error {
 // Restore function
 func Restore(name string) error {
 	f := functionRestore
-	f.Infof("name: %s\n", name)
+	f.DebugInfo("name: %s\n", name)
 
 	reference := common.RootDir + "-backup/" + name
 	copy := common.RootDir
 
 	err := sync.HandleDir(reference, copy)
 	if err != nil {
-		f.Dump("could not sync [%s] with [%s]: %v", reference, copy, err)
+		f.Dump("could not sync [%s] with [%s]\n%v", reference, copy, err)
 		return err
 	}
 

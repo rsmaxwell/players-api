@@ -10,9 +10,24 @@ import (
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/basic/version"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 
 	"github.com/rsmaxwell/players-api/internal/model"
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	pkg = debug.NewPackage("main")
+
+	functionMain              = debug.NewFunction(pkg, "main")
+	functionCreateBackupEmpty = debug.NewFunction(pkg, "createBackupEmpty")
+	functionCreateBackupOne   = debug.NewFunction(pkg, "createBackupOne")
+	functionCreateBackupLogon = debug.NewFunction(pkg, "createBackupLogon")
+	functionCreateBackupFull  = debug.NewFunction(pkg, "createBackupFull")
+	functionRegister          = debug.NewFunction(pkg, "Register")
+	functionCreateCourt       = debug.NewFunction(pkg, "CreateCourt")
+	functionClearModel        = debug.NewFunction(pkg, "clearModel")
+	functionRemoveContents    = debug.NewFunction(pkg, "removeContents")
 )
 
 var (
@@ -20,8 +35,8 @@ var (
 )
 
 func main() {
-
-	log.Printf("Generate-test-data for Players-Api: version: %s\n", version.Version())
+	f := functionMain
+	f.Infof("Generate-test-data for Players-Api: version: %s\n", version.Version())
 
 	err := createBackupEmpty()
 	if err != nil {
@@ -45,6 +60,8 @@ func main() {
 }
 
 func createBackupEmpty() error {
+	f := functionCreateBackupEmpty
+	f.DebugInfo("\n")
 
 	err := createTestdataEmpty()
 	if err != nil {
@@ -65,6 +82,8 @@ func createBackupEmpty() error {
 }
 
 func createBackupOne() error {
+	f := functionCreateBackupOne
+	f.DebugInfo("\n")
 
 	err := createTestdataOne()
 	if err != nil {
@@ -85,6 +104,8 @@ func createBackupOne() error {
 }
 
 func createBackupLogon() error {
+	f := functionCreateBackupLogon
+	f.DebugInfo("\n")
 
 	err := createTestdataLoggedin()
 	if err != nil {
@@ -105,6 +126,8 @@ func createBackupLogon() error {
 }
 
 func createBackupFull() error {
+	f := functionCreateBackupFull
+	f.DebugInfo("\n")
 
 	err := createTestdataFull()
 	if err != nil {
@@ -126,6 +149,8 @@ func createBackupFull() error {
 
 // Register function
 func Register(id, password, firstName, lastName, email string) error {
+	f := functionRegister
+	f.DebugInfo("id: %s, password: %s, firstName: %s, lastName: %s, email: %s\n", id, password, firstName, lastName, email)
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -142,6 +167,8 @@ func Register(id, password, firstName, lastName, email string) error {
 
 // CreateCourt function
 func CreateCourt(name string, players []string) error {
+	f := functionCreateCourt
+	f.DebugInfo("name: %s, players: %v\n", name, players)
 
 	_, err := court.New(name, players).Add()
 	if err != nil {
@@ -152,6 +179,9 @@ func CreateCourt(name string, players []string) error {
 }
 
 func clearModel() error {
+	f := functionClearModel
+	f.DebugInfo("\n")
+
 	_, err := os.Stat(common.RootDir)
 	if err == nil {
 		err = removeContents(common.RootDir)
@@ -164,6 +194,9 @@ func clearModel() error {
 
 // removeContents empties the contents of a directory
 func removeContents(dirname string) error {
+	f := functionRemoveContents
+	f.DebugInfo("dirname: %s\n", dirname)
+
 	children, err := ioutil.ReadDir(dirname)
 	if err != nil {
 		return err

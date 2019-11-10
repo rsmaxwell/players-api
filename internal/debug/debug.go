@@ -265,6 +265,7 @@ func (f *Function) DebugRequestBody(data []byte) {
 // Dump function
 func (f *Function) Dump(format string, a ...interface{}) {
 
+	fmt.Fprintln(os.Stderr, "------------------------------------------------------------")
 	pc, fn, line, ok := runtime.Caller(1)
 	if ok {
 		pkgfunction := runtime.FuncForPC(pc).Name()

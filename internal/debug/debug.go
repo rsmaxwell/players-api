@@ -292,7 +292,6 @@ type Dump struct {
 	Timestamp     string `json:"timestamp"`
 	TimeUnix      int64  `json:"timeunix"`
 	TimeUnixNano  int64  `json:"timeunixnano"`
-	FirstName     string `json:"firstname"`
 	Package       string `json:"package"`
 	Function      string `json:"function"`
 	FuncForPC     string `json:"funcforpc"`

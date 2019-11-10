@@ -26,13 +26,6 @@ func HandleDir(reference, copy string) error {
 	f := functionHandleDir
 	f.DebugVerbose("reference: [%s], copy:[%s]", reference, copy)
 
-	d, err := f.Dump("HELP: %s", "ME")
-	if err != nil {
-		f.Infof("***** Error writing dump: %v", err)
-	} else {
-		f.Infof("***** dumpDir = %s", d)
-	}
-
 	// Check the reference is a directory
 	fi, err := os.Stat(reference)
 	if err != nil {

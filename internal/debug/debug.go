@@ -14,6 +14,7 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/basic/version"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
 // Package type
@@ -56,6 +57,10 @@ const (
 )
 
 var (
+	pkg = debug.NewPackage("debug")
+
+	functionHandleDir = debug.NewFunction(pkg, "Dump")
+
 	level                int
 	defaultPackageLevel  int
 	defaultFunctionLevel int
@@ -308,14 +313,16 @@ type Dump struct {
 
 // Dump function
 func (f *Function) Dump(format string, a ...interface{}) (string, error) {
+	f := functionDump
 
 	t := time.Now()
 	now := fmt.Sprintf(t.Format("20060102-150405"))
 	dumpDir := dumpRoot + "/" + now
 
-	fmt.Fprintln(os.Stderr, fmt.Sprintf("writing dump:[%s]", dumpDir))
+	f.DebugError("writing dump:[%s]", dumpDir)
 	err := os.MkdirAll(dumpDir, 0755)
 	if err != nil {
+		f.DebugError("%v", err)
 		return "", err
 	}
 
@@ -348,6 +355,7 @@ func (f *Function) Dump(format string, a ...interface{}) (string, error) {
 
 	json, err := json.Marshal(dump)
 	if err != nil {
+		f.DebugError("%v", err)
 		return "", err
 	}
 
@@ -355,6 +363,7 @@ func (f *Function) Dump(format string, a ...interface{}) (string, error) {
 
 	err = ioutil.WriteFile(filename, json, 0644)
 	if err != nil {
+		f.DebugError("%v", err)
 		return "", err
 	}
 

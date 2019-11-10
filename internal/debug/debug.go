@@ -56,10 +56,6 @@ const (
 )
 
 var (
-	pkg = NewPackage("debug")
-
-	functionHandleDir = NewFunction(pkg, "Dump")
-
 	level                int
 	defaultPackageLevel  int
 	defaultFunctionLevel int
@@ -312,16 +308,15 @@ type Dump struct {
 
 // Dump function
 func (f *Function) Dump(format string, a ...interface{}) (string, error) {
-	f := functionDump
 
 	t := time.Now()
 	now := fmt.Sprintf(t.Format("20060102-150405"))
 	dumpDir := dumpRoot + "/" + now
 
-	f.DebugError("writing dump:[%s]", dumpDir)
+	f.DebugError("DUMP: writing dump:[%s]", dumpDir)
 	err := os.MkdirAll(dumpDir, 0755)
 	if err != nil {
-		f.DebugError("%v", err)
+		f.DebugError("DUMP: %v", err)
 		return "", err
 	}
 
@@ -354,7 +349,7 @@ func (f *Function) Dump(format string, a ...interface{}) (string, error) {
 
 	json, err := json.Marshal(dump)
 	if err != nil {
-		f.DebugError("%v", err)
+		f.DebugError("DUMP: %v", err)
 		return "", err
 	}
 
@@ -362,7 +357,7 @@ func (f *Function) Dump(format string, a ...interface{}) (string, error) {
 
 	err = ioutil.WriteFile(filename, json, 0644)
 	if err != nil {
-		f.DebugError("%v", err)
+		f.DebugError("DUMP: %v", err)
 		return "", err
 	}
 

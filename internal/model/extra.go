@@ -25,7 +25,7 @@ var (
 // BasicAuth function
 func BasicAuth(username, password string) string {
 	f := functionBasicAuth
-	f.DebugInfo("username: [%s], password:[%s]", username, password)
+	f.DebugVerbose("username: [%s], password:[%s]", username, password)
 
 	auth := username + ":" + password
 	return "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
@@ -34,7 +34,7 @@ func BasicAuth(username, password string) string {
 // SetupEmpty function
 func SetupEmpty(t *testing.T) func(t *testing.T) {
 	f := functionSetupEmpty
-	f.DebugInfo("")
+	f.DebugVerbose("")
 
 	err := Restore("empty")
 	require.Nil(t, err, "err should be nothing")
@@ -46,7 +46,7 @@ func SetupEmpty(t *testing.T) func(t *testing.T) {
 // SetupOne function
 func SetupOne(t *testing.T) func(t *testing.T) {
 	f := functionSetupOne
-	f.DebugInfo("")
+	f.DebugVerbose("")
 
 	err := Restore("one")
 	require.Nil(t, err, "err should be nothing")
@@ -58,7 +58,7 @@ func SetupOne(t *testing.T) func(t *testing.T) {
 // SetupLoggedin function
 func SetupLoggedin(t *testing.T) func(t *testing.T) {
 	f := functionSetupLoggedin
-	f.DebugInfo("")
+	f.DebugVerbose("")
 
 	err := Restore("logon")
 	require.Nil(t, err, "err should be nothing")
@@ -70,7 +70,7 @@ func SetupLoggedin(t *testing.T) func(t *testing.T) {
 // SetupFull function
 func SetupFull(t *testing.T) func(t *testing.T) {
 	f := functionSetupFull
-	f.DebugInfo("")
+	f.DebugVerbose("")
 
 	err := Restore("full")
 	require.Nil(t, err, "err should be nothing")
@@ -82,7 +82,7 @@ func SetupFull(t *testing.T) func(t *testing.T) {
 // Backup function
 func Backup(name string) error {
 	f := functionBackup
-	f.DebugInfo("name: %s", name)
+	f.DebugVerbose("name: %s", name)
 
 	reference := common.RootDir
 	copy := common.RootDir + "-backup/" + name
@@ -99,7 +99,7 @@ func Backup(name string) error {
 // Restore function
 func Restore(name string) error {
 	f := functionRestore
-	f.DebugInfo("name: %s", name)
+	f.DebugVerbose("name: %s", name)
 
 	reference := common.RootDir + "-backup/" + name
 	copy := common.RootDir

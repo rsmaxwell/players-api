@@ -61,7 +61,7 @@ func main() {
 
 func createBackupEmpty() error {
 	f := functionCreateBackupEmpty
-	f.DebugInfo("")
+	f.DebugVerbose("")
 
 	err := createTestdataEmpty()
 	if err != nil {
@@ -83,7 +83,7 @@ func createBackupEmpty() error {
 
 func createBackupOne() error {
 	f := functionCreateBackupOne
-	f.DebugInfo("")
+	f.DebugVerbose("")
 
 	err := createTestdataOne()
 	if err != nil {
@@ -105,7 +105,7 @@ func createBackupOne() error {
 
 func createBackupLogon() error {
 	f := functionCreateBackupLogon
-	f.DebugInfo("")
+	f.DebugVerbose("")
 
 	err := createTestdataLoggedin()
 	if err != nil {
@@ -127,7 +127,7 @@ func createBackupLogon() error {
 
 func createBackupFull() error {
 	f := functionCreateBackupFull
-	f.DebugInfo("")
+	f.DebugVerbose("")
 
 	err := createTestdataFull()
 	if err != nil {
@@ -150,7 +150,7 @@ func createBackupFull() error {
 // Register function
 func Register(id, password, firstName, lastName, email string) error {
 	f := functionRegister
-	f.DebugInfo("id: %s, password: %s, firstName: %s, lastName: %s, email: %s", id, password, firstName, lastName, email)
+	f.DebugVerbose("id: %s, password: %s, firstName: %s, lastName: %s, email: %s", id, password, firstName, lastName, email)
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -168,7 +168,7 @@ func Register(id, password, firstName, lastName, email string) error {
 // CreateCourt function
 func CreateCourt(name string, players []string) error {
 	f := functionCreateCourt
-	f.DebugInfo("name: %s, players: %v", name, players)
+	f.DebugVerbose("name: %s, players: %v", name, players)
 
 	_, err := court.New(name, players).Add()
 	if err != nil {
@@ -180,7 +180,7 @@ func CreateCourt(name string, players []string) error {
 
 func clearModel() error {
 	f := functionClearModel
-	f.DebugInfo("")
+	f.DebugVerbose("")
 
 	_, err := os.Stat(common.RootDir)
 	if err == nil {
@@ -195,7 +195,7 @@ func clearModel() error {
 // removeContents empties the contents of a directory
 func removeContents(dirname string) error {
 	f := functionRemoveContents
-	f.DebugInfo("dirname: %s", dirname)
+	f.DebugVerbose("dirname: %s", dirname)
 
 	children, err := ioutil.ReadDir(dirname)
 	if err != nil {

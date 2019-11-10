@@ -44,18 +44,22 @@ func HandleDir(reference, copy string) error {
 	fi, err = os.Stat(copy)
 	if err != nil {
 		if os.IsNotExist(err) {
+
+			f.DebugInfo("calling os.MkdirAll(\"%s\", 0755)", copy)
 			err = os.MkdirAll(copy, 0755)
 			if err != nil {
 				f.Dump("error creating directory [%s]\n%v", copy, err)
 				return err
 			}
 
+			f.DebugInfo("calling os.Chmod(\"%s\", 0755)", copy)
 			err = os.Chmod(copy, 0755)
 			if err != nil {
 				f.Dump("error chmod directory [%s]\n%v", copy, err)
 				return err
 			}
 
+			f.DebugInfo("calling os.Stat(\"%s\")", copy)
 			fi, err = os.Stat(copy)
 			if err != nil {
 				if os.IsNotExist(err) {
@@ -65,6 +69,9 @@ func HandleDir(reference, copy string) error {
 				f.Dump("unexpected error on file [%s]\n%v", copy, err)
 				return err
 			}
+
+			f.DebugInfo("file perms of [%s]: %#o", copy, fi.Mode().Perm())
+
 		} else {
 			f.Dump("unexpected error on file [%s]\n%v", copy, err)
 			return err

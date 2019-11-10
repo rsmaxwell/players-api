@@ -215,7 +215,7 @@ func handleFile(reference, copy string) error {
 		return err
 	}
 
-	f.DebugVerbose("comparing the has of the reference(%s) with the copy(%s)", hashref, hashcopy)
+	f.DebugVerbose("comparing the hash of the reference(%v) with the copy(%v)", hashref, hashcopy)
 	if bytes.Compare(hashref, hashcopy) != 0 {
 
 		f.DebugVerbose("hashed do not match, copying the reference file(%s) to the copy(%s)", reference, copy)

@@ -3,7 +3,6 @@ package model
 import (
 	"encoding/base64"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -93,7 +92,7 @@ func listdir(title string, root string) error {
 		return err
 	}
 	for _, file := range fileInfo {
-		log.Printf("    %t  %o  %s\n", file.IsDir(), file.Mode(), file.Name())
+		f.DebugInfo("    %t  %o  %s\n", file.IsDir(), file.Mode(), file.Name())
 	}
 	return nil
 }

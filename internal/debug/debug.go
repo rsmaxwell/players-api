@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Package type
@@ -266,10 +267,13 @@ func (f *Function) DebugRequestBody(data []byte) {
 func (f *Function) Dump(format string, a ...interface{}) {
 
 	fmt.Fprintln(os.Stderr, "------------------------------------------------------------")
+	fmt.Println(fmt.Sprintf("timestamp: %s", time.Now().Format("02-Jan-2006 15:04:05")))
+
 	pc, fn, line, ok := runtime.Caller(1)
 	if ok {
-		pkgfunction := runtime.FuncForPC(pc).Name()
-		fmt.Println(fmt.Sprintf("%s[%s:%d]", pkgfunction, fn, line))
+		fmt.Println(fmt.Sprintf("package.function: %s.%s", f.pkg.name, f.name))
+		fmt.Println(fmt.Sprintf("package.function: %s", runtime.FuncForPC(pc).Name()))
+		fmt.Println(fmt.Sprintf("filename: %s[%d]", fn, line))
 	}
 
 	fmt.Fprintln(os.Stderr, fmt.Sprintf(format, a...))

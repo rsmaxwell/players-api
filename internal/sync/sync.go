@@ -16,12 +16,13 @@ import (
 func handleError(err error) {
 	if err != nil {
 		pc, fn, line, _ := runtime.Caller(1)
-		log.Printf("[error] in %s[%s:%d] %v", runtime.FuncForPC(pc).Name(), fn, line, err)
+		log.Printf("[error] in %s\n[%s:%d]\n%v", runtime.FuncForPC(pc).Name(), fn, line, err)
 	}
 }
 
 // Dir synchronises a directory with a reference directory
 func Dir(reference, copy string) error {
+	log.printf("Dir: reference: [%s], copy:[%s]\n", reference, copy)
 
 	// Check the reference is a directory
 	fi, err := os.Stat(reference)
@@ -139,6 +140,7 @@ func Dir(reference, copy string) error {
 }
 
 func file(reference, copy string) error {
+	log.printf("file: reference: [%s], copy:[%s]\n", reference, copy)
 
 	// If the 'copy' does not exist, then copy the reference file
 	_, err := os.Stat(copy)

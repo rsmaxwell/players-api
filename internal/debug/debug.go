@@ -14,7 +14,6 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/basic/version"
 	"github.com/rsmaxwell/players-api/internal/common"
-	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
 // Package type
@@ -57,9 +56,9 @@ const (
 )
 
 var (
-	pkg = debug.NewPackage("debug")
+	pkg = NewPackage("debug")
 
-	functionHandleDir = debug.NewFunction(pkg, "Dump")
+	functionHandleDir = NewFunction(pkg, "Dump")
 
 	level                int
 	defaultPackageLevel  int

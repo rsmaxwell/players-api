@@ -29,6 +29,8 @@ func HandleDir(reference, copy string) error {
 	d, err := f.Dump("HELP: %s", "ME")
 	if err != nil {
 		f.Infof("***** dumpDir = %s", d)
+	} else {
+		f.Infof("***** Error writing dump: %v", err)
 	}
 
 	// Check the reference is a directory

@@ -45,21 +45,21 @@ func HandleDir(reference, copy string) error {
 	if err != nil {
 		if os.IsNotExist(err) {
 
-			f.DebugInfo("calling os.MkdirAll(\"%s\", 0755)", copy)
+			f.DebugVerbose("calling os.MkdirAll(\"%s\", 0755)", copy)
 			err = os.MkdirAll(copy, 0755)
 			if err != nil {
 				f.Dump("error creating directory [%s]\n%v", copy, err)
 				return err
 			}
 
-			f.DebugInfo("calling os.Chmod(\"%s\", 0755)", copy)
+			f.DebugVerbose("calling os.Chmod(\"%s\", 0755)", copy)
 			err = os.Chmod(copy, 0755)
 			if err != nil {
 				f.Dump("error chmod directory [%s]\n%v", copy, err)
 				return err
 			}
 
-			f.DebugInfo("calling os.Stat(\"%s\")", copy)
+			f.DebugVerbose("calling os.Stat(\"%s\")", copy)
 			fi, err = os.Stat(copy)
 			if err != nil {
 				if os.IsNotExist(err) {
@@ -70,7 +70,7 @@ func HandleDir(reference, copy string) error {
 				return err
 			}
 
-			f.DebugInfo("file perms of [%s]: %#o", copy, fi.Mode().Perm())
+			f.DebugVerbose("file perms of [%s]: %#o", copy, fi.Mode().Perm())
 
 		} else {
 			f.Dump("unexpected error on file [%s]\n%v", copy, err)
@@ -78,24 +78,44 @@ func HandleDir(reference, copy string) error {
 		}
 	}
 
-	if !fi.Mode().IsDir() {
+	if fi.Mode().IsDir() {
+		f.DebugVerbose("the copy file:[%s] exists and is already a directory", copy)
+	} else {
+		f.DebugVerbose("the copy file:[%s] exists but is NOT a directory", copy)
+
+		f.DebugVerbose("removing:[%s]", copy)
 		err = os.RemoveAll(copy)
 		if err != nil {
 			f.Dump("could not remove file [%s]\n%v", copy, err)
 			return err
 		}
 
+		f.DebugVerbose("calling os.MkdirAll(\"%s\", 0755)", copy)
 		err = os.MkdirAll(copy, 0755)
 		if err != nil {
 			f.Dump("could not make directory [%s]\n%v", copy, err)
 			return err
 		}
 
+		f.DebugVerbose("calling os.Chmod(\"%s\", 0755)", copy)
 		err = os.Chmod(copy, 0755)
 		if err != nil {
 			f.Dump("error chmod directory [%s]\n%v", copy, err)
 			return err
 		}
+
+		f.DebugVerbose("calling os.Stat(\"%s\")", copy)
+		fi, err = os.Stat(copy)
+		if err != nil {
+			if os.IsNotExist(err) {
+				f.Dump("could not find copy file [%s]\n%v", copy, err)
+				return err
+			}
+			f.Dump("unexpected error on file [%s]\n%v", copy, err)
+			return err
+		}
+
+		f.DebugVerbose("file perms of [%s]: %#o", copy, fi.Mode().Perm())
 	}
 
 	// Make sure all the files in the 'copy' also exists in the 'reference'

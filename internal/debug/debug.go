@@ -353,7 +353,7 @@ func (f *Function) Dump(format string, a ...interface{}) (string, error) {
 		return "", err
 	}
 
-	filename := dumpDir + "/dump.jsom"
+	filename := dumpDir + "/dump.json"
 
 	err = ioutil.WriteFile(filename, json, 0644)
 	if err != nil {

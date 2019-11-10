@@ -50,6 +50,12 @@ func HandleDir(reference, copy string) error {
 				return err
 			}
 
+			err = os.Chmod(copy, 0755)
+			if err != nil {
+				f.Dump("error chmod directory [%s]\n%v", copy, err)
+				return err
+			}
+
 			fi, err = os.Stat(copy)
 			if err != nil {
 				if os.IsNotExist(err) {
@@ -75,6 +81,12 @@ func HandleDir(reference, copy string) error {
 		err = os.MkdirAll(copy, 0755)
 		if err != nil {
 			f.Dump("could not make directory [%s]\n%v", copy, err)
+			return err
+		}
+
+		err = os.Chmod(copy, 0755)
+		if err != nil {
+			f.Dump("error chmod directory [%s]\n%v", copy, err)
 			return err
 		}
 	}

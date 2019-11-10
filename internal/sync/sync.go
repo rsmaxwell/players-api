@@ -22,7 +22,7 @@ func handleError(err error) {
 
 // Dir synchronises a directory with a reference directory
 func Dir(reference, copy string) error {
-	log.printf("Dir: reference: [%s], copy:[%s]\n", reference, copy)
+	log.Printf("Dir: reference: [%s], copy:[%s]\n", reference, copy)
 
 	// Check the reference is a directory
 	fi, err := os.Stat(reference)
@@ -140,7 +140,7 @@ func Dir(reference, copy string) error {
 }
 
 func file(reference, copy string) error {
-	log.printf("file: reference: [%s], copy:[%s]\n", reference, copy)
+	log.Printf("file: reference: [%s], copy:[%s]\n", reference, copy)
 
 	// If the 'copy' does not exist, then copy the reference file
 	_, err := os.Stat(copy)

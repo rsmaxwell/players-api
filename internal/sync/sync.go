@@ -24,7 +24,7 @@ var (
 // HandleDir synchronises a directory with a reference directory
 func HandleDir(reference, copy string) error {
 	f := functionHandleDir
-	f.DebugInfo("reference: [%s], copy:[%s]\n", reference, copy)
+	f.DebugInfo("reference: [%s], copy:[%s]", reference, copy)
 
 	// Check the reference is a directory
 	fi, err := os.Stat(reference)
@@ -145,7 +145,7 @@ func HandleDir(reference, copy string) error {
 
 func handleFile(reference, copy string) error {
 	f := functionHandleFile
-	f.DebugInfo("reference: [%s], copy:[%s]\n", reference, copy)
+	f.DebugInfo("reference: [%s], copy:[%s]", reference, copy)
 
 	// If the 'copy' does not exist, then copy the reference file
 	_, err := os.Stat(copy)
@@ -185,7 +185,7 @@ func handleFile(reference, copy string) error {
 
 func hashfile(filename string) ([]byte, error) {
 	f := functionHashfile
-	f.DebugInfo("filename: [%s]\n", filename)
+	f.DebugInfo("filename: [%s]", filename)
 
 	file, err := os.Open(filename)
 	if err != nil {
@@ -205,7 +205,7 @@ func hashfile(filename string) ([]byte, error) {
 
 func copyfile(reference, copy string) (int64, error) {
 	f := functionCopyfile
-	f.DebugInfo("reference: [%s], copy: [%s]\n", reference, copy)
+	f.DebugInfo("reference: [%s], copy: [%s]", reference, copy)
 
 	sourceFileStat, err := os.Stat(reference)
 	if err != nil {

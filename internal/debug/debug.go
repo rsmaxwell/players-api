@@ -3,6 +3,7 @@ package debug
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"regexp"
@@ -10,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rsmaxwell/players-api/internal/basic/version"
+	"github.com/rsmaxwell/players-api/internal/common"
 )
 
 // Package type
@@ -55,12 +59,20 @@ var (
 	level                int
 	defaultPackageLevel  int
 	defaultFunctionLevel int
+	dumpRoot             string
 )
 
 func init() {
 	level, _ = getEnvInteger("DEBUG_LEVEL", InfoLevel)
 	defaultPackageLevel, _ = getEnvInteger("DEBUG_DEFAULT_PACKAGE_LEVEL", InfoLevel)
 	defaultFunctionLevel, _ = getEnvInteger("DEBUG_DEFAULT_FUNCTION_LEVEL", InfoLevel)
+
+	dir, ok := os.LookupEnv("DEBUG_DUMP_DIR")
+	if ok {
+		dumpRoot = dir
+	} else {
+		dumpRoot = common.HomeDir() + "/players-api-dump"
+	}
 }
 
 func getEnvInteger(name string, def int) (int, error) {
@@ -69,6 +81,14 @@ func getEnvInteger(name string, def int) (int, error) {
 		return def, nil
 	}
 	return strconv.Atoi(value)
+}
+
+func getEnvString(name string, def string) (string, error) {
+	value, ok := os.LookupEnv(name)
+	if !ok {
+		return def, nil
+	}
+	return value, nil
 }
 
 // NewPackage function
@@ -263,11 +283,41 @@ func (f *Function) DebugRequestBody(data []byte) {
 	}
 }
 
-// Dump function
-func (f *Function) Dump(format string, a ...interface{}) {
+// Dump type
+type Dump struct {
+	GroupID       string `json:"groupidid"`
+	Artifact      string `json:"artifact"`
+	Classifier    string `json:"classifier"`
+	RepositoryURL string `json:"repositoryurl"`
+	Timestamp     string `json:"timestamp"`
+	TimeUnix      int64  `json:"timeunix"`
+	TimeUnixNano  int64  `json:"timeunixnano"`
+	FirstName     string `json:"firstname"`
+	Package       string `json:"package"`
+	Function      string `json:"function"`
+	FuncForPC     string `json:"funcforpc"`
+	Filename      string `json:"filename"`
+	Line          int    `json:"line"`
+	Version       string `json:"version"`
+	BuildDate     string `json:"builddate"`
+	GitCommit     string `json:"gitcommit"`
+	GitBranch     string `json:"gitbranch"`
+	GitURL        string `json:"giturl"`
+	Message       string `json:"message"`
+}
 
-	fmt.Fprintln(os.Stderr, "------------------------------------------------------------")
-	fmt.Println(fmt.Sprintf("timestamp: %s", time.Now().Format("02-Jan-2006 15:04:05")))
+// Dump function
+func (f *Function) Dump(format string, a ...interface{}) (string, error) {
+
+	t := time.Now()
+	now := fmt.Sprintln(t.Format("20060102-150405"))
+	dumpDir := dumpRoot + "/" + now
+
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("writing dump:[%s]", dumpDir))
+	err := os.MkdirAll(dumpDir, 0755)
+	if err != nil {
+		return "", err
+	}
 
 	pc, fn, line, ok := runtime.Caller(1)
 	if ok {
@@ -276,5 +326,37 @@ func (f *Function) Dump(format string, a ...interface{}) {
 		fmt.Println(fmt.Sprintf("filename: %s[%d]", fn, line))
 	}
 
-	fmt.Fprintln(os.Stderr, fmt.Sprintf(format, a...))
+	dump := new(Dump)
+	dump.GroupID = "com.rsmaxwell.players"
+	dump.Artifact = "players-api"
+	dump.Classifier = "test"
+	dump.RepositoryURL = "https://server.rsmaxwell.co.uk/archiva"
+	dump.Timestamp = now
+	dump.TimeUnix = t.Unix()
+	dump.TimeUnixNano = t.UnixNano()
+	dump.Package = f.pkg.name
+	dump.Function = f.name
+	dump.FuncForPC = runtime.FuncForPC(pc).Name()
+	dump.Filename = fn
+	dump.Line = line
+	dump.Version = version.Version()
+	dump.BuildDate = version.BuildDate()
+	dump.GitCommit = version.GitCommit()
+	dump.GitBranch = version.GitBranch()
+	dump.GitURL = version.GitURL()
+	dump.Message = fmt.Sprintf(format, a...)
+
+	json, err := json.Marshal(dump)
+	if err != nil {
+		return "", err
+	}
+
+	filename := dumpDir + "/dump.jsom"
+
+	err = ioutil.WriteFile(filename, json, 0644)
+	if err != nil {
+		return "", err
+	}
+
+	return dumpDir, nil
 }

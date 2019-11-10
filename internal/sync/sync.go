@@ -26,6 +26,11 @@ func HandleDir(reference, copy string) error {
 	f := functionHandleDir
 	f.DebugVerbose("reference: [%s], copy:[%s]", reference, copy)
 
+	d, err := f.Dump("HELP: %s", "ME")
+	if err != nil {
+		f.Infof("***** dumpDir = %s", d)
+	}
+
 	// Check the reference is a directory
 	fi, err := os.Stat(reference)
 	if err != nil {
@@ -51,27 +56,6 @@ func HandleDir(reference, copy string) error {
 				f.Dump("error creating directory [%s]\n%v", copy, err)
 				return err
 			}
-
-			f.DebugVerbose("calling os.Chmod(\"%s\", 0755)", copy)
-			err = os.Chmod(copy, 0755)
-			if err != nil {
-				f.Dump("error chmod directory [%s]\n%v", copy, err)
-				return err
-			}
-
-			f.DebugVerbose("calling os.Stat(\"%s\")", copy)
-			fi, err = os.Stat(copy)
-			if err != nil {
-				if os.IsNotExist(err) {
-					f.Dump("could not find copy file [%s]\n%v", copy, err)
-					return err
-				}
-				f.Dump("unexpected error on file [%s]\n%v", copy, err)
-				return err
-			}
-
-			f.DebugVerbose("file perms of [%s]: %#o", copy, fi.Mode().Perm())
-
 		} else {
 			f.Dump("unexpected error on file [%s]\n%v", copy, err)
 			return err
@@ -96,26 +80,6 @@ func HandleDir(reference, copy string) error {
 			f.Dump("could not make directory [%s]\n%v", copy, err)
 			return err
 		}
-
-		f.DebugVerbose("calling os.Chmod(\"%s\", 0755)", copy)
-		err = os.Chmod(copy, 0755)
-		if err != nil {
-			f.Dump("error chmod directory [%s]\n%v", copy, err)
-			return err
-		}
-
-		f.DebugVerbose("calling os.Stat(\"%s\")", copy)
-		fi, err = os.Stat(copy)
-		if err != nil {
-			if os.IsNotExist(err) {
-				f.Dump("could not find copy file [%s]\n%v", copy, err)
-				return err
-			}
-			f.Dump("unexpected error on file [%s]\n%v", copy, err)
-			return err
-		}
-
-		f.DebugVerbose("file perms of [%s]: %#o", copy, fi.Mode().Perm())
 	}
 
 	// Make sure all the files in the 'copy' also exists in the 'reference'

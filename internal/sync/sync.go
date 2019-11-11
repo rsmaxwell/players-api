@@ -51,8 +51,14 @@ func HandleDir(reference, copy string) error {
 				f.Dump("error creating directory [%s]\n%v", copy, err)
 				return err
 			}
+
+			fi, err = os.Stat(copy)
+			if err != nil {
+				f.Dump("unexpected error stating file [%s]\n%v", copy, err)
+				return err
+			}
 		} else {
-			f.Dump("unexpected error on file [%s]\n%v", copy, err)
+			f.Dump("unexpected error stating file [%s]\n%v", copy, err)
 			return err
 		}
 	}

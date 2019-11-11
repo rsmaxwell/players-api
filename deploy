@@ -1,21 +1,8 @@
 #!/bin/bash
 
-REPOSITORY_URL="https://server.rsmaxwell.co.uk/archiva/repository"
-REPOSITORYID="build"
-REPOSITORY="build"
-GROUPID="com.rsmaxwell.players"
-NAME="players-api"
-PACKAGING="zip"
-
-GOARCH=$(go env GOARCH)
-GOOS=$(go env GOOS)
-
-URL=${REPOSITORY_URL}/${REPOSITORY}/
-ARTIFACTID=${JOB_NAME}-${GOARCH}-${GOOS}
-FILENAME=${JOB_NAME}-${GOARCH}-${GOOS}-${BUILD_ID}.${PACKAGING}
-
-CLASSIFIER_TEST="test"
-FILENAME_TEST=${JOB_NAME}-${GOARCH}-${GOOS}-${BUILD_ID}-${CLASSIFIER_TEST}.${PACKAGING}
+#**************************************************************
+# Deploy 'players-api' to 'build'
+#**************************************************************
 
 currentDir=$(pwd)
 result=$?
@@ -52,13 +39,31 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
+REPOSITORY_URL="https://server.rsmaxwell.co.uk/archiva/repository"
+REPOSITORYID="build"
+REPOSITORY="build"
+GROUPID="com.rsmaxwell.players"
+NAME="players-api"
+PACKAGING="zip"
+VERSION=${BUILD_ID}
+
+GOARCH=$(go env GOARCH)
+GOOS=$(go env GOOS)
+
+URL=${REPOSITORY_URL}/${REPOSITORY}/
+ARTIFACTID=${NAME}-${GOARCH}-${GOOS}
+FILENAME=${ARTIFACTID}-${VERSION}.${PACKAGING}
+
+CLASSIFIER_TEST="test"
+FILENAME_TEST=${ARTIFACTID}-${VERSION}-${CLASSIFIER_TEST}.${PACKAGING}
+
 mvn --batch-mode deploy:deploy-file \
 	-Durl=${URL} \
 	-DrepositoryId=${REPOSITORYID} \
 	-Dfile=${FILENAME} \
 	-DgroupId=${GROUPID} \
 	-DartifactId=${ARTIFACTID} \
-	-Dversion=${BUILD_ID} \
+	-Dversion=${VERSION} \
 	-Dpackaging=${PACKAGING} \
 	-Dfiles=${FILENAME_TEST} \
 	-Dclassifiers=${CLASSIFIER_TEST} \

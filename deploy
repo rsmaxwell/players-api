@@ -23,22 +23,6 @@ fi
 #****************************************************************
 #* Deploy the main executable and test utilities 
 #****************************************************************
-zip ${FILENAME} players-api version.json
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result: ${result}"
-    exit 1
-fi
-
-zip ${FILENAME_TEST} generate-test-data
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result: ${result}"
-    exit 1
-fi
-
 REPOSITORY_URL="https://server.rsmaxwell.co.uk/archiva/repository"
 REPOSITORYID="build"
 REPOSITORY="build"
@@ -57,6 +41,22 @@ FILENAME=${ARTIFACTID}-${VERSION}.${PACKAGING}
 CLASSIFIER_TEST="test"
 FILENAME_TEST=${ARTIFACTID}-${VERSION}-${CLASSIFIER_TEST}.${PACKAGING}
 
+
+zip ${FILENAME} players-api version.json
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
+zip ${FILENAME_TEST} generate-test-data
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
 mvn --batch-mode deploy:deploy-file \
 	-Durl=${URL} \
 	-DrepositoryId=${REPOSITORYID} \

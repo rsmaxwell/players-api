@@ -1,0 +1,1 @@
+{"person":{"firstname":"Alice","lastname":"Wonderland","email":"alice@abc.com","hashedpassword":"JDJhJDEwJENTbXFPTUNma1V4YUo0WWVXNUtvSC56OXdtMzZGeUhTRS5ZR2Faekd6V1ZPd00xampPM01D","role":"normal","player":true}}

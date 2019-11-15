@@ -1,0 +1,129 @@
+
+plugins {
+	id 'com.github.blindpirate.gogradle' version '0.11.4'
+}
+
+golang {
+	packagePath = 'github.com/rsmaxwell/players-api'
+}
+
+ext {
+	TIMESTAMP = new Date().format('yyyy-MM-dd HH:mm:ss.SSS')
+
+    new ByteArrayOutputStream().withStream { os ->
+        def result = exec {
+            commandLine = [ 'go', 'env', 'GOEXE' ]
+            standardOutput = os
+        }
+        GOEXE = os.toString().trim()
+    }
+
+    new ByteArrayOutputStream().withStream { os ->
+        def result = exec {
+            commandLine = [ 'go', 'env', 'GOOS' ]
+            standardOutput = os
+        }
+        GOOS = os.toString().trim()
+    }
+
+    new ByteArrayOutputStream().withStream { os ->
+        def result = exec {
+            commandLine = [ 'go', 'env', 'GOARCH' ]
+            standardOutput = os
+        }
+        GOARCH = os.toString().trim()
+    }
+
+	mainName = "players-api"
+	testName = "generate-test-data"
+
+    groupID = 'com.rsmaxwell.players'	
+	artifactID = "${mainName}-${GOARCH}-${GOOS}"
+    myVersion = System.env.BUILD_ID
+	packaging = "zip"
+	classifier = "test"
+} 
+
+task updateVersionGO {
+	onlyIf { System.env.BUILD_ID != null }
+	doLast {
+		ant.replace(dir: 'internal', includes: '**/version.go', token: '<BUILD_ID>', value: System.env.BUILD_ID)
+		ant.replace(dir: 'internal', includes: '**/version.go', token: '<TIMESTAMP>', value: TIMESTAMP)
+		ant.replace(dir: 'internal', includes: '**/version.go', token: '<GIT_COMMIT>', value: System.env.GIT_COMMIT)
+		ant.replace(dir: 'internal', includes: '**/version.go', token: '<GIT_BRANCH>', value: System.env.GIT_BRANCH)
+		ant.replace(dir: 'internal', includes: '**/version.go', token: '<GIT_URL>', value: System.env.GIT_URL)
+	}
+}
+
+task writeVersionJSON {
+	onlyIf { System.env.BUILD_ID != null }
+	doLast {
+		def data = [
+			version: 	System.env.BUILD_ID,
+			buildDate:	TIMESTAMP,
+			gitCommit:	System.env.GIT_COMMIT,
+			gitBranch:	System.env.GIT_BRANCH,
+			gitURL:		System.env.GIT_URL
+		]
+
+		def json_str = groovy.json.JsonOutput.toJson(data)
+		def json_beauty = groovy.json.JsonOutput.prettyPrint(json_str)
+		new File("build").mkdir()
+		File file = new File( 'build/version.json' )
+		file.write(json_beauty)
+	}
+}
+
+goBuild {
+	go "build -o ./build/${mainName}${GOEXE} github.com/rsmaxwell/players-api/cmd/${mainName}"
+	go "build -o ./build/${testName}${GOEXE} github.com/rsmaxwell/players-api/cmd/${testName}"
+}
+
+task clean(type: Delete) {
+  delete 'build'
+}
+
+task mainZip(type: Zip) {
+   from('build') {
+       include "${mainName}${GOEXE}"
+	   include 'version.json'
+   }
+   archiveName "${mainName}.${packaging}"
+   destinationDir(file('./build'))
+}
+
+task testZip(type: Zip) {
+   from('build') {
+       include "${testName}${GOEXE}"
+	   include 'version.json'
+   }
+   archiveName "${testName}.${packaging}"
+   destinationDir(file('./build'))
+}                        
+
+apply plugin: 'maven-publish'
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId groupID
+            artifactId artifactID
+            version myVersion
+
+            artifact("./build/${mainName}.${packaging}") 
+            artifact("./build/${testName}.${packaging}") {
+				classifier = 'test'
+            }
+        }
+    }
+    repositories {
+        maven {
+            name 'build'
+            url "${repoUrl}/build"
+            credentials {
+                username = repoUsername
+                password = repoPassword
+            }
+        }
+    }
+}

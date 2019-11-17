@@ -75,8 +75,8 @@ task writeVersionJSON {
 }
 
 goBuild {
-	go "build -o ./build/${mainName}${GOEXE} github.com/rsmaxwell/players-api/cmd/${mainName}"
-	go "build -o ./build/${testName}${GOEXE} github.com/rsmaxwell/players-api/cmd/${testName}"
+	go "build -o ./build/${mainName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE} github.com/rsmaxwell/players-api/cmd/${mainName}"
+	go "build -o ./build/${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE} github.com/rsmaxwell/players-api/cmd/${testName}"
 }
 
 task clean(type: Delete) {
@@ -99,7 +99,7 @@ task testZip(type: Zip) {
    }
    archiveName "${testName}.${packaging}"
    destinationDir(file('./build'))
-}                        
+}
 
 apply plugin: 'maven-publish'
 
@@ -112,7 +112,7 @@ publishing {
 
             artifact("./build/${mainName}.${packaging}") 
             artifact("./build/${testName}.${packaging}") {
-				classifier = 'test'
+				classifier = classifier
             }
         }
     }

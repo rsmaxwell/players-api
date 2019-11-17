@@ -112,7 +112,7 @@ publishing {
 
             artifact("./build/${mainName}.${packaging}") 
             artifact("./build/${testName}.${packaging}") {
-				classifier = 'test'
+				classifier = project.ext.classifier
             }
         }
     }

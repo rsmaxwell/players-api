@@ -17,3 +17,5 @@ data.json
 vendor/
 build/
 .gradle/
+.gogradle/
+.settings/

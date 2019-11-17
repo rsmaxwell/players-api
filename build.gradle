@@ -85,7 +85,7 @@ task clean(type: Delete) {
 
 task mainZip(type: Zip) {
    from('build') {
-       include "${mainName}${GOEXE}"
+       include "${mainName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
 	   include 'version.json'
    }
    archiveName "${mainName}.${packaging}"
@@ -94,7 +94,7 @@ task mainZip(type: Zip) {
 
 task testZip(type: Zip) {
    from('build') {
-       include "${testName}${GOEXE}"
+       include "${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
 	   include 'version.json'
    }
    archiveName "${testName}.${packaging}"

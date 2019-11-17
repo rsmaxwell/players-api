@@ -88,7 +88,7 @@ task mainZip(type: Zip) {
        include "${mainName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
 	   include 'version.json'
    }
-   archiveName "${mainName}.${packaging}"
+   archiveName "${mainName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
    destinationDir(file('./build'))
 }
 
@@ -97,7 +97,7 @@ task testZip(type: Zip) {
        include "${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
 	   include 'version.json'
    }
-   archiveName "${testName}.${packaging}"
+   archiveName "${testName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
    destinationDir(file('./build'))
 }
 

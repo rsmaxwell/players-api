@@ -110,8 +110,8 @@ publishing {
             artifactId artifactID
             version myVersion
 
-            artifact("./build/${mainName}.${packaging}") 
-            artifact("./build/${testName}.${packaging}") {
+            artifact("./build/${mainName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}") 
+            artifact("./build/${testName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}") {
 				classifier = project.ext.classifier
             }
         }

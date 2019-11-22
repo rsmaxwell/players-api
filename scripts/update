@@ -1,0 +1,348 @@
+#!/bin/bash
+
+SCHEME="https"
+HOST="server.rsmaxwell.co.uk"
+BASE="archiva/repository"
+REPOSITORYID="releases"
+GROUPID="com.rsmaxwell.players"
+ARTIFACTID="players-api-amd64-linux"
+PACKAGING=zip
+
+players_api_username="philip"
+
+#####################################################################
+# Compare dot separated strings (i.e. version format)
+#     if arg1 'less than' arg2  then return: 2
+#             'equal'                        0
+#             'greater than'                 1
+#####################################################################
+function vercomp () {
+    if [[ $1 == $2 ]]
+    then
+        return 0
+    fi
+
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if (( 10#${ver1[i]} > 10#${ver2[i]} ))
+        then
+            return 1
+        fi
+        if (( 10#${ver1[i]} < 10#${ver2[i]} ))
+        then
+            return 2
+        fi
+    done
+    return 0
+}
+
+#####################################################################
+# Find the latest version available on the repository
+#####################################################################
+
+url="${SCHEME}://${HOST}/${BASE}/${REPOSITORYID}/${GROUPID//.//}/${ARTIFACTID}/maven-metadata.xml"
+
+rm -rf maven-metadata.xml
+wget --quiet "${url}"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    echo "Could not download 'maven-metadata.xml'"
+    exit 1
+fi
+
+line=$(grep "<latest>.*</latest>" maven-metadata.xml)
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    echo "Could not find latest version"
+    exit 1
+fi
+
+regex="<latest>(.*)</latest>"
+if [[ ! ${line} =~ ${regex} ]]
+then
+    echo "Error: $0[${LINENO}]"
+    echo "Could not find latest version"
+    exit 1
+fi
+
+latest_version="${BASH_REMATCH[1]}"
+
+#####################################################################
+# Decide if we need to update 'players-api' by comparing the installed
+# version with the latest version
+#####################################################################
+filename="/opt/players-api/version.json"
+
+if [ -f "${filename}" ]; then
+    installed_version=$(jq -r .version "${filename}")
+
+    vercomp ${installed_version} ${latest_version}
+    result=$?
+    if [ ${result} == 2 ]; then
+        echo "Need to update: ${installed_version} --> ${latest_version}"
+    else
+        echo "'players-api' is up-to-date: version ${installed_version}"
+        exit 0
+    fi
+else
+    echo "Need to update: ? --> ${latest_version}"
+fi
+
+
+#####################################################################
+# Stop the 'players-api' service (if there is one)
+#####################################################################
+sudo systemctl stop players-api
+result=$?
+if [ ${result} == 0 ]; then
+    : # ok
+elif [ ${result} == 5 ]; then
+    : # ok. service not found
+else
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+#####################################################################
+# remove 'players-api'
+#####################################################################
+
+sudo rm -rf /opt/players-api*
+
+
+#####################################################################
+# Download and extract the 'players-api' artifact from the repository
+#####################################################################
+url="${SCHEME}://${HOST}/${BASE}/${REPOSITORYID}/${GROUPID//.//}/${ARTIFACTID}/${latest_version}/${ARTIFACTID}-${latest_version}.${PACKAGING}"
+
+download="/tmp/${ARTIFACTID}.${PACKAGING}"
+rm -rf "${download}"
+wget --output-document "${download}" --quiet "${url}"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    echo "Could not download 'maven-metadata.xml'"
+    exit 1
+fi
+
+directory="${ARTIFACTID}-${latest_version}"
+
+sudo mkdir -p "/opt/${directory}"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+currentDir=$(pwd)
+cd "/opt/${directory}"
+
+sudo unzip "${download}"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+filename=$(ls players-api*)
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+rm -rf "${download}"
+
+#######################################################################
+# Make the directory symbolic link
+#######################################################################
+linkname="players-api"
+linkpath="/opt/${linkname}"
+
+cd /opt
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+echo "Create a new symbolic link"
+sudo ln -s "${directory}" "${linkname}"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+#######################################################################
+# Make the file symbolic link
+#######################################################################
+linkname="players-api"
+linkpath="/opt/players-api/${linkname}"
+
+cd "/opt/players-api"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+echo "Create a new symbolic link"
+sudo ln -s "${directory}" "${linkname}"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+#######################################################################
+# Set file perms and ownership
+#######################################################################
+find "/opt/${directory}" -type d -exec sudo chmod 755 {} \;
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+find "/opt/${directory}" -type f -exec sudo chmod 644 {} \;
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+sudo chown -R "${players_api_username}:${players_api_username}" "/opt/${directory}"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+sudo chown --no-dereference "${players_api_username}:${players_api_username}" "${linkpath}"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+#######################################################################
+# Configure rsyslog
+#######################################################################
+
+echo "configure rsyslog"
+rsyslogconfig="/etc/rsyslog.d/30-players-api.conf"
+logfile="/var/log/players-api.log"
+
+sudo rm -rf ${rsyslogconfig}
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+sudo tee --append ${rsyslogconfig} << EOT3
+# Log "players-api" generated log messages to file
+:syslogtag, startswith, "players-api" /var/log/players-api.log
+
+# comment out the following line to allow "players-api" messages through.
+# Doing so means you'll also get "players-api" messages in /var/log/syslog
+& stop
+
+EOT3
+
+echo "Restart the syslog service"
+sudo systemctl restart syslog
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+
+#######################################################################
+# Create a service
+#######################################################################
+
+echo "Create the 'players-api' service"
+service="/etc/systemd/system/players-api.service"
+
+sudo rm -rf "${service}"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+sudo tee --append ${service} << EOT2
+[Unit]
+Description=Players-api
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=${players_api_username}
+WorkingDirectory=/home/philip
+ExecStart=/opt/players-api/players-api
+Restart=on-failure
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=players-api
+
+[Install]
+WantedBy=multi-user.target
+
+EOT2
+
+echo "Restart the services daemon to pick up the new configuration"
+sudo systemctl daemon-reload
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+echo "Start the 'players-api' service"
+sudo systemctl start players-api
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S.%3N")
+echo "${TIMESTAMP}   update-players-api"
+
 SCHEME="https"
 HOST="server.rsmaxwell.co.uk"
 BASE="archiva/repository"
@@ -81,6 +84,7 @@ then
     exit 1
 fi
 
+rm -rf maven-metadata.xml
 latest_version="${BASH_REMATCH[1]}"
 
 #####################################################################
@@ -177,9 +181,9 @@ rm -rf "${download}"
 #######################################################################
 # Make the directory symbolic link
 #######################################################################
-linkname="players-api"
-linkpath="/opt/${linkname}"
+dirlinkname="players-api"
 
+echo "Change the working directory to '/opt'"
 cd /opt
 result=$?
 if [ ! ${result} == 0 ]; then
@@ -188,8 +192,8 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
-echo "Create a new symbolic link"
-sudo ln -s "${directory}" "${linkname}"
+echo "Make the directory symbolic link"
+sudo ln -s "${directory}" "${dirlinkname}"
 result=$?
 if [ ! ${result} == 0 ]; then
     echo "Error: $0[${LINENO}]"
@@ -200,9 +204,9 @@ fi
 #######################################################################
 # Make the file symbolic link
 #######################################################################
-linkname="players-api"
-linkpath="/opt/players-api/${linkname}"
+filelinkname="players-api"
 
+echo "Change the working directory to '/opt/players-api'"
 cd "/opt/players-api"
 result=$?
 if [ ! ${result} == 0 ]; then
@@ -211,8 +215,8 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
-echo "Create a new symbolic link"
-sudo ln -s "${directory}" "${linkname}"
+echo "Make the file symbolic link"
+sudo ln -s "${directory}" "${filelinkname}"
 result=$?
 if [ ! ${result} == 0 ]; then
     echo "Error: $0[${LINENO}]"
@@ -239,6 +243,14 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
+find "/opt/${directory}" -name "players-api*" -type f -exec sudo chmod 744 {} \;
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
 sudo chown -R "${players_api_username}:${players_api_username}" "/opt/${directory}"
 result=$?
 if [ ! ${result} == 0 ]; then
@@ -247,7 +259,17 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
-sudo chown --no-dereference "${players_api_username}:${players_api_username}" "${linkpath}"
+dirlinkpath="/opt/${dirlinkname}"
+sudo chown --no-dereference "${players_api_username}:${players_api_username}" "${dirlinkpath}"
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result = ${result}"
+    exit 1
+fi
+
+filelinkpath="/opt/${dirlinkname}/${filelinkname}"
+sudo chown --no-dereference "${players_api_username}:${players_api_username}" "${filelinkpath}"
 result=$?
 if [ ! ${result} == 0 ]; then
     echo "Error: $0[${LINENO}]"
@@ -256,87 +278,8 @@ if [ ! ${result} == 0 ]; then
 fi
 
 #######################################################################
-# Configure rsyslog
+# Start the service
 #######################################################################
-
-echo "configure rsyslog"
-rsyslogconfig="/etc/rsyslog.d/30-players-api.conf"
-logfile="/var/log/players-api.log"
-
-sudo rm -rf ${rsyslogconfig}
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result = ${result}"
-    exit 1
-fi
-
-sudo tee --append ${rsyslogconfig} << EOT3
-# Log "players-api" generated log messages to file
-:syslogtag, startswith, "players-api" /var/log/players-api.log
-
-# comment out the following line to allow "players-api" messages through.
-# Doing so means you'll also get "players-api" messages in /var/log/syslog
-& stop
-
-EOT3
-
-echo "Restart the syslog service"
-sudo systemctl restart syslog
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result = ${result}"
-    exit 1
-fi
-
-
-#######################################################################
-# Create a service
-#######################################################################
-
-echo "Create the 'players-api' service"
-service="/etc/systemd/system/players-api.service"
-
-sudo rm -rf "${service}"
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result = ${result}"
-    exit 1
-fi
-
-sudo tee --append ${service} << EOT2
-[Unit]
-Description=Players-api
-After=network.target
-StartLimitIntervalSec=0
-
-[Service]
-Type=simple
-User=${players_api_username}
-WorkingDirectory=/home/philip
-ExecStart=/opt/players-api/players-api
-Restart=on-failure
-RestartSec=5
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=players-api
-
-[Install]
-WantedBy=multi-user.target
-
-EOT2
-
-echo "Restart the services daemon to pick up the new configuration"
-sudo systemctl daemon-reload
-result=$?
-if [ ! ${result} == 0 ]; then
-    echo "Error: $0[${LINENO}]"
-    echo "result = ${result}"
-    exit 1
-fi
-
 echo "Start the 'players-api' service"
 sudo systemctl start players-api
 result=$?
@@ -345,4 +288,3 @@ if [ ! ${result} == 0 ]; then
     echo "result = ${result}"
     exit 1
 fi
-

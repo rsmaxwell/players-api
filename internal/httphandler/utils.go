@@ -102,24 +102,25 @@ func SetupHandlers(r *mux.Router) {
 
 	s := r.PathPrefix("/players-api").Subrouter()
 
-	s.HandleFunc("/register", Register).Methods(http.MethodPost)
-	s.HandleFunc("/login", Login).Methods(http.MethodGet)
-	s.HandleFunc("/logout", Logout).Methods(http.MethodGet)
+	s.HandleFunc("/users/authenticate", Authenticate).Methods(http.MethodPost)
+	s.HandleFunc("/users/register", Register).Methods(http.MethodPost)
+	s.HandleFunc("/users", ListPeople).Methods(http.MethodGet)
+	s.HandleFunc("/users/{id}", DeletePerson).Methods(http.MethodDelete)
+	s.HandleFunc("/users/logout", Logout).Methods(http.MethodGet)
+	s.HandleFunc("/users/{id}", GetPerson).Methods(http.MethodGet)
+	s.HandleFunc("/users/{id}", UpdatePerson).Methods(http.MethodPut)
+	s.HandleFunc("/users/player/{id}", UpdatePersonPlayer).Methods(http.MethodPut)
+	s.HandleFunc("/users/role/{id}", UpdatePersonRole).Methods(http.MethodPut)
+	s.HandleFunc("/users/move", PostMove).Methods(http.MethodPost)
+
 	s.HandleFunc("/court", ListCourts).Methods(http.MethodGet)
 	s.HandleFunc("/court/{id}", GetCourt).Methods(http.MethodGet)
 	s.HandleFunc("/court", CreateCourt).Methods(http.MethodPost)
 	s.HandleFunc("/court/{id}", UpdateCourt).Methods(http.MethodPut)
 	s.HandleFunc("/court/{id}", DeleteCourt).Methods(http.MethodDelete)
-	s.HandleFunc("/person", ListPeople).Methods(http.MethodGet)
-	s.HandleFunc("/person/{id}", GetPerson).Methods(http.MethodGet)
-	s.HandleFunc("/person/{id}", UpdatePerson).Methods(http.MethodPut)
-	s.HandleFunc("/personplayer/{id}", UpdatePersonPlayer).Methods(http.MethodPut)
-	s.HandleFunc("/personrole/{id}", UpdatePersonRole).Methods(http.MethodPut)
-	s.HandleFunc("/person/{id}", DeletePerson).Methods(http.MethodDelete)
+
+	s.HandleFunc("/queue", GetQueue).Methods(http.MethodGet)
 	s.HandleFunc("/metrics", GetMetrics).Methods(http.MethodGet)
-	s.HandleFunc("/queue", GetQueue).Methods(http.MethodGet)
-	s.HandleFunc("/move", PostMove).Methods(http.MethodPost)
-	s.HandleFunc("/queue", GetQueue).Methods(http.MethodGet)
 
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 }

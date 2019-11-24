@@ -39,9 +39,10 @@ ext {
 
     groupID = 'com.rsmaxwell.players'    
     artifactID = "${mainName}-${GOARCH}-${GOOS}"
-    myVersion = System.env.BUILD_ID
     packaging = "zip"
     classifier = "test"
+    
+    myVersion = System.getenv("BUILD_ID") ?: "SNAPSHOT"
 } 
 
 task updateVersionGO {

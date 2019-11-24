@@ -8,12 +8,12 @@ import (
 )
 
 var (
-	functionLogin = debug.NewFunction(pkg, "Login")
+	functionAuthenticate = debug.NewFunction(pkg, "Authenticate")
 )
 
-// Login method
-func Login(rw http.ResponseWriter, req *http.Request) {
-	f := functionLogin
+// Authenticate method
+func Authenticate(rw http.ResponseWriter, req *http.Request) {
+	f := functionAuthenticate
 
 	id, password, _ := req.BasicAuth()
 

@@ -1,14 +1,14 @@
 #!/bin/bash
 
-ENDPOINT="https://server.rsmaxwell.co.uk/players-api"
-#ENDPOINT="http://localhost:4201/players-api"
+#ENDPOINT="https://server.rsmaxwell.co.uk/players-api"
+ENDPOINT="http://localhost:4201/players-api"
 
 OPTIONS="--silent --cookie cookie-jar.txt --cookie-jar cookie-jar.txt --dump-header - -k"
 
 echo "------------------------------------------------------------------"
 echo "Register"
 
-COMMAND="/register"
+COMMAND="/users/register"
 
 cat > data.json <<EOT
 {  
@@ -28,14 +28,14 @@ curl ${OPTIONS} -X POST ${ENDPOINT}${COMMAND} \
 set +x
 
 echo "------------------------------------------------------------------"
-echo "Login"
+echo "Authenticate"
 
-COMMAND="/login"
+COMMAND="/users/authenticate"
 USERID="007"
 PASSWORD="topsecret"
 
 set -x
-curl ${OPTIONS} -X GET -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
+curl ${OPTIONS} -X POST -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
 --header "Accept: application/json"
 set +x
@@ -43,7 +43,7 @@ set +x
 echo "------------------------------------------------------------------"
 echo "Register"
 
-COMMAND="/register"
+COMMAND="/users/register"
 
 cat > data.json <<EOT
 {  
@@ -65,7 +65,7 @@ set +x
 echo "------------------------------------------------------------------"
 echo "Update Person Role"
 
-COMMAND="/personrole/alice"
+COMMAND="/users/role/alice"
 
 cat > data.json <<EOT
 {
@@ -84,7 +84,7 @@ set +x
 echo "------------------------------------------------------------------"
 echo "Update Person Player"
 
-COMMAND="/personplayer/alice"
+COMMAND="/users/player/alice"
 
 cat > data.json <<EOT
 {
@@ -103,7 +103,7 @@ set +x
 echo "------------------------------------------------------------------"
 echo "Read Person - alice"
 
-COMMAND="/person/alice"
+COMMAND="/users/alice"
 
 set -x
 curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
@@ -116,7 +116,7 @@ jq . output.txt
 echo "------------------------------------------------------------------"
 echo "Read People"
 
-COMMAND="/person"
+COMMAND="/users"
 
 cat > data.json <<EOT
 {
@@ -139,7 +139,7 @@ set +x
 echo "------------------------------------------------------------------"
 echo "Logout"
 
-COMMAND="/logout"
+COMMAND="/users/logout"
 
 set -x
 curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \

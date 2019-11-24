@@ -6,7 +6,7 @@ echo "${TIMESTAMP}   update-players-api"
 SCHEME="https"
 HOST="server.rsmaxwell.co.uk"
 BASE="archiva/repository"
-REPOSITORYID="releases"
+REPOSITORY="releases"
 GROUPID="com.rsmaxwell.players"
 ARTIFACTID="players-api-amd64-linux"
 PACKAGING=zip
@@ -55,7 +55,7 @@ function vercomp () {
 # Find the latest version available on the repository
 #####################################################################
 
-url="${SCHEME}://${HOST}/${BASE}/${REPOSITORYID}/${GROUPID//.//}/${ARTIFACTID}/maven-metadata.xml"
+url="${SCHEME}://${HOST}/${BASE}/${REPOSITORY}/${GROUPID//.//}/${ARTIFACTID}/maven-metadata.xml"
 
 rm -rf maven-metadata.xml
 wget --quiet "${url}"
@@ -134,7 +134,7 @@ sudo rm -rf /opt/players-api*
 #####################################################################
 # Download and extract the 'players-api' artifact from the repository
 #####################################################################
-url="${SCHEME}://${HOST}/${BASE}/${REPOSITORYID}/${GROUPID//.//}/${ARTIFACTID}/${latest_version}/${ARTIFACTID}-${latest_version}.${PACKAGING}"
+url="${SCHEME}://${HOST}/${BASE}/${REPOSITORY}/${GROUPID//.//}/${ARTIFACTID}/${latest_version}/${ARTIFACTID}-${latest_version}.${PACKAGING}"
 
 download="/tmp/${ARTIFACTID}.${PACKAGING}"
 rm -rf "${download}"

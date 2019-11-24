@@ -15,7 +15,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestLogin(t *testing.T) {
+func TestAuthenticate(t *testing.T) {
 
 	teardown := model.SetupOne(t)
 	defer teardown(t)
@@ -54,7 +54,7 @@ func TestLogin(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 
 			// Create a request to pass to our handler.
-			req, err := http.NewRequest("GET", contextPath+"/login", nil)
+			req, err := http.NewRequest("POST", contextPath+"/login", nil)
 			require.Nil(t, err, "err should be nothing")
 
 			req.Header.Set("Authorization", model.BasicAuth(test.userID, test.password))

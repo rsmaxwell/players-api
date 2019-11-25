@@ -63,6 +63,7 @@ task updateVersionGO {
 }
 
 task updateJWTSecretKey {
+    onlyIf { System.env.BUILD_ID != null }
     doLast {
         def generator = { String alphabet, int n ->
           new Random().with {

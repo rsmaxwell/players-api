@@ -33,7 +33,7 @@ ext {
         }
         GOARCH = os.toString().trim()
     }
-
+            
     mainName = "players-api"
     testName = "generate-test-data"
 
@@ -44,6 +44,12 @@ ext {
     
     myVersion = System.getenv("BUILD_ID") ?: "SNAPSHOT"
 } 
+
+task generate {
+    dependsOn 'updateVersionGO'
+    dependsOn 'updateJWTSecretKey'
+    dependsOn 'writeVersionJSON'
+}
 
 task updateVersionGO {
     onlyIf { System.env.BUILD_ID != null }
@@ -56,15 +62,28 @@ task updateVersionGO {
     }
 }
 
+task updateJWTSecretKey {
+    doLast {
+        def generator = { String alphabet, int n ->
+          new Random().with {
+            (1..n).collect { alphabet[ nextInt( alphabet.length() ) ] }.join()
+          }
+        }
+        ext.jwtSecretKey = generator( (('A'..'Z')+('0'..'9')+('a'..'z')).join(), 16 )
+
+        ant.replace(dir: 'internal', includes: '**/postAuthenticate.go', token: '<JWT_SECRET_KEY>', value: jwtSecretKey)
+    }
+}
+
 task writeVersionJSON {
     onlyIf { System.env.BUILD_ID != null }
     doLast {
         def data = [
-            version:     System.env.BUILD_ID,
+            version:      System.env.BUILD_ID,
             buildDate:    TIMESTAMP,
             gitCommit:    System.env.GIT_COMMIT,
             gitBranch:    System.env.GIT_BRANCH,
-            gitURL:        System.env.GIT_URL
+            gitURL:       System.env.GIT_URL
         ]
 
         def json_str = groovy.json.JsonOutput.toJson(data)
@@ -82,6 +101,11 @@ goBuild {
 
 task clean(type: Delete) {
   delete 'build'
+}
+
+task zip {
+     dependsOn 'mainZip'
+     dependsOn 'testZip'
 }
 
 task mainZip(type: Zip) {

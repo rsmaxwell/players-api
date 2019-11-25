@@ -466,9 +466,7 @@ func Load(id string) (*Person, error) {
 
 	filename, err := makeFilename(id)
 	if err != nil {
-		message := fmt.Sprintf("could not make filename for person[%s]: %v", id, err)
-		f.Dump(message)
-		return nil, codeerror.NewInternalServerError(message)
+		return nil, err
 	}
 
 	data, err := ioutil.ReadFile(filename)

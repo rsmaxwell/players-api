@@ -163,9 +163,7 @@ func (c *Court) Add() (string, error) {
 
 	count, err := getAndIncrementCurrentCourtID()
 	if err != nil {
-		message := fmt.Sprintf("could not increment the court counter: %v", err)
-		f.Dump(message)
-		return "", codeerror.NewInternalServerError(message)
+		return "", err
 	}
 
 	id := strconv.Itoa(count)
@@ -297,9 +295,9 @@ func Load(ref *common.Reference) (*Court, error) {
 	var c Court
 	err = json.Unmarshal(data, &c)
 	if err != nil {
-		message := fmt.Sprintf("could not unmarshal court [%s]", filename)
-		f.Dump(message)
-		return nil, codeerror.NewInternalServerError(message)
+		message := fmt.Sprintf("could not unmarshal [%s]: %v", filename, err)
+		f.Dump(message).AddByteArray(filename, data)
+		return nil, codeerror.NewInternalServerError(err.Error())
 	}
 	return &c, nil
 }
@@ -318,11 +316,11 @@ func Remove(id string) error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			return codeerror.NewNotFound(fmt.Sprintf("file not found: [%s]", filename))
-		} else {
-			message := fmt.Sprintf("could not stat: [%s]: %v", filename, err)
-			f.Dump(message)
-			return codeerror.NewInternalServerError(message)
 		}
+
+		message := fmt.Sprintf("could not stat: [%s]: %v", filename, err)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
 	}
 
 	err = os.Remove(filename)
@@ -353,7 +351,6 @@ func GetCourtInfo() (*Info, error) {
 
 		err = makefileStructure()
 		if err != nil {
-			f.Dump("could not make the court file structure: %v", err)
 			return nil, err
 		}
 
@@ -375,8 +372,8 @@ func GetCourtInfo() (*Info, error) {
 	var i Info
 	err = json.Unmarshal(data, &i)
 	if err != nil {
-		message := fmt.Sprintf("could not unmarshal the court info file [%s]: %v", courtInfoFile, err)
-		f.Dump(message)
+		message := fmt.Sprintf("could not unmarshal [%s]: %v", courtInfoFile, err)
+		f.Dump(message).AddByteArray("courtInfoFile", data)
 		return nil, codeerror.NewInternalServerError(message)
 	}
 
@@ -412,11 +409,9 @@ func saveCourtInfo(i Info) error {
 
 // getAndIncrementCurrentCourtID returns the CurrentID and then increments the CurrentID on disk
 func getAndIncrementCurrentCourtID() (int, error) {
-	f := functionGetAndIncrementCurrentCourtID
 
 	i, err := GetCourtInfo()
 	if err != nil {
-		f.Dump("could not get the court info: %v", err)
 		return 0, err
 	}
 
@@ -425,7 +420,6 @@ func getAndIncrementCurrentCourtID() (int, error) {
 
 	err = saveCourtInfo(*i)
 	if err != nil {
-		f.Dump("could not save the court info: %v", err)
 		return 0, err
 	}
 

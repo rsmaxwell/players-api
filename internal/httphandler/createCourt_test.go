@@ -62,7 +62,7 @@ func TestCreateCourt(t *testing.T) {
 			token:          goodToken,
 			name:           "Court 1",
 			players:        []string{},
-			expectedStatus: http.StatusTeapot,
+			expectedStatus: http.StatusOK,
 		},
 		{
 			testName:       "no login cookie",

@@ -286,9 +286,14 @@ func (f *Function) DebugRequestBody(data []byte) {
 
 // Dump type
 type Dump struct {
+	directory string
+	err       error
+}
+
+// DumpInfo type
+type DumpInfo struct {
 	GroupID       string `json:"groupidid"`
 	Artifact      string `json:"artifact"`
-	Classifier    string `json:"classifier"`
 	RepositoryURL string `json:"repositoryurl"`
 	Timestamp     string `json:"timestamp"`
 	TimeUnix      int64  `json:"timeunix"`
@@ -307,17 +312,19 @@ type Dump struct {
 }
 
 // Dump function
-func (f *Function) Dump(format string, a ...interface{}) (string, error) {
+func (f *Function) Dump(format string, a ...interface{}) *Dump {
+
+	dump := new(Dump)
 
 	t := time.Now()
 	now := fmt.Sprintf(t.Format("2006-01-02_15-04-05.999999999"))
-	dumpDir := dumpRoot + "/" + now
+	dump.directory = dumpRoot + "/" + now
 
-	f.DebugError("DUMP: writing dump:[%s]", dumpDir)
-	err := os.MkdirAll(dumpDir, 0755)
+	f.DebugError("DUMP: writing dump:[%s]", dump.directory)
+	err := os.MkdirAll(dump.directory, 0755)
 	if err != nil {
-		f.DebugError("DUMP: %v", err)
-		return "", err
+		dump.err = err
+		return dump
 	}
 
 	pc, fn, line, ok := runtime.Caller(1)
@@ -330,51 +337,196 @@ func (f *Function) Dump(format string, a ...interface{}) (string, error) {
 	// *****************************************************************
 	// * Main dump info
 	// *****************************************************************
-	dump := new(Dump)
-	dump.GroupID = "com.rsmaxwell.players"
-	dump.Artifact = "players-api"
-	dump.Classifier = "test"
-	dump.RepositoryURL = "https://server.rsmaxwell.co.uk/archiva"
-	dump.Timestamp = now
-	dump.TimeUnix = t.Unix()
-	dump.TimeUnixNano = t.UnixNano()
-	dump.Package = f.pkg.name
-	dump.Function = f.name
-	dump.FuncForPC = runtime.FuncForPC(pc).Name()
-	dump.Filename = fn
-	dump.Line = line
-	dump.Version = version.Version()
-	dump.BuildDate = version.BuildDate()
-	dump.GitCommit = version.GitCommit()
-	dump.GitBranch = version.GitBranch()
-	dump.GitURL = version.GitURL()
-	dump.Message = fmt.Sprintf(format, a...)
+	info := new(DumpInfo)
+	info.GroupID = "com.rsmaxwell.players"
+	info.Artifact = "players-api"
+	info.RepositoryURL = "https://server.rsmaxwell.co.uk/archiva"
+	info.Timestamp = now
+	info.TimeUnix = t.Unix()
+	info.TimeUnixNano = t.UnixNano()
+	info.Package = f.pkg.name
+	info.Function = f.name
+	info.FuncForPC = runtime.FuncForPC(pc).Name()
+	info.Filename = fn
+	info.Line = line
+	info.Version = version.Version()
+	info.BuildDate = version.BuildDate()
+	info.GitCommit = version.GitCommit()
+	info.GitBranch = version.GitBranch()
+	info.GitURL = version.GitURL()
+	info.Message = fmt.Sprintf(format, a...)
 
-	json, err := json.Marshal(dump)
+	json, err := json.Marshal(info)
 	if err != nil {
-		f.DebugError("DUMP: %v", err)
-		return "", err
+		dump.err = err
+		return dump
 	}
 
-	filename := dumpDir + "/dump.json"
+	filename := dump.directory + "/dump.json"
 
 	err = ioutil.WriteFile(filename, json, 0644)
 	if err != nil {
-		f.DebugError("DUMP: %v", err)
-		return "", err
+		dump.err = err
+		return dump
 	}
 
 	// *****************************************************************
 	// * Call stack
 	// *****************************************************************
 	stacktrace := debug.Stack()
-	filename = dumpDir + "/callstack.txt"
+	filename = dump.directory + "/callstack.txt"
 
 	err = ioutil.WriteFile(filename, stacktrace, 0644)
 	if err != nil {
-		f.DebugError("DUMP: %v", err)
-		return "", err
+		dump.err = err
+		return dump
 	}
 
-	return dumpDir, nil
+	return dump
+}
+
+// AddByteArray method
+func (dump *Dump) AddByteArray(title string, data []byte) *Dump {
+
+	if dump.err != nil {
+		return dump
+	}
+
+	filename := dump.directory + "/" + title
+
+	err := ioutil.WriteFile(filename, data, 0644)
+	if err != nil {
+		dump.err = err
+		return dump
+	}
+
+	return dump
+}
+
+// MarkDumps type
+type MarkDumps struct {
+	dumps map[string]bool
+	err   error
+}
+
+// Mark method
+func Mark() *MarkDumps {
+
+	mark := new(MarkDumps)
+
+	files, err := ioutil.ReadDir(dumpRoot)
+	if err != nil {
+		mark.err = err
+		return mark
+	}
+
+	mark.dumps = map[string]bool{}
+
+	for _, file := range files {
+		if file.IsDir() {
+			mark.dumps[file.Name()] = true
+		}
+	}
+
+	return mark
+}
+
+// ListNewDumps method
+func (mark *MarkDumps) ListNewDumps() ([]*Dump, error) {
+
+	if mark.err != nil {
+		return nil, mark.err
+	}
+
+	files, err := ioutil.ReadDir(dumpRoot)
+	if err != nil {
+		mark.err = err
+		return nil, err
+	}
+
+	newdumps := []*Dump{}
+
+	for _, file := range files {
+		if file.IsDir() {
+			if !mark.dumps[file.Name()] {
+
+				dump := new(Dump)
+				dump.directory = dumpRoot + "/" + file.Name()
+
+				newdumps = append(newdumps, dump)
+			}
+		}
+	}
+
+	return newdumps, nil
+}
+
+// ListDumps method
+func ListDumps() ([]*Dump, error) {
+
+	files, err := ioutil.ReadDir(dumpRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	newdumps := []*Dump{}
+
+	for _, file := range files {
+		if file.IsDir() {
+			dump := new(Dump)
+			dump.directory = dumpRoot + "/" + file.Name()
+
+			newdumps = append(newdumps, dump)
+		}
+	}
+
+	return newdumps, nil
+}
+
+// Remove function
+func (dump *Dump) Remove() error {
+
+	err := os.RemoveAll(dump.directory)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetInfo function
+func (dump *Dump) GetInfo() (*DumpInfo, error) {
+
+	infofile := dump.directory + "/dump.json"
+
+	data, err := ioutil.ReadFile(infofile)
+	if err != nil {
+		return nil, err
+	}
+
+	var info DumpInfo
+	err = json.Unmarshal(data, &info)
+	if err != nil {
+		return nil, err
+	}
+
+	return &info, nil
+}
+
+// ClearDumps function
+func ClearDumps() error {
+
+	dumps, err := ListDumps()
+	if err != nil {
+		return err
+	}
+
+	for _, dump := range dumps {
+		err = dump.Remove()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

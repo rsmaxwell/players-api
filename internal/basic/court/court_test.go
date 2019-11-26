@@ -9,6 +9,7 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/rsmaxwell/players-api/internal/debug"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,6 +17,9 @@ import (
 
 // SetupTestcase function
 func setupTestcase(t *testing.T) func(t *testing.T) {
+
+	err := debug.ClearDumps()
+	require.Nil(t, err, "err should be nothing")
 
 	list, err := List()
 	require.Nil(t, err, "err should be nothing")
@@ -43,8 +47,15 @@ func TestNewInfoUnreadableInfofileCourt(t *testing.T) {
 	err := ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
 	require.Nil(t, err, "err should be nothing")
 
+	mark := debug.Mark()
+
 	// Attempt to use the info file
 	_, err = New("Fred", []string{}).Add()
+
+	dumps, err2 := mark.ListNewDumps()
+	require.Nil(t, err2, "err should be nothing")
+	require.Equal(t, len(dumps), 1, fmt.Sprintf("expected %d dump, actual %d", 1, len(dumps)))
+
 	if err != nil {
 		if cerr, ok := err.(*codeerror.CodeError); ok {
 			if cerr.Code() != http.StatusInternalServerError {

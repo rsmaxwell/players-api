@@ -3,11 +3,11 @@ package httphandler
 import (
 	"encoding/json"
 	"net/http"
-	"os"
-	"strings"
 
-	"github.com/astaxie/beego/session"
 	"github.com/gorilla/mux"
+
+	"github.com/dgrijalva/jwt-go"
+
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
@@ -24,37 +24,8 @@ var (
 
 	pkg = debug.NewPackage("httphandler")
 
-	functionInit       = debug.NewFunction(pkg, "init")
 	functionMiddleware = debug.NewFunction(pkg, "Middleware")
-
-	globalSessions *session.Manager
 )
-
-func init() {
-	f := functionInit
-
-	home := strings.Replace(common.HomeDir(), "\\", "/", -1)
-	sessionDir := home + "/players-api/sessions"
-
-	err := os.MkdirAll(sessionDir, 0755)
-	if err != nil {
-		f.Fatalf(err.Error())
-	}
-
-	cfg := session.ManagerConfig{}
-	cfg.CookieName = "players-api"
-	cfg.Gclifetime = 60
-	cfg.ProviderConfig = sessionDir
-	cfg.EnableSetCookie = true
-	cfg.CookieLifeTime = 3 * 60 * 60
-
-	globalSessions, err = session.NewManager("file", &cfg)
-	if err != nil {
-		f.Fatalf(err.Error())
-	}
-
-	go globalSessions.GC()
-}
 
 // WriteResponse method
 func WriteResponse(w http.ResponseWriter, httpStatus int, message string) {
@@ -95,6 +66,36 @@ func errorHandler(rw http.ResponseWriter, req *http.Request, err error) {
 		common.MetricsData.ClientError++
 		return
 	}
+}
+
+// checkAuthToken method
+func checkAuthToken(req *http.Request) (*Claims, error) {
+
+	cookie, err := req.Cookie("players-api")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			return nil, codeerror.NewUnauthorized(err.Error())
+		}
+		return nil, codeerror.NewInternalServerError(err.Error())
+	}
+
+	tokenString := cookie.Value
+	claims := &Claims{}
+
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return nil, codeerror.NewUnauthorized(err.Error())
+		}
+		return nil, codeerror.NewBadRequest(err.Error())
+	}
+	if !token.Valid {
+		return nil, codeerror.NewUnauthorized(err.Error())
+	}
+
+	return claims, nil
 }
 
 // SetupHandlers Handlers for REST API routes

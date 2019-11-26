@@ -27,27 +27,15 @@ var (
 func UpdateCourt(rw http.ResponseWriter, req *http.Request) {
 	f := functionUpdateCourt
 
-	session, err := globalSessions.SessionStart(rw, req)
+	claims, err := checkAuthToken(req)
 	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, err.Error())
-		common.MetricsData.ServerError++
+		errorHandler(rw, req, err)
 		return
 	}
-	defer session.SessionRelease(rw)
-	value := session.Get("id")
-	if value == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		return
-	}
-	userID, ok := value.(string)
-	if !ok {
-		f.Dump("Unexpected type for userID: %t: %v", value, value)
-		WriteResponse(rw, http.StatusInternalServerError, "Not Authorized")
-		return
-	}
-	p, err := person.Load(userID)
+
+	p, err := person.Load(claims.UserID)
 	if err != nil {
-		f.Dump("Could not load the logged on user[%s]: %v", userID, err)
+		f.Dump("Could not load the logged on user[%s]: %v", claims.UserID, err)
 		WriteResponse(rw, http.StatusInternalServerError, "Not Authorized")
 		return
 	}

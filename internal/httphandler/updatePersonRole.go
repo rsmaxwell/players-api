@@ -2,7 +2,6 @@ package httphandler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -26,23 +25,9 @@ var (
 func UpdatePersonRole(rw http.ResponseWriter, req *http.Request) {
 	f := functionUpdatePersonRole
 
-	session, err := globalSessions.SessionStart(rw, req)
+	claims, err := checkAuthToken(req)
 	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, err.Error())
-		common.MetricsData.ServerError++
-		return
-	}
-	defer session.SessionRelease(rw)
-	value := session.Get("id")
-	if value == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		return
-	}
-	userID, ok := value.(string)
-	if !ok {
-		message := fmt.Sprintf("The type of 'id' is Unexpected: %T", value)
-		f.Dump(message)
-		WriteResponse(rw, http.StatusInternalServerError, message)
+		errorHandler(rw, req, err)
 		return
 	}
 
@@ -67,7 +52,7 @@ func UpdatePersonRole(rw http.ResponseWriter, req *http.Request) {
 	id := mux.Vars(req)["id"]
 	f.DebugVerbose("ID: %s", id)
 
-	err = model.UpdatePersonRole(userID, id, r.Role)
+	err = model.UpdatePersonRole(claims.UserID, id, r.Role)
 	if err != nil {
 		errorHandler(rw, req, err)
 		return

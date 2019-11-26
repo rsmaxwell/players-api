@@ -472,12 +472,10 @@ func Load(id string) (*Person, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			message := fmt.Sprintf("the file [%s] does not exist, for person[%s]", filename, id)
-			f.Dump(message)
-			return nil, codeerror.NewNotFound(message)
+			return nil, codeerror.NewNotFound(fmt.Sprintf("file not found: [%s]", filename))
 		}
 
-		message := fmt.Sprintf("could not read the file [%s] for person[%s]: %v", filename, id, err)
+		message := fmt.Sprintf("could not read file: [%s]: %v", filename, err)
 		f.Dump(message)
 		return nil, codeerror.NewInternalServerError(message)
 	}
@@ -499,31 +497,27 @@ func Remove(id string) error {
 
 	filename, err := makeFilename(id)
 	if err != nil {
-		message := fmt.Sprintf("could not make filename for person[%s]: %v", id, err)
+		return err
+	}
+
+	_, err = os.Stat(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return codeerror.NewNotFound(fmt.Sprintf("file not found: [%s]", filename))
+		}
+
+		message := fmt.Sprintf("could not stat file: [%s]: %v", filename, err)
 		f.Dump(message)
 		return codeerror.NewInternalServerError(message)
 	}
 
-	_, err = os.Stat(filename)
-
-	if err == nil { // File exists
-		err = os.Remove(filename)
-		if err != nil {
-			message := fmt.Sprintf("could not remove file [%s] for person[%s]: %v", filename, id, err)
-			f.Dump(message)
-			return codeerror.NewInternalServerError(message)
-		}
-		return nil
-
-	} else if os.IsNotExist(err) { // File does not exist
-		message := fmt.Sprintf("the file [%s] for person[%s] could not be found: %v", filename, id, err)
+	err = os.Remove(filename)
+	if err != nil {
+		message := fmt.Sprintf("could not remove file [%s] for person[%s]: %v", filename, id, err)
 		f.Dump(message)
-		return codeerror.NewNotFound(message)
+		return codeerror.NewInternalServerError(message)
 	}
-
-	message := fmt.Sprintf("could not stat the file [%s] for person[%s]: %v", filename, id, err)
-	f.Dump(message)
-	return codeerror.NewInternalServerError(message)
+	return nil
 }
 
 // Size returns the number of people
@@ -546,13 +540,16 @@ func Exists(id string) bool {
 
 	filename, err := makeFilename(id)
 	if err != nil {
-		f.Dump("could not make the filename for person[%s]: %v", id, err)
 		return false
 	}
 
 	_, err = os.Stat(filename)
 	if err != nil {
-		f.DebugVerbose("could not stat the file[%s] for person[%s]: %v", filename, id, err)
+		if os.IsNotExist(err) {
+			return false
+		}
+
+		f.Dump(fmt.Sprintf("could not stat file: [%s]: %v", filename, err))
 		return false
 	}
 

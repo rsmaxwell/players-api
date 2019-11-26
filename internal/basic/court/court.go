@@ -287,11 +287,11 @@ func Load(ref *common.Reference) (*Court, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			f.Dump(fmt.Sprintf("could not read court[%s] file [%s]", ref.Type, filename))
-			return nil, codeerror.NewNotFound(fmt.Sprintf("could not read court[%s]", ref.Type))
+			return nil, codeerror.NewNotFound(fmt.Sprintf("File not found: [%s]", filename))
 		}
-		f.Dump(fmt.Sprintf("could not read court[%s] file [%s]: %v", ref.Type, filename, err))
-		return nil, codeerror.NewInternalServerError(fmt.Sprintf("could not read court[%s]", ref.Type))
+		message := fmt.Sprintf("could not read court[%s] file [%s]: %v", ref.Type, filename, err)
+		f.Dump(message)
+		return nil, codeerror.NewInternalServerError(message)
 	}
 
 	var c Court

@@ -70,7 +70,7 @@ task updateJWTSecretKey {
             (1..n).collect { alphabet[ nextInt( alphabet.length() ) ] }.join()
           }
         }
-        ext.jwtSecretKey = generator( (('A'..'Z')+('0'..'9')+('a'..'z')).join(), 16 )
+        ext.jwtSecretKey = generator( (('A'..'Z')+('0'..'9')+('a'..'z')).join(), 64 )
 
         ant.replace(dir: 'internal', includes: '**/postAuthenticate.go', token: '<JWT_SECRET_KEY>', value: jwtSecretKey)
     }

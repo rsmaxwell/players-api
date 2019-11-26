@@ -16,7 +16,6 @@ func DeletePerson(id string) error {
 
 	err := person.Remove(id)
 	if err != nil {
-		f.Dump("could not remove person: %v", err)
 		return err
 	}
 

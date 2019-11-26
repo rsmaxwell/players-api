@@ -82,7 +82,7 @@ func TestRegister(t *testing.T) {
 				log.Fatalln(err)
 			}
 
-			req, err := http.NewRequest("POST", contextPath+"/register", bytes.NewBuffer(requestBody))
+			req, err := http.NewRequest("POST", contextPath+"/users/register", bytes.NewBuffer(requestBody))
 			require.Nil(t, err)
 
 			// Serve the request

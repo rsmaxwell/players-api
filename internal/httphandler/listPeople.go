@@ -29,16 +29,9 @@ var (
 func ListPeople(rw http.ResponseWriter, req *http.Request) {
 	f := functionListPeople
 
-	session, err := globalSessions.SessionStart(rw, req)
+	_, err := checkAuthToken(req)
 	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, err.Error())
-		common.MetricsData.ServerError++
-		return
-	}
-	defer session.SessionRelease(rw)
-	value := session.Get("id")
-	if value == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		errorHandler(rw, req, err)
 		return
 	}
 

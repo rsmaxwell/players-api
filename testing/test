@@ -37,8 +37,40 @@ PASSWORD="topsecret"
 set -x
 curl ${OPTIONS} -X POST -u "${USERID}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
 --header "Content-Type: application/json" \
---header "Accept: application/json"
+--header "Accept: application/json" \
+--output output.txt > status.txt
 set +x
+
+
+
+result=$?
+status=$(cat status.txt)
+
+echo "result: ${result}"
+echo "status: ${status}"
+jq . output.txt
+
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ ${status} -eq 200 ]; then
+    : # ok
+elif [ ${status} -eq 400 ]; then
+    : # ok, already exists
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+
+
+
+
+
+
 
 echo "------------------------------------------------------------------"
 echo "Register"

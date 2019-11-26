@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -326,6 +327,9 @@ func (f *Function) Dump(format string, a ...interface{}) (string, error) {
 		fmt.Println(fmt.Sprintf("filename: %s[%d]", fn, line))
 	}
 
+	// *****************************************************************
+	// * Main dump info
+	// *****************************************************************
 	dump := new(Dump)
 	dump.GroupID = "com.rsmaxwell.players"
 	dump.Artifact = "players-api"
@@ -355,6 +359,18 @@ func (f *Function) Dump(format string, a ...interface{}) (string, error) {
 	filename := dumpDir + "/dump.json"
 
 	err = ioutil.WriteFile(filename, json, 0644)
+	if err != nil {
+		f.DebugError("DUMP: %v", err)
+		return "", err
+	}
+
+	// *****************************************************************
+	// * Call stack
+	// *****************************************************************
+	stacktrace := debug.Stack()
+	filename = dumpDir + "/callstack.txt"
+
+	err = ioutil.WriteFile(filename, stacktrace, 0644)
 	if err != nil {
 		f.DebugError("DUMP: %v", err)
 		return "", err

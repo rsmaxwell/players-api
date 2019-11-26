@@ -6,7 +6,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/internal/basic/court"
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
@@ -24,16 +23,9 @@ var (
 func GetCourt(rw http.ResponseWriter, req *http.Request) {
 	f := functionGetCourt
 
-	session, err := globalSessions.SessionStart(rw, req)
+	_, err := checkAuthToken(req)
 	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, err.Error())
-		common.MetricsData.ServerError++
-		return
-	}
-	defer session.SessionRelease(rw)
-	userID := session.Get("id")
-	if userID == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		errorHandler(rw, req, err)
 		return
 	}
 

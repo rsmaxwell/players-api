@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
@@ -17,29 +16,16 @@ var (
 func DeletePerson(rw http.ResponseWriter, req *http.Request) {
 	f := functionDeletePerson
 
-	session, err := globalSessions.SessionStart(rw, req)
+	claims, err := checkAuthToken(req)
 	if err != nil {
-		WriteResponse(rw, http.StatusInternalServerError, err.Error())
-		common.MetricsData.ServerError++
-		return
-	}
-	defer session.SessionRelease(rw)
-	value := session.Get("id")
-	if value == nil {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
-		return
-	}
-	userID, ok := value.(string)
-	if !ok {
-		f.Dump("Unexpected type for userID: %T: %v", value, value)
-		WriteResponse(rw, http.StatusInternalServerError, "Not Authorized")
+		errorHandler(rw, req, err)
 		return
 	}
 
 	id := mux.Vars(req)["id"]
 	f.DebugVerbose("ID: %s", id)
 
-	if userID == id {
+	if claims.UserID == id {
 		f.DebugVerbose("Attempt delete self: %s", id)
 		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
 		return

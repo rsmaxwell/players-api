@@ -25,7 +25,7 @@ func TestUpdatePersonPlayer(t *testing.T) {
 	// ***************************************************************
 	// * Login to get valid session
 	// ***************************************************************
-	req, err := http.NewRequest("GET", contextPath+"/login", nil)
+	req, err := http.NewRequest("POST", contextPath+"/users/authenticate", nil)
 	require.Nil(t, err, "err should be nothing")
 
 	userID := "007"
@@ -37,12 +37,13 @@ func TestUpdatePersonPlayer(t *testing.T) {
 	rw := httptest.NewRecorder()
 	router.ServeHTTP(rw, req)
 
-	sess, err := globalSessions.SessionStart(rw, req)
-	require.Nil(t, err, "err should be nothing")
-	defer sess.SessionRelease(rw)
+	cookies := map[string]string{}
+	for _, cookie := range rw.Result().Cookies() {
+		cookies[cookie.Name] = cookie.Value
+	}
 
-	goodSID := sess.SessionID()
-	require.NotNil(t, goodSID, "err should be nothing")
+	goodToken := cookies["players-api"]
+	require.NotNil(t, goodToken, "token should be something")
 
 	// ***************************************************************
 	// * Testcases
@@ -50,7 +51,7 @@ func TestUpdatePersonPlayer(t *testing.T) {
 	tests := []struct {
 		testName       string
 		setLoginCookie bool
-		sid            string
+		token          string
 		id             string
 		player         bool
 		expectedStatus int
@@ -58,7 +59,7 @@ func TestUpdatePersonPlayer(t *testing.T) {
 		{
 			testName:       "Good request - false",
 			setLoginCookie: true,
-			sid:            goodSID,
+			token:          goodToken,
 			id:             goodUserID,
 			player:         false,
 			expectedStatus: http.StatusOK,
@@ -66,7 +67,7 @@ func TestUpdatePersonPlayer(t *testing.T) {
 		{
 			testName:       "Good request - true",
 			setLoginCookie: true,
-			sid:            goodSID,
+			token:          goodToken,
 			id:             goodUserID,
 			player:         true,
 			expectedStatus: http.StatusOK,
@@ -74,7 +75,7 @@ func TestUpdatePersonPlayer(t *testing.T) {
 		{
 			testName:       "no login cookie",
 			setLoginCookie: false,
-			sid:            goodSID,
+			token:          goodToken,
 			id:             goodUserID,
 			player:         false,
 			expectedStatus: http.StatusUnauthorized,
@@ -82,7 +83,7 @@ func TestUpdatePersonPlayer(t *testing.T) {
 		{
 			testName:       "Bad userID",
 			setLoginCookie: true,
-			sid:            goodSID,
+			token:          goodToken,
 			id:             "junk",
 			player:         false,
 			expectedStatus: http.StatusNotFound,
@@ -106,7 +107,7 @@ func TestUpdatePersonPlayer(t *testing.T) {
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			req, err := http.NewRequest("PUT", contextPath+"/personplayer/"+test.id, bytes.NewBuffer(requestBody))
+			req, err := http.NewRequest("PUT", contextPath+"/users/player/"+test.id, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			// set a cookie with the value of the login sid
@@ -114,7 +115,7 @@ func TestUpdatePersonPlayer(t *testing.T) {
 				cookieLifeTime := 3 * 60 * 60
 				cookie := http.Cookie{
 					Name:    "players-api",
-					Value:   test.sid,
+					Value:   test.token,
 					MaxAge:  cookieLifeTime,
 					Expires: time.Now().Add(time.Duration(cookieLifeTime) * time.Second),
 				}

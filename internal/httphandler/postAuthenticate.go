@@ -54,19 +54,10 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	http.SetCookie(rw, &http.Cookie{
-		Name:    "token2",
+		Name:    "players-api",
 		Value:   tokenString,
 		Expires: expirationTime,
 	})
-
-	sess, err := globalSessions.SessionStart(rw, req)
-	if err != nil {
-		errorHandler(rw, req, err)
-		return
-	}
-	defer sess.SessionRelease(rw)
-
-	sess.Set("id", id)
 
 	setHeaders(rw, req)
 	rw.WriteHeader(http.StatusOK)

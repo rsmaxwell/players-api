@@ -22,7 +22,7 @@ func TestGetMetrics(t *testing.T) {
 	// ***************************************************************
 	// * Login to get valid session
 	// ***************************************************************
-	req, err := http.NewRequest("GET", contextPath+"/login", nil)
+	req, err := http.NewRequest("POST", contextPath+"/users/authenticate", nil)
 	require.Nil(t, err, "err should be nothing")
 
 	userID := "007"
@@ -34,12 +34,13 @@ func TestGetMetrics(t *testing.T) {
 	rw := httptest.NewRecorder()
 	router.ServeHTTP(rw, req)
 
-	sess, err := globalSessions.SessionStart(rw, req)
-	require.Nil(t, err, "err should be nothing")
-	defer sess.SessionRelease(rw)
+	cookies := map[string]string{}
+	for _, cookie := range rw.Result().Cookies() {
+		cookies[cookie.Name] = cookie.Value
+	}
 
-	goodSID := sess.SessionID()
-	require.NotNil(t, goodSID, "err should be nothing")
+	goodToken := cookies["players-api"]
+	require.NotNil(t, goodToken, "token should be something")
 
 	// ***************************************************************
 	// * Testcases
@@ -47,26 +48,26 @@ func TestGetMetrics(t *testing.T) {
 	tests := []struct {
 		testName       string
 		setLoginCookie bool
-		sid            string
+		token          string
 		expectedStatus int
 	}{
 		{
 			testName:       "Good request",
 			setLoginCookie: true,
-			sid:            goodSID,
+			token:          goodToken,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			testName:       "no login cookie",
 			setLoginCookie: false,
-			sid:            goodSID,
+			token:          goodToken,
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
-			testName:       "bad sid",
+			testName:       "bad token",
 			setLoginCookie: true,
-			sid:            "junk",
-			expectedStatus: http.StatusUnauthorized,
+			token:          "junk",
+			expectedStatus: http.StatusBadRequest,
 		},
 	}
 
@@ -90,7 +91,7 @@ func TestGetMetrics(t *testing.T) {
 				cookieLifeTime := 3 * 60 * 60
 				cookie := http.Cookie{
 					Name:    "players-api",
-					Value:   test.sid,
+					Value:   test.token,
 					MaxAge:  cookieLifeTime,
 					Expires: time.Now().Add(time.Duration(cookieLifeTime) * time.Second),
 				}

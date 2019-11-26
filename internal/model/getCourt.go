@@ -18,7 +18,6 @@ func GetCourt(id string) (*court.Court, error) {
 	ref := &common.Reference{Type: "court", ID: id}
 	court, err := court.Load(ref)
 	if err != nil {
-		f.Dump("could not load court: %v", err)
 		return nil, err
 	}
 

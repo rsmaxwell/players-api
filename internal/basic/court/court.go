@@ -315,23 +315,23 @@ func Remove(id string) error {
 	}
 
 	_, err = os.Stat(filename)
-
-	if err == nil { // File exists
-		err = os.Remove(filename)
-		if err != nil {
-			message := fmt.Sprintf("could not remove the file [%s] for court [%s]", filename, id)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return codeerror.NewNotFound(fmt.Sprintf("file not found: [%s]", filename))
+		} else {
+			message := fmt.Sprintf("could not stat: [%s]: %v", filename, err)
 			f.Dump(message)
 			return codeerror.NewInternalServerError(message)
 		}
-		return nil
-
-	} else if os.IsNotExist(err) { // File does not exist
-		message := fmt.Sprintf("the file [%s] for court [%s] does not exist", filename, id)
-		f.Dump(message)
-		return codeerror.NewNotFound(message)
 	}
 
-	return codeerror.NewInternalServerError(err.Error())
+	err = os.Remove(filename)
+	if err != nil {
+		message := fmt.Sprintf("could not remove the file [%s] for court [%s]", filename, id)
+		f.Dump(message)
+		return codeerror.NewInternalServerError(message)
+	}
+	return nil
 }
 
 // GetCourtInfo returns the Court class data

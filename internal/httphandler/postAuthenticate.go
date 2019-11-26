@@ -54,9 +54,10 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	http.SetCookie(rw, &http.Cookie{
-		Name:    "players-api",
-		Value:   tokenString,
-		Expires: expirationTime,
+		Name:     "players-api",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		HttpOnly: true,
 	})
 
 	setHeaders(rw, req)

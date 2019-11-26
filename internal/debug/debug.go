@@ -310,7 +310,7 @@ type Dump struct {
 func (f *Function) Dump(format string, a ...interface{}) (string, error) {
 
 	t := time.Now()
-	now := fmt.Sprintf(t.Format("20060102-150405"))
+	now := fmt.Sprintf(t.Format("2006-01-02 15-04-05.999999999"))
 	dumpDir := dumpRoot + "/" + now
 
 	f.DebugError("DUMP: writing dump:[%s]", dumpDir)

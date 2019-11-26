@@ -98,18 +98,7 @@ task writeVersionJSON {
 goBuild {
     go "build -o ./build/${mainName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE} github.com/rsmaxwell/players-api/cmd/${mainName}"
     go "build -o ./build/${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE} github.com/rsmaxwell/players-api/cmd/${testName}"
-}
-
-task test() {
-    doLast {
-        new ByteArrayOutputStream().withStream { os ->
-            def result = exec {
-                commandLine 'go', 'test', '-v', './...'
-                standardOutput = os
-            }
-            println os.toString()
-        }
-    }
+    go "test -v ./..."
 }
 
 task clean(type: Delete) {

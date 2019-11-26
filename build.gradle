@@ -100,8 +100,16 @@ goBuild {
     go "build -o ./build/${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE} github.com/rsmaxwell/players-api/cmd/${testName}"
 }
 
-task test {
-    go test -v ./...
+task test() {
+    doLast {
+        new ByteArrayOutputStream().withStream { os ->
+            def result = exec {
+                commandLine 'go', 'test', '-v', './...'
+                standardOutput = os
+            }
+            println os.toString()
+        }
+    }
 }
 
 task clean(type: Delete) {

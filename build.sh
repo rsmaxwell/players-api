@@ -9,7 +9,7 @@
 export GOPATH=${WORKSPACE}
 export PROJECT_DIR=${WORKSPACE}/src/github.com/rsmaxwell/players-api
 
-export PLAYERS_API_ROOTDIR=${PROJECT_DIR}/build/root
+export PLAYERS_API_ROOTDIR=${PROJECT_DIR}/testing/root
 export DEBUG_DUMP_DIR=${PROJECT_DIR}/build/dumps
 
 gradle clean generate build

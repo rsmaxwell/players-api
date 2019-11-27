@@ -74,6 +74,8 @@ func init() {
 	} else {
 		dumpRoot = common.HomeDir() + "/players-api-dump"
 	}
+
+	os.MkdirAll(dumpRoot, 0755)
 }
 
 func getEnvInteger(name string, def int) (int, error) {

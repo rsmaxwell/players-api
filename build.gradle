@@ -138,25 +138,26 @@ task clean() {
 }
 
 task zip {
-    doLast {
-        zip {
-            from('build') {
-                include "${mainName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
-                include 'version.json'
-            }
-            archiveName "${mainName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
-            destinationDir(file('./build'))
-        }
-        
-        zip {
-            from('build') {
-                include "${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
-                include 'version.json'
-            }
-            archiveName "${testName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
-            destinationDir(file('./build'))
-        }
+    dependsOn: zipMain
+    dependsOn: zipTest
+}
+
+task zipMain(type: Zip) {
+    from('build') {
+        include "${mainName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
+        include 'version.json'
     }
+    archiveName "${mainName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
+    destinationDir(file('./build'))
+}
+
+task zipTest(type: Zip) {
+    from('build') {
+        include "${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
+        include 'version.json'
+    }
+    archiveName "${testName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
+    destinationDir(file('./build'))
 }
 
 apply plugin: 'maven-publish'

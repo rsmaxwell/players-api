@@ -138,8 +138,8 @@ task clean() {
 }
 
 task zip {
-    dependsOn: zipMain
-    dependsOn: zipTest
+    dependsOn('zipMain')
+    dependsOn('zipTest')
 }
 
 task zipMain(type: Zip) {

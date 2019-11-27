@@ -138,11 +138,6 @@ task clean() {
 }
 
 task zip {
-    dependsOn 'mainZip'
-    dependsOn 'testZip'
-}
-
-task mainZip() {
     doLast {
         zip {
             from('build') {
@@ -152,11 +147,7 @@ task mainZip() {
             archiveName "${mainName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
             destinationDir(file('./build'))
         }
-    }
-}
-
-task testZip() {
-    doLast {
+        
         zip {
             from('build') {
                 include "${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"

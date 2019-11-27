@@ -53,6 +53,8 @@ func init() {
 	} else {
 		RootDir = HomeDir() + "/players-api"
 	}
+
+	os.MkdirAll(RootDir, 0755)
 }
 
 // CheckCharactersInID checks the characters are valid for an ID

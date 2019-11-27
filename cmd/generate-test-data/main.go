@@ -11,9 +11,9 @@ import (
 	"github.com/rsmaxwell/players-api/internal/basic/version"
 	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/rsmaxwell/players-api/internal/model"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var (

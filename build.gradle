@@ -95,37 +95,57 @@ task writeVersionJSON {
     }
 }
 
-goBuild {
-    go "build -o ./build/${mainName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE} github.com/rsmaxwell/players-api/cmd/${mainName}"
-    go "build -o ./build/${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE} github.com/rsmaxwell/players-api/cmd/${testName}"
-    go "test -v ./..."
+task build()  {
+    doLast {
+        exec {
+            commandLine 'go', 'build', '-o', "./build/${mainName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}", "github.com/rsmaxwell/players-api/cmd/${mainName}"
+        }
+        exec {
+            commandLine 'go', 'build', '-o', "./build/${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}", "github.com/rsmaxwell/players-api/cmd/${testName}"
+        }
+        exec {
+            commandLine 'go', 'test', './...'
+        }
+    }
 }
 
-task clean(type: Delete) {
-  delete 'build'
+task clean() {
+    doLast {
+        delete fileTree('./build') {
+            include '**/*'
+        }
+    }
 }
 
 task zip {
-     dependsOn 'mainZip'
-     dependsOn 'testZip'
+    dependsOn 'mainZip'
+    dependsOn 'testZip'
 }
 
-task mainZip(type: Zip) {
-   from('build') {
-       include "${mainName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
-       include 'version.json'
-   }
-   archiveName "${mainName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
-   destinationDir(file('./build'))
+task mainZip() {
+    doLast {
+        zip {
+            from('build') {
+                include "${mainName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
+                include 'version.json'
+            }
+            archiveName "${mainName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
+            destinationDir(file('./build'))
+        }
+    }
 }
 
-task testZip(type: Zip) {
-   from('build') {
-       include "${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
-       include 'version.json'
-   }
-   archiveName "${testName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
-   destinationDir(file('./build'))
+task testZip() {
+    doLast {
+        zip {
+            from('build') {
+                include "${testName}-${GOARCH}-${GOOS}-${myVersion}${GOEXE}"
+                include 'version.json'
+            }
+            archiveName "${testName}-${GOARCH}-${GOOS}-${myVersion}.${packaging}"
+            destinationDir(file('./build'))
+        }
+    }
 }
 
 apply plugin: 'maven-publish'

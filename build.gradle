@@ -95,6 +95,26 @@ task writeVersionJSON {
     }
 }
 
+task prepare()  {
+    doLast {
+        exec {
+            commandLine 'go', 'get', "github.com/dgrijalva/jwt-go"
+        }
+        exec {
+            commandLine 'go', 'get', "github.com/gorilla/mux"
+        }
+        exec {
+            commandLine 'go', 'get', "github.com/stretchr/testify/require"
+        }
+        exec {
+            commandLine 'go', 'get', "golang.org/x/crypto/bcrypt"
+        }
+        exec {
+            commandLine 'go', 'get', "gopkg.in/go-playground/validator.v9"
+        }
+    }
+}
+
 task build()  {
     doLast {
         exec {

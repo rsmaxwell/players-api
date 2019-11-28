@@ -1,12 +1,4 @@
 
-plugins {
-    id 'com.github.blindpirate.gogradle' version '0.11.4'
-}
-
-golang {
-    packagePath = 'github.com/rsmaxwell/players-api'
-}
-
 ext {
     TIMESTAMP = new Date().format('yyyy-MM-dd HH:mm:ss.SSS')
 

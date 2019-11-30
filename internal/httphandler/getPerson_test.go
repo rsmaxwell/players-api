@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
@@ -21,62 +20,56 @@ func TestGetPerson(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get valid session
+	// * Login to get tokens
 	// ***************************************************************
-	req, err := http.NewRequest("POST", contextPath+"/users/authenticate", nil)
-	require.Nil(t, err, "err should be nothing")
-
-	userID := "007"
-	password := "topsecret"
-	req.Header.Set("Authorization", model.BasicAuth(userID, password))
-
-	router := mux.NewRouter()
-	SetupHandlers(router)
-	rw := httptest.NewRecorder()
-	router.ServeHTTP(rw, req)
-
-	cookies := map[string]string{}
-	for _, cookie := range rw.Result().Cookies() {
-		cookies[cookie.Name] = cookie.Value
-	}
-
-	goodToken := cookies["players-api"]
-	require.NotNil(t, goodToken, "token should be something")
+	accessTokenString, refreshTokenCookie := testLogin(t, "007", "topsecret")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName           string
-		setLoginCookie     bool
-		token              string
-		userID             string
-		expectedStatus     int
-		expectedResultName string
+		testName            string
+		setAccessToken      bool
+		accessToken         string
+		useGoodRefreshToken bool
+		setRefreshToken     bool
+		refreshToken        string
+		userID              string
+		expectedStatus      int
+		expectedResultName  string
 	}{
 		{
-			testName:           "Good request",
-			setLoginCookie:     true,
-			token:              goodToken,
-			userID:             goodUserID,
-			expectedStatus:     http.StatusOK,
-			expectedResultName: "James",
+			testName:            "Good request",
+			setAccessToken:      true,
+			accessToken:         "Bearer " + accessTokenString,
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			userID:              goodUserID,
+			expectedStatus:      http.StatusOK,
+			expectedResultName:  "James",
 		},
 		{
-			testName:           "no login cookie",
-			setLoginCookie:     false,
-			token:              goodToken,
-			userID:             "junk",
-			expectedStatus:     http.StatusUnauthorized,
-			expectedResultName: "",
+			testName:            "no login cookie",
+			setAccessToken:      false,
+			accessToken:         "",
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			userID:              "junk",
+			expectedStatus:      http.StatusUnauthorized,
+			expectedResultName:  "",
 		},
 		{
-			testName:           "bad token",
-			setLoginCookie:     true,
-			token:              "junk",
-			userID:             "junk",
-			expectedStatus:     http.StatusBadRequest,
-			expectedResultName: "",
+			testName:            "bad token",
+			setAccessToken:      true,
+			accessToken:         "junk",
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			userID:              "junk",
+			expectedStatus:      http.StatusBadRequest,
+			expectedResultName:  "",
 		},
 	}
 
@@ -96,17 +89,8 @@ func TestGetPerson(t *testing.T) {
 			req, err := http.NewRequest("GET", contextPath+"/users/"+test.userID, nil)
 			require.Nil(t, err, "err should be nothing")
 
-			// set a cookie with the value of the login sid
-			if test.setLoginCookie {
-				cookieLifeTime := 3 * 60 * 60
-				cookie := http.Cookie{
-					Name:    "players-api",
-					Value:   test.token,
-					MaxAge:  cookieLifeTime,
-					Expires: time.Now().Add(time.Duration(cookieLifeTime) * time.Second),
-				}
-				req.AddCookie(&cookie)
-			}
+			setAccessToken(req, test.setAccessToken, test.accessToken)
+			setRefreshToken(req, test.useGoodRefreshToken, test.setRefreshToken, refreshTokenCookie, test.refreshToken)
 
 			// Serve the request
 			router2.ServeHTTP(rw, req)

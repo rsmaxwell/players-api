@@ -30,7 +30,8 @@ func main() {
 	f.Verbosef("    GitCommit: %s", version.GitCommit())
 	f.Verbosef("    GitBranch: %s", version.GitBranch())
 	f.Verbosef(".    GitURL:    %s", version.GitURL())
-	var ok bool
+
+	// var ok bool
 
 	portstring, ok := os.LookupEnv("PORT")
 	if !ok {

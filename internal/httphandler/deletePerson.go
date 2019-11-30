@@ -18,7 +18,7 @@ func DeletePerson(rw http.ResponseWriter, req *http.Request) {
 
 	claims, err := checkAuthToken(req)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
@@ -27,16 +27,15 @@ func DeletePerson(rw http.ResponseWriter, req *http.Request) {
 
 	if claims.UserID == id {
 		f.DebugVerbose("Attempt delete self: %s", id)
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		writeResponseMessage(rw, req, http.StatusUnauthorized, "", "Not Authorized")
 		return
 	}
 
 	err = model.DeletePerson(id)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	setHeaders(rw, req)
-	rw.WriteHeader(http.StatusOK)
+	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 }

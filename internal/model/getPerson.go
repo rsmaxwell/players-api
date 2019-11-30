@@ -5,7 +5,6 @@ import (
 
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
@@ -24,7 +23,6 @@ func GetPerson(id string) (*person.Person, error) {
 	}
 
 	if p == nil {
-		common.MetricsData.ClientError++
 		return nil, codeerror.NewNotFound(fmt.Sprintf("Person[%s] Not Found", id))
 	}
 

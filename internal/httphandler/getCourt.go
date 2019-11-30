@@ -1,7 +1,6 @@
 package httphandler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -25,7 +24,7 @@ func GetCourt(rw http.ResponseWriter, req *http.Request) {
 
 	_, err := checkAuthToken(req)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
@@ -34,13 +33,11 @@ func GetCourt(rw http.ResponseWriter, req *http.Request) {
 
 	c, err := model.GetCourt(id)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	setHeaders(rw, req)
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(GetCourtResponse{
+	writeResponseObject(rw, req, http.StatusOK, "", GetCourtResponse{
 		Court: *c,
 	})
 }

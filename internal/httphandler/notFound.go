@@ -3,7 +3,6 @@ package httphandler
 import (
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
@@ -16,7 +15,5 @@ func NotFound(rw http.ResponseWriter, req *http.Request) {
 	f := functionNotFound
 	f.DebugVerbose("")
 
-	setHeaders(rw, req)
-	WriteResponse(rw, http.StatusNotFound, "Not Found")
-	common.MetricsData.ClientError++
+	writeResponseMessage(rw, req, http.StatusNotFound, "", "Not Found")
 }

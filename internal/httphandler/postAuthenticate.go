@@ -6,22 +6,11 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 
-	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // Create the JWT key used to create the signature
 var jwtKey = []byte("<JWT_SECRET_KEY>")
-
-// Claims is a struct that will be encoded to a JWT.
-type Claims struct {
-	UserID string `json:"userid"`
-	jwt.StandardClaims
-}
-
-var (
-	functionAuthenticate = debug.NewFunction(pkg, "Authenticate")
-)
 
 // Authenticate method
 func Authenticate(rw http.ResponseWriter, req *http.Request) {
@@ -32,34 +21,62 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 	f.DebugVerbose("id:       %s", id)
 	f.DebugVerbose("password: %s", password)
 
-	err := model.Authenticate(id, password)
+	// *********************************************************************
+	// * Authenticate the user
+	// *********************************************************************
+	p, err := model.Authenticate(id, password)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	expirationTime := time.Now().Add(3 * time.Hour)
-	claims := &Claims{
-		UserID: id,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
+	// *********************************************************************
+	// * Make an access token and put it in the header
+	// *********************************************************************
+	accessToken := jwt.New(jwt.SigningMethodHS256)
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
+	setAccessClaims(accessToken, &AccessClaims{
+		UserID:    id,
+		ExpiresAt: time.Now().Add(time.Minute * 15).Unix(),
+		Role:      p.Role,
+		FirstName: p.FirstName,
+		LastName:  p.LastName,
+	})
+
+	accessTokenString, err := accessToken.SignedString(jwtKey)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
+
+	f.DebugVerbose("Access-Token: %s", accessTokenString)
+	rw.Header().Set("Access-Token", accessTokenString)
+
+	// *********************************************************************
+	// * Make a refresh token and put it in a cookie
+	// *********************************************************************
+	refreshExpiration := time.Now().Add(time.Hour * 24)
+
+	refreshToken := jwt.New(jwt.SigningMethodHS256)
+	refreshClaims := refreshToken.Claims.(jwt.MapClaims)
+
+	refreshClaims["sub"] = id
+	refreshClaims["exp"] = refreshExpiration.Unix()
+
+	refreshTokenString, err := refreshToken.SignedString(jwtKey)
+	if err != nil {
+		writeResponseError(rw, req, err)
+		return
+	}
+
+	f.DebugVerbose("Refresh-Token: %s", refreshTokenString)
 
 	http.SetCookie(rw, &http.Cookie{
 		Name:     "players-api",
-		Value:    tokenString,
-		Expires:  expirationTime,
+		Value:    refreshTokenString,
+		Expires:  refreshExpiration,
 		HttpOnly: true,
 	})
 
-	setHeaders(rw, req)
-	rw.WriteHeader(http.StatusOK)
+	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 }

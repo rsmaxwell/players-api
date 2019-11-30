@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -23,94 +22,100 @@ func TestUpdatePersonRole(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get valid session
+	// * Login to get tokens
 	// ***************************************************************
-	req, err := http.NewRequest("POST", contextPath+"/users/authenticate", nil)
-	require.Nil(t, err, "err should be nothing")
-
-	userID := "007"
-	password := "topsecret"
-	req.Header.Set("Authorization", model.BasicAuth(userID, password))
-
-	router := mux.NewRouter()
-	SetupHandlers(router)
-	rw := httptest.NewRecorder()
-	router.ServeHTTP(rw, req)
-
-	cookies := map[string]string{}
-	for _, cookie := range rw.Result().Cookies() {
-		cookies[cookie.Name] = cookie.Value
-	}
-
-	goodToken := cookies["players-api"]
-	require.NotNil(t, goodToken, "token should be something")
+	accessTokenString, refreshTokenCookie := testLogin(t, "007", "topsecret")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		setLoginCookie bool
-		token          string
-		id             string
-		role           string
-		expectedStatus int
+		testName            string
+		setAccessToken      bool
+		accessToken         string
+		useGoodRefreshToken bool
+		setRefreshToken     bool
+		refreshToken        string
+		id                  string
+		role                string
+		expectedStatus      int
 	}{
 		{
-			testName:       "Good request",
-			setLoginCookie: true,
-			token:          goodToken,
-			id:             anotherUserID,
-			role:           person.RoleNormal,
-			expectedStatus: http.StatusOK,
+			testName:            "Good request",
+			setAccessToken:      true,
+			accessToken:         "Bearer " + accessTokenString,
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			id:                  anotherUserID,
+			role:                person.RoleNormal,
+			expectedStatus:      http.StatusOK,
 		},
 		{
-			testName:       "no login cookie",
-			setLoginCookie: false,
-			token:          goodToken,
-			id:             anotherUserID,
-			role:           person.RoleNormal,
-			expectedStatus: http.StatusUnauthorized,
+			testName:            "no login cookie",
+			setAccessToken:      false,
+			accessToken:         "",
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			id:                  anotherUserID,
+			role:                person.RoleNormal,
+			expectedStatus:      http.StatusUnauthorized,
 		},
 		{
-			testName:       "Bad userID",
-			setLoginCookie: true,
-			token:          goodToken,
-			id:             "junk",
-			role:           person.RoleNormal,
-			expectedStatus: http.StatusNotFound,
+			testName:            "Bad userID",
+			setAccessToken:      true,
+			accessToken:         "Bearer " + accessTokenString,
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			id:                  "junk",
+			role:                person.RoleNormal,
+			expectedStatus:      http.StatusNotFound,
 		},
 		{
-			testName:       "Bad Role",
-			setLoginCookie: true,
-			token:          goodToken,
-			id:             anotherUserID,
-			role:           "junk",
-			expectedStatus: http.StatusBadRequest,
+			testName:            "Bad Role",
+			setAccessToken:      true,
+			accessToken:         "Bearer " + accessTokenString,
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			id:                  anotherUserID,
+			role:                "junk",
+			expectedStatus:      http.StatusBadRequest,
 		},
 		{
-			testName:       "Admin Role",
-			setLoginCookie: true,
-			token:          goodToken,
-			id:             anotherUserID,
-			role:           person.RoleAdmin,
-			expectedStatus: http.StatusOK,
+			testName:            "Admin Role",
+			setAccessToken:      true,
+			accessToken:         "Bearer " + accessTokenString,
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			id:                  anotherUserID,
+			role:                person.RoleAdmin,
+			expectedStatus:      http.StatusOK,
 		},
 		{
-			testName:       "Normal Role",
-			setLoginCookie: true,
-			token:          goodToken,
-			id:             anotherUserID,
-			role:           person.RoleNormal,
-			expectedStatus: http.StatusOK,
+			testName:            "Normal Role",
+			setAccessToken:      true,
+			accessToken:         "Bearer " + accessTokenString,
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			id:                  anotherUserID,
+			role:                person.RoleNormal,
+			expectedStatus:      http.StatusOK,
 		},
 		{
-			testName:       "Suspended Role",
-			setLoginCookie: true,
-			token:          goodToken,
-			id:             anotherUserID,
-			role:           person.RoleSuspended,
-			expectedStatus: http.StatusOK,
+			testName:            "Suspended Role",
+			setAccessToken:      true,
+			accessToken:         "Bearer " + accessTokenString,
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			id:                  anotherUserID,
+			role:                person.RoleSuspended,
+			expectedStatus:      http.StatusOK,
 		},
 	}
 
@@ -134,17 +139,8 @@ func TestUpdatePersonRole(t *testing.T) {
 			req, err := http.NewRequest("PUT", contextPath+"/users/role/"+test.id, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
-			// set a cookie with the value of the login sid
-			if test.setLoginCookie {
-				cookieLifeTime := 3 * 60 * 60
-				cookie := http.Cookie{
-					Name:    "players-api",
-					Value:   test.token,
-					MaxAge:  cookieLifeTime,
-					Expires: time.Now().Add(time.Duration(cookieLifeTime) * time.Second),
-				}
-				req.AddCookie(&cookie)
-			}
+			setAccessToken(req, test.setAccessToken, test.accessToken)
+			setRefreshToken(req, test.useGoodRefreshToken, test.setRefreshToken, refreshTokenCookie, test.refreshToken)
 
 			// Serve the request
 			router.ServeHTTP(rw, req)

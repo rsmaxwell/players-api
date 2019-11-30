@@ -18,7 +18,7 @@ func Logout(rw http.ResponseWriter, req *http.Request) {
 
 	_, err := checkAuthToken(req)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
@@ -30,6 +30,5 @@ func Logout(rw http.ResponseWriter, req *http.Request) {
 		HttpOnly: true,
 	})
 
-	setHeaders(rw, req)
-	rw.WriteHeader(http.StatusOK)
+	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 }

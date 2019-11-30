@@ -11,24 +11,24 @@ var (
 )
 
 // Authenticate method
-func Authenticate(id, password string) error {
+func Authenticate(id, password string) (*person.Person, error) {
 	f := functionAuthenticate
 	f.DebugVerbose("id: %s, password:%s", id, "********")
 
 	p, err := person.Load(id)
 	if err != nil {
-		return codeerror.NewUnauthorized("Not Authorized")
+		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 
 	if !p.CheckPassword(password) {
 		f.Dump("password check failed")
-		return codeerror.NewUnauthorized("Not Authorized")
+		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 
 	if !p.CanLogin() {
 		f.Dump("person not authorized to login")
-		return codeerror.NewUnauthorized("Not Authorized")
+		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 
-	return nil
+	return p, nil
 }

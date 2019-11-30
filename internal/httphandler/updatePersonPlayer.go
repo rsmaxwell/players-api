@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
@@ -28,15 +27,14 @@ func UpdatePersonPlayer(rw http.ResponseWriter, req *http.Request) {
 
 	claims, err := checkAuthToken(req)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
@@ -45,8 +43,7 @@ func UpdatePersonPlayer(rw http.ResponseWriter, req *http.Request) {
 	var r UpdatePersonPlayerRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
@@ -55,10 +52,9 @@ func UpdatePersonPlayer(rw http.ResponseWriter, req *http.Request) {
 
 	err = model.UpdatePersonPlayer(claims.UserID, id, r.Player)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	setHeaders(rw, req)
-	WriteResponse(rw, http.StatusOK, "ok")
+	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 }

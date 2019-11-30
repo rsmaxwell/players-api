@@ -25,10 +25,7 @@ var (
 
 // Metrics structure
 type Metrics struct {
-	ClientSuccess             int `json:"clientSuccess"`
-	ClientError               int `json:"clientError"`
-	ClientAuthenticationError int `json:"clientAuthenticationError"`
-	ServerError               int `json:"serverError"`
+	StatusCodes map[int]int `json:"statusCodes"`
 }
 
 // HomeDir returns the home directory
@@ -47,6 +44,9 @@ func HomeDir() string {
 }
 
 func init() {
+	MetricsData = Metrics{}
+	MetricsData.StatusCodes = make(map[int]int)
+
 	dir, ok := os.LookupEnv("PLAYERS_API_ROOTDIR")
 	if ok {
 		RootDir = dir

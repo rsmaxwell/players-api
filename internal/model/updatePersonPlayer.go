@@ -3,7 +3,6 @@ package model
 import (
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
@@ -22,9 +21,7 @@ func UpdatePersonPlayer(userID string, id string, player bool) error {
 	}
 
 	if !p.CanUpdatePersonPlayer() {
-		f.Verbosef("Not Authorised")
-		common.MetricsData.ClientError++
-		return codeerror.NewUnauthorized("Not Authorised")
+		return codeerror.NewUnauthorized("Not Authorized")
 	}
 
 	err = person.UpdatePlayer(id, player)

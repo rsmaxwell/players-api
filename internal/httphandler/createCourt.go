@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 
 	"github.com/rsmaxwell/players-api/internal/basic/court"
@@ -33,15 +32,14 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 
 	_, err := checkAuthToken(req)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
@@ -50,19 +48,17 @@ func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 	var r CreateCourtRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
 	id, err := model.CreateCourt(&r.Court)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	setHeaders(rw, req)
-	rw.WriteHeader(http.StatusOK)
+	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 	json.NewEncoder(rw).Encode(CreateCourtResponse{
 		ID: id,
 	})

@@ -18,7 +18,7 @@ func DeleteCourt(rw http.ResponseWriter, req *http.Request) {
 
 	_, err := checkAuthToken(req)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
@@ -27,10 +27,9 @@ func DeleteCourt(rw http.ResponseWriter, req *http.Request) {
 
 	err = model.DeleteCourt(id)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	setHeaders(rw, req)
-	rw.WriteHeader(http.StatusOK)
+	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 }

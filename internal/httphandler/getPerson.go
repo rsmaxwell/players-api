@@ -1,7 +1,6 @@
 package httphandler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -25,7 +24,7 @@ func GetPerson(rw http.ResponseWriter, req *http.Request) {
 
 	_, err := checkAuthToken(req)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
@@ -34,13 +33,11 @@ func GetPerson(rw http.ResponseWriter, req *http.Request) {
 
 	p, err := model.GetPerson(id)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	setHeaders(rw, req)
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(GetPersonResponse{
+	writeResponseObject(rw, req, http.StatusOK, "", GetPersonResponse{
 		Person: *p,
 	})
 }

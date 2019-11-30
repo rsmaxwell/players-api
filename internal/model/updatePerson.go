@@ -3,7 +3,6 @@ package model
 import (
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
@@ -18,12 +17,11 @@ func UpdatePerson(userID string, id string, fields map[string]interface{}) error
 
 	p, err := person.Load(userID)
 	if err != nil {
-		return codeerror.NewUnauthorized("Not Authorised")
+		return codeerror.NewUnauthorized("Not Authorized")
 	}
 
 	if !p.CanUpdatePerson(userID, id) {
-		common.MetricsData.ClientError++
-		return codeerror.NewUnauthorized("Not Authorised")
+		return codeerror.NewUnauthorized("Not Authorized")
 	}
 
 	err = person.Update(id, fields)

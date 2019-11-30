@@ -2,7 +2,9 @@ package httphandler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 
@@ -24,78 +26,222 @@ var (
 
 	pkg = debug.NewPackage("httphandler")
 
-	functionMiddleware = debug.NewFunction(pkg, "Middleware")
+	functionMiddleware     = debug.NewFunction(pkg, "Middleware")
+	functionCheckAuthToken = debug.NewFunction(pkg, "checkAuthToken")
 )
 
-// WriteResponse method
-func WriteResponse(w http.ResponseWriter, httpStatus int, message string) {
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(httpStatus)
-
-	json.NewEncoder(w).Encode(messageResponse{
+// writeResponseMessage method
+func writeResponseMessage(r http.ResponseWriter, req *http.Request, statusCode int, qualifier string, message string) {
+	writeResponse(r, req, statusCode, qualifier)
+	json.NewEncoder(r).Encode(messageResponse{
 		Message: message,
 	})
 }
 
-func setHeaders(rw http.ResponseWriter, req *http.Request) {
-	origin := req.Header.Get("Origin")
-
-	if origin == "" {
-		origin = "http://localhost:4200"
-	}
-
-	rw.Header().Set("Content-Type", "application/json")
-	rw.Header().Set("Access-Control-Allow-Origin", origin)
-	rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	rw.Header().Set("Access-Control-Allow-Headers",
-		"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Authorization")
+// writeResponseObject method
+func writeResponseObject(r http.ResponseWriter, req *http.Request, statusCode int, qualifier string, object interface{}) {
+	writeResponse(r, req, statusCode, qualifier)
+	json.NewEncoder(r).Encode(object)
 }
 
-// errorHandler function
-func errorHandler(rw http.ResponseWriter, req *http.Request, err error) {
+// writeResponse method
+func writeResponse(r http.ResponseWriter, req *http.Request, statusCode int, qualifier string) {
+
+	common.MetricsData.StatusCodes[statusCode]++
+
+	if statusCode == http.StatusOK {
+
+		origin := req.Header.Get("Origin")
+		if origin == "" {
+			origin = "http://localhost:4200"
+		}
+
+		r.Header().Set("Content-Type", "application/json")
+		r.Header().Set("Access-Control-Allow-Origin", origin)
+		r.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		r.Header().Set("Access-Control-Allow-Headers",
+			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Authorization")
+
+	} else if statusCode == http.StatusUnauthorized {
+
+		r.Header().Set("WWW-Authenticate", "Basic realm=\"players-api: "+qualifier+"\"")
+
+	} else {
+
+	}
+
+	r.WriteHeader(statusCode)
+}
+
+// writeResponseError function
+func writeResponseError(rw http.ResponseWriter, req *http.Request, err error) {
 	if err != nil {
-		setHeaders(rw, req)
 		if serr, ok := err.(*codeerror.CodeError); ok {
-			WriteResponse(rw, serr.Code(), serr.Error())
-			common.MetricsData.ClientError++
+			writeResponseMessage(rw, req, serr.Code(), serr.Qualifier(), serr.Error())
 			return
 		}
 
-		WriteResponse(rw, http.StatusInternalServerError, "InternalServerError")
-		common.MetricsData.ClientError++
+		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "error")
 		return
 	}
 }
 
-// checkAuthToken method
-func checkAuthToken(req *http.Request) (*Claims, error) {
+func stripBearerPrefixFromTokenString(tok string) (string, error) {
+	// Should be a bearer token
+	if len(tok) > 6 && strings.ToUpper(tok[0:7]) == "BEARER " {
+		return tok[7:], nil
+	}
+	return tok, nil
+}
 
-	cookie, err := req.Cookie("players-api")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			return nil, codeerror.NewUnauthorized(err.Error())
-		}
-		return nil, codeerror.NewInternalServerError(err.Error())
+// AccessClaims struct
+type AccessClaims struct {
+	UserID    string
+	Role      string
+	FirstName string
+	LastName  string
+	ExpiresAt int64
+}
+
+var (
+	functionAuthenticate = debug.NewFunction(pkg, "Authenticate")
+)
+
+// setAccessClaims function
+func setAccessClaims(token *jwt.Token, claims *AccessClaims) {
+
+	c := token.Claims.(jwt.MapClaims)
+
+	c["sub"] = claims.UserID
+	c["exp"] = claims.ExpiresAt
+	c["Role"] = claims.Role
+	c["FirstName"] = claims.FirstName
+	c["LastName"] = claims.LastName
+}
+
+// getAccessClaims function
+func getAccessClaims(claims jwt.MapClaims, accessClaims *AccessClaims) error {
+
+	var ok bool
+
+	value := claims["sub"]
+	accessClaims.UserID, ok = value.(string)
+	if !ok {
+		return fmt.Errorf("The 'sub' value is not a 'string': %v, %t", value, value)
 	}
 
-	tokenString := cookie.Value
-	claims := &Claims{}
+	value = claims["exp"]
+	float64Value, ok := value.(float64)
+	if !ok {
+		return fmt.Errorf("The 'exp' value is not a 'int64': %v, %t", value, value)
+	}
+	accessClaims.ExpiresAt = int64(float64Value)
 
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+	value = claims["Role"]
+	accessClaims.Role, ok = value.(string)
+	if !ok {
+		return fmt.Errorf("The 'Role' value is not a 'string': %v, %t", value, value)
+	}
+
+	value = claims["FirstName"]
+	accessClaims.FirstName, ok = value.(string)
+	if !ok {
+		return fmt.Errorf("The 'FirstName' value is not a 'string': %v, %t", value, value)
+	}
+
+	value = claims["LastName"]
+	accessClaims.LastName, ok = value.(string)
+	if !ok {
+		return fmt.Errorf("The 'LastName' value is not a 'string': %v, %t", value, value)
+	}
+
+	return nil
+}
+
+// checkAuthToken method
+func checkAuthToken(req *http.Request) (*AccessClaims, error) {
+	f := functionCheckAuthToken
+
+	// ********************************************************************
+	// * Get the access token from the Header
+	// ********************************************************************
+	authorizationString := req.Header.Get("Authorization")
+	if authorizationString == "" {
+		return nil, codeerror.NewUnauthorized("Not Authorized")
+	}
+
+	accessTokenString, err := stripBearerPrefixFromTokenString(authorizationString)
+	if err != nil {
+		return nil, codeerror.NewUnauthorized("Not Authorized")
+	}
+
+	claims := jwt.MapClaims{}
+	accessToken, err := jwt.ParseWithClaims(accessTokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
-			return nil, codeerror.NewUnauthorized(err.Error())
+			return nil, codeerror.NewUnauthorized("Not Authorized")
 		}
 		return nil, codeerror.NewBadRequest(err.Error())
 	}
-	if !token.Valid {
-		return nil, codeerror.NewUnauthorized(err.Error())
+	if !accessToken.Valid {
+		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 
-	return claims, nil
+	accessClaims := AccessClaims{}
+	err = getAccessClaims(claims, &accessClaims)
+	if err != nil {
+		return nil, codeerror.NewUnauthorized("Not Authorized")
+	}
+
+	if f.Level() >= debug.VerboseLevel {
+		f.DebugVerbose("accessClaims:")
+		f.DebugVerbose("    UserID:    %s", accessClaims.UserID)
+		f.DebugVerbose("    ExpiresAt: %d", accessClaims.ExpiresAt)
+		f.DebugVerbose("    Role:      %s", accessClaims.Role)
+		f.DebugVerbose("    FirstName: %s", accessClaims.FirstName)
+		f.DebugVerbose("    LastName:  %s", accessClaims.LastName)
+	}
+
+	// ********************************************************************
+	// * Get the refresh token from the Cookie
+	// ********************************************************************
+	cookie, err := req.Cookie("players-api")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			return nil, codeerror.NewUnauthorized("Not Authorized")
+		}
+		return nil, codeerror.NewInternalServerError(err.Error())
+	}
+
+	refreshTokenString := cookie.Value
+
+	refreshClaims := jwt.MapClaims{}
+	refreshToken, err := jwt.ParseWithClaims(refreshTokenString, refreshClaims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return nil, codeerror.NewUnauthorized("Not Authorized")
+		}
+		return nil, codeerror.NewBadRequest(err.Error())
+	}
+	if !refreshToken.Valid {
+		return nil, codeerror.NewUnauthorized("Not Authorized")
+	}
+
+	if f.Level() >= debug.VerboseLevel {
+		userID := refreshClaims["sub"].(string)
+		float64Value := refreshClaims["exp"].(float64)
+		expiresAt := int64(float64Value)
+
+		f.DebugVerbose("refreshClaims:")
+		f.DebugVerbose("    Subject:   %s", userID)
+		f.DebugVerbose("    ExpiresAt: %d", expiresAt)
+	}
+
+	return &accessClaims, nil
 }
 
 // SetupHandlers Handlers for REST API routes
@@ -105,6 +251,7 @@ func SetupHandlers(r *mux.Router) {
 
 	s.HandleFunc("/users/authenticate", Authenticate).Methods(http.MethodPost)
 	s.HandleFunc("/users/register", Register).Methods(http.MethodPost)
+	s.HandleFunc("/users/refresh", Refresh).Methods(http.MethodPost)
 	s.HandleFunc("/users", ListPeople).Methods(http.MethodGet)
 	s.HandleFunc("/users/{id}", DeletePerson).Methods(http.MethodDelete)
 	s.HandleFunc("/users/logout", Logout).Methods(http.MethodGet)

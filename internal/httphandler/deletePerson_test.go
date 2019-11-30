@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/model"
@@ -20,72 +19,72 @@ func TestDeletePerson(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get valid session
+	// * Login to get tokens
 	// ***************************************************************
-	req, err := http.NewRequest("POST", contextPath+"/users/authenticate", nil)
-	require.Nil(t, err, "err should be nothing")
-
-	userID := "007"
-	password := "topsecret"
-	req.Header.Set("Authorization", model.BasicAuth(userID, password))
-
-	router := mux.NewRouter()
-	SetupHandlers(router)
-	rw := httptest.NewRecorder()
-	router.ServeHTTP(rw, req)
-
-	cookies := map[string]string{}
-	for _, cookie := range rw.Result().Cookies() {
-		cookies[cookie.Name] = cookie.Value
-	}
-
-	goodToken := cookies["players-api"]
-	require.NotNil(t, goodToken, "token should be something")
+	accessTokenString, refreshTokenCookie := testLogin(t, "007", "topsecret")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		setLoginCookie bool
-		token          string
-		userID         string
-		expectedStatus int
+		testName            string
+		setAccessToken      bool
+		accessToken         string
+		useGoodRefreshToken bool
+		setRefreshToken     bool
+		refreshToken        string
+		userID              string
+		expectedStatus      int
 	}{
 		{
-			testName:       "Good request",
-			setLoginCookie: true,
-			token:          goodToken,
-			userID:         anotherUserID,
-			expectedStatus: http.StatusOK,
+			testName:            "Good request",
+			setAccessToken:      true,
+			accessToken:         "Bearer " + accessTokenString,
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			userID:              anotherUserID,
+			expectedStatus:      http.StatusOK,
 		},
 		{
-			testName:       "no login cookie",
-			setLoginCookie: false,
-			token:          goodToken,
-			userID:         anotherUserID,
-			expectedStatus: http.StatusUnauthorized,
+			testName:            "no login cookie",
+			setAccessToken:      false,
+			accessToken:         "",
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			userID:              anotherUserID,
+			expectedStatus:      http.StatusUnauthorized,
 		},
 		{
-			testName:       "bad token",
-			setLoginCookie: true,
-			token:          "junk",
-			userID:         anotherUserID,
-			expectedStatus: http.StatusBadRequest,
+			testName:            "bad token",
+			setAccessToken:      true,
+			accessToken:         "junk",
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			userID:              anotherUserID,
+			expectedStatus:      http.StatusBadRequest,
 		},
 		{
-			testName:       "Bad userID",
-			setLoginCookie: true,
-			token:          goodToken,
-			userID:         "junk",
-			expectedStatus: http.StatusNotFound,
+			testName:            "Bad userID",
+			setAccessToken:      true,
+			accessToken:         "Bearer " + accessTokenString,
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			userID:              "junk",
+			expectedStatus:      http.StatusNotFound,
 		},
 		{
-			testName:       "delete myself",
-			setLoginCookie: true,
-			token:          goodToken,
-			userID:         "007",
-			expectedStatus: http.StatusUnauthorized,
+			testName:            "delete myself",
+			setAccessToken:      true,
+			accessToken:         "Bearer " + accessTokenString,
+			useGoodRefreshToken: true,
+			setRefreshToken:     false,
+			refreshToken:        "",
+			userID:              "007",
+			expectedStatus:      http.StatusUnauthorized,
 		},
 	}
 
@@ -107,17 +106,8 @@ func TestDeletePerson(t *testing.T) {
 			req, err := http.NewRequest("DELETE", contextPath+"/users/"+test.userID, nil)
 			require.Nil(t, err, "err should be nothing")
 
-			// set a cookie with the value of the login sid
-			if test.setLoginCookie {
-				cookieLifeTime := 3 * 60 * 60
-				cookie := http.Cookie{
-					Name:    "players-api",
-					Value:   test.token,
-					MaxAge:  cookieLifeTime,
-					Expires: time.Now().Add(time.Duration(cookieLifeTime) * time.Second),
-				}
-				req.AddCookie(&cookie)
-			}
+			setAccessToken(req, test.setAccessToken, test.accessToken)
+			setRefreshToken(req, test.useGoodRefreshToken, test.setRefreshToken, refreshTokenCookie, test.refreshToken)
 
 			// Serve the request
 			router.ServeHTTP(rw, req)

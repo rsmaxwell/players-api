@@ -1,7 +1,6 @@
 package httphandler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/debug"
@@ -24,19 +23,17 @@ func ListCourts(rw http.ResponseWriter, req *http.Request) {
 
 	_, err := checkAuthToken(req)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
 	listOfCourts, err := model.ListCourts()
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	setHeaders(rw, req)
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(ListCourtsResponse{
+	writeResponseObject(rw, req, http.StatusOK, "", ListCourtsResponse{
 		Courts: listOfCourts,
 	})
 }

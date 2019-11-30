@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
@@ -31,8 +30,7 @@ func Register(rw http.ResponseWriter, req *http.Request) {
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
@@ -41,8 +39,7 @@ func Register(rw http.ResponseWriter, req *http.Request) {
 	var r RegisterRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
@@ -54,10 +51,9 @@ func Register(rw http.ResponseWriter, req *http.Request) {
 
 	err = model.Register(r.UserID, r.Password, r.FirstName, r.LastName, r.Email)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	setHeaders(rw, req)
-	WriteResponse(rw, http.StatusOK, "ok")
+	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 }

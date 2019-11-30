@@ -1,7 +1,6 @@
 package httphandler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/basic/queue"
@@ -18,19 +17,17 @@ func GetQueue(rw http.ResponseWriter, req *http.Request) {
 
 	_, err := checkAuthToken(req)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
 	q, err := model.GetQueue()
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	setHeaders(rw, req)
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(GetQueueResponse{
+	writeResponseObject(rw, req, http.StatusOK, "", GetQueueResponse{
 		Queue: *q,
 	})
 }

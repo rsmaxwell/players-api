@@ -9,7 +9,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/basic/person"
 
 	"github.com/gorilla/mux"
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
@@ -29,25 +28,24 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request) {
 
 	claims, err := checkAuthToken(req)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
 	p, err := person.Load(claims.UserID)
 	if err != nil {
 		f.Dump("Could not load the logged on user[%s]: %v", claims.UserID, err)
-		WriteResponse(rw, http.StatusInternalServerError, "Not Authorized")
+		writeResponseMessage(rw, req, http.StatusInternalServerError, "", err.Error())
 		return
 	}
 	if !p.CanUpdateCourt() {
-		WriteResponse(rw, http.StatusUnauthorized, "Not Authorized")
+		writeResponseMessage(rw, req, http.StatusUnauthorized, "", "Not Authorized")
 	}
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
@@ -56,8 +54,7 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request) {
 	var r UpdateCourtRequest
 	err = json.Unmarshal(b, &r)
 	if err != nil {
-		WriteResponse(rw, http.StatusBadRequest, err.Error())
-		common.MetricsData.ClientError++
+		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
@@ -66,10 +63,9 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request) {
 
 	err = model.UpdateCourt(id, r.Court)
 	if err != nil {
-		errorHandler(rw, req, err)
+		writeResponseError(rw, req, err)
 		return
 	}
 
-	setHeaders(rw, req)
-	WriteResponse(rw, http.StatusOK, "ok")
+	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 }

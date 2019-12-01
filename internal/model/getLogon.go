@@ -17,16 +17,17 @@ func Authenticate(id, password string) (*person.Person, error) {
 
 	p, err := person.Load(id)
 	if err != nil {
+		f.DebugVerbose("could not load person [%s]", id)
 		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 
 	if !p.CheckPassword(password) {
-		f.Dump("password check failed")
+		f.DebugVerbose("password check failed for person [%s]", id)
 		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 
 	if !p.CanLogin() {
-		f.Dump("person not authorized to login")
+		f.DebugVerbose("person [%s] not authorized to login", id)
 		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -113,7 +114,7 @@ func setAccessClaims(token *jwt.Token, claims *AccessClaims) {
 	c := token.Claims.(jwt.MapClaims)
 
 	c["sub"] = claims.UserID
-	c["exp"] = claims.ExpiresAt
+	c["exp"] = time.Now().Add(time.Minute * 15).Unix()
 	c["Role"] = claims.Role
 	c["FirstName"] = claims.FirstName
 	c["LastName"] = claims.LastName
@@ -175,6 +176,8 @@ func checkAuthToken(req *http.Request) (*AccessClaims, error) {
 		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 
+	f.DebugVerbose("Access-Token: %s", accessTokenString)
+
 	claims := jwt.MapClaims{}
 	accessToken, err := jwt.ParseWithClaims(accessTokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
@@ -216,6 +219,8 @@ func checkAuthToken(req *http.Request) (*AccessClaims, error) {
 	}
 
 	refreshTokenString := cookie.Value
+
+	f.DebugVerbose("Refresh-Token: %s", refreshTokenString)
 
 	refreshClaims := jwt.MapClaims{}
 	refreshToken, err := jwt.ParseWithClaims(refreshTokenString, refreshClaims, func(token *jwt.Token) (interface{}, error) {

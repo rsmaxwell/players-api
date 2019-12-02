@@ -21,7 +21,7 @@ var (
 func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 	f := functionGetMetrics
 
-	claims, err := checkAuthToken(req)
+	claims, err := checkAccessToken(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

@@ -24,6 +24,7 @@ type Person struct {
 	HashedPassword []byte `json:"hashedpassword" validate:"required,len=60"`
 	Role           string `json:"role" validate:"required,oneof=admin normal suspended"`
 	Player         bool   `json:"player"`
+	Count          int    `json:"count"`
 }
 
 const (

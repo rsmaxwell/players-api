@@ -26,7 +26,7 @@ var (
 func UpdateCourt(rw http.ResponseWriter, req *http.Request) {
 	f := functionUpdateCourt
 
-	claims, err := checkAuthToken(req)
+	claims, err := checkAccessToken(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

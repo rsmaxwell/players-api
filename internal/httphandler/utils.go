@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gorilla/mux"
 
@@ -27,8 +26,10 @@ var (
 
 	pkg = debug.NewPackage("httphandler")
 
-	functionMiddleware     = debug.NewFunction(pkg, "Middleware")
-	functionCheckAuthToken = debug.NewFunction(pkg, "checkAuthToken")
+	functionMiddleware        = debug.NewFunction(pkg, "Middleware")
+	functionCheckAccessToken  = debug.NewFunction(pkg, "checkAccessToken")
+	functionCheckRefreshToken = debug.NewFunction(pkg, "checkRefreshToken")
+	functionAuthenticate      = debug.NewFunction(pkg, "Authenticate")
 )
 
 // writeResponseMessage method
@@ -95,18 +96,59 @@ func stripBearerPrefixFromTokenString(tok string) (string, error) {
 	return tok, nil
 }
 
+// RefreshClaims struct
+type RefreshClaims struct {
+	UserID    string
+	ExpiresAt int64
+	Count     int
+}
+
+// setRefreshClaims function
+func setRefreshClaims(token *jwt.Token, claims *RefreshClaims) {
+
+	c := token.Claims.(jwt.MapClaims)
+
+	c["sub"] = claims.UserID
+	c["exp"] = claims.ExpiresAt
+	c["Count"] = claims.Count
+}
+
+// getRefreshClaims function
+func getRefreshClaims(claims jwt.MapClaims, refreshClaims *RefreshClaims) error {
+
+	var ok bool
+
+	value := claims["sub"]
+	refreshClaims.UserID, ok = value.(string)
+	if !ok {
+		return fmt.Errorf("The 'sub' value is not a 'string': %v, %t", value, value)
+	}
+
+	value = claims["exp"]
+	float64Value, ok := value.(float64)
+	if !ok {
+		return fmt.Errorf("The 'exp' value is not a 'int64': %v, %t", value, value)
+	}
+	refreshClaims.ExpiresAt = int64(float64Value)
+
+	value = claims["Count"]
+	float64Value, ok = value.(float64)
+	if !ok {
+		return fmt.Errorf("The 'Count' value is not a 'number': %v, %t", value, value)
+	}
+	refreshClaims.Count = int(float64Value)
+
+	return nil
+}
+
 // AccessClaims struct
 type AccessClaims struct {
 	UserID    string
+	ExpiresAt int64
 	Role      string
 	FirstName string
 	LastName  string
-	ExpiresAt int64
 }
-
-var (
-	functionAuthenticate = debug.NewFunction(pkg, "Authenticate")
-)
 
 // setAccessClaims function
 func setAccessClaims(token *jwt.Token, claims *AccessClaims) {
@@ -114,7 +156,7 @@ func setAccessClaims(token *jwt.Token, claims *AccessClaims) {
 	c := token.Claims.(jwt.MapClaims)
 
 	c["sub"] = claims.UserID
-	c["exp"] = time.Now().Add(time.Minute * 15).Unix()
+	c["exp"] = claims.ExpiresAt
 	c["Role"] = claims.Role
 	c["FirstName"] = claims.FirstName
 	c["LastName"] = claims.LastName
@@ -159,9 +201,9 @@ func getAccessClaims(claims jwt.MapClaims, accessClaims *AccessClaims) error {
 	return nil
 }
 
-// checkAuthToken method
-func checkAuthToken(req *http.Request) (*AccessClaims, error) {
-	f := functionCheckAuthToken
+// checkAccessToken method
+func checkAccessToken(req *http.Request) (*AccessClaims, error) {
+	f := functionCheckAccessToken
 
 	// ********************************************************************
 	// * Get the access token from the Header
@@ -175,8 +217,6 @@ func checkAuthToken(req *http.Request) (*AccessClaims, error) {
 	if err != nil {
 		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
-
-	f.DebugVerbose("Access-Token: %s", accessTokenString)
 
 	claims := jwt.MapClaims{}
 	accessToken, err := jwt.ParseWithClaims(accessTokenString, claims, func(token *jwt.Token) (interface{}, error) {
@@ -207,9 +247,13 @@ func checkAuthToken(req *http.Request) (*AccessClaims, error) {
 		f.DebugVerbose("    LastName:  %s", accessClaims.LastName)
 	}
 
-	// ********************************************************************
-	// * Get the refresh token from the Cookie
-	// ********************************************************************
+	return &accessClaims, nil
+}
+
+// checkRefreshToken method
+func checkRefreshToken(req *http.Request) (*RefreshClaims, error) {
+	f := functionCheckRefreshToken
+
 	cookie, err := req.Cookie("players-api")
 	if err != nil {
 		if err == http.ErrNoCookie {
@@ -220,10 +264,8 @@ func checkAuthToken(req *http.Request) (*AccessClaims, error) {
 
 	refreshTokenString := cookie.Value
 
-	f.DebugVerbose("Refresh-Token: %s", refreshTokenString)
-
-	refreshClaims := jwt.MapClaims{}
-	refreshToken, err := jwt.ParseWithClaims(refreshTokenString, refreshClaims, func(token *jwt.Token) (interface{}, error) {
+	claims := jwt.MapClaims{}
+	refreshToken, err := jwt.ParseWithClaims(refreshTokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
 	if err != nil {
@@ -236,17 +278,20 @@ func checkAuthToken(req *http.Request) (*AccessClaims, error) {
 		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 
-	if f.Level() >= debug.VerboseLevel {
-		userID := refreshClaims["sub"].(string)
-		float64Value := refreshClaims["exp"].(float64)
-		expiresAt := int64(float64Value)
-
-		f.DebugVerbose("refreshClaims:")
-		f.DebugVerbose("    Subject:   %s", userID)
-		f.DebugVerbose("    ExpiresAt: %d", expiresAt)
+	refreshClaims := RefreshClaims{}
+	err = getRefreshClaims(claims, &refreshClaims)
+	if err != nil {
+		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 
-	return &accessClaims, nil
+	if f.Level() >= debug.VerboseLevel {
+		f.DebugVerbose("refreshClaims:")
+		f.DebugVerbose("    UserID:    %s", refreshClaims.UserID)
+		f.DebugVerbose("    ExpiresAt: %d", refreshClaims.ExpiresAt)
+		f.DebugVerbose("    Count:     %d", refreshClaims.Count)
+	}
+
+	return &refreshClaims, nil
 }
 
 // SetupHandlers Handlers for REST API routes

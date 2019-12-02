@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
+	"github.com/rsmaxwell/players-api/internal/debug"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -148,7 +149,12 @@ func TestListPeopleWithDuffPlayerFile(t *testing.T) {
 	require.Nil(t, err, "err should be nothing")
 
 	// Attempt to use the 'junk' person!
+	mark := debug.Mark()
 	_, err = List([]string{"regular", "admin", "suspended"})
+	dumps, err2 := mark.ListNewDumps()
+	require.Nil(t, err2, "err should be nothing")
+	require.Equal(t, len(dumps), 1, fmt.Sprintf("expected %d dump, actual %d", 1, len(dumps)))
+
 	if err != nil {
 		if cerr, ok := err.(*codeerror.CodeError); ok {
 			if cerr.Code() != http.StatusInternalServerError {
@@ -208,7 +214,10 @@ func removeContents(dirname string) error {
 // SetupTestcase function
 func setupTestcase(t *testing.T) func(t *testing.T) {
 
-	err := removeContents(personListDir)
+	err := debug.ClearDumps()
+	require.Nil(t, err, "err should be nothing")
+
+	err = removeContents(personListDir)
 	require.Nil(t, err, "err should be nothing")
 
 	return func(t *testing.T) {

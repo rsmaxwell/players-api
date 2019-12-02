@@ -47,11 +47,9 @@ func TestNewInfoUnreadableInfofileCourt(t *testing.T) {
 	err := ioutil.WriteFile(courtInfoFile, []byte("junk"), 0644)
 	require.Nil(t, err, "err should be nothing")
 
-	mark := debug.Mark()
-
 	// Attempt to use the info file
+	mark := debug.Mark()
 	_, err = New("Fred", []string{}).Add()
-
 	dumps, err2 := mark.ListNewDumps()
 	require.Nil(t, err2, "err should be nothing")
 	require.Equal(t, len(dumps), 1, fmt.Sprintf("expected %d dump, actual %d", 1, len(dumps)))
@@ -150,9 +148,15 @@ func TestLoadWithDuffCourtFile(t *testing.T) {
 	err := ioutil.WriteFile(filename, []byte("junk"), 0644)
 	require.Nil(t, err, "err should be nothing")
 
-	// Check that Load returns an error
+	// Check that Load returns an error and dumps
 	ref := common.Reference{Type: "court", ID: "junk"}
+
+	mark := debug.Mark()
 	_, err = Load(&ref)
+	dumps, err2 := mark.ListNewDumps()
+	require.Nil(t, err2, "err should be nothing")
+	require.Equal(t, len(dumps), 1, fmt.Sprintf("expected %d dump, actual %d", 1, len(dumps)))
+
 	if err != nil {
 		if cerr, ok := err.(*codeerror.CodeError); ok {
 			if cerr.Code() != http.StatusInternalServerError {

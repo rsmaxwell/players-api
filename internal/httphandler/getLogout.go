@@ -16,7 +16,7 @@ func Logout(rw http.ResponseWriter, req *http.Request) {
 	f := functionLogout
 	f.DebugVerbose("")
 
-	_, err := checkAuthToken(req)
+	_, err := checkAccessToken(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

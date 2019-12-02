@@ -51,7 +51,7 @@ func TestRefresh(t *testing.T) {
 			useGoodRefreshToken: true,
 			setRefreshToken:     false,
 			refreshToken:        "",
-			expectedStatus:      http.StatusBadRequest,
+			expectedStatus:      http.StatusOK,
 		},
 		{
 			testName:            "no 'Bearer' prefix before accessToken",
@@ -60,7 +60,7 @@ func TestRefresh(t *testing.T) {
 			useGoodRefreshToken: true,
 			setRefreshToken:     false,
 			refreshToken:        "",
-			expectedStatus:      http.StatusBadRequest,
+			expectedStatus:      http.StatusOK,
 		},
 		{
 			testName:            "missing accessToken",
@@ -69,7 +69,7 @@ func TestRefresh(t *testing.T) {
 			useGoodRefreshToken: true,
 			setRefreshToken:     false,
 			refreshToken:        "",
-			expectedStatus:      http.StatusUnauthorized,
+			expectedStatus:      http.StatusOK,
 		},
 		{
 			testName:            "junk refreshToken",

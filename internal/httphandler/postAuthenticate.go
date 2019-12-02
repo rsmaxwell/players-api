@@ -58,10 +58,12 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 	refreshExpiration := time.Now().Add(time.Hour * 24)
 
 	refreshToken := jwt.New(jwt.SigningMethodHS256)
-	refreshClaims := refreshToken.Claims.(jwt.MapClaims)
 
-	refreshClaims["sub"] = id
-	refreshClaims["exp"] = refreshExpiration.Unix()
+	setRefreshClaims(refreshToken, &RefreshClaims{
+		UserID:    id,
+		ExpiresAt: refreshExpiration.Unix(),
+		Count:     0,
+	})
 
 	refreshTokenString, err := refreshToken.SignedString(jwtKey)
 	if err != nil {

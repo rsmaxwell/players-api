@@ -24,7 +24,7 @@ var (
 func UpdatePersonRole(rw http.ResponseWriter, req *http.Request) {
 	f := functionUpdatePersonRole
 
-	claims, err := checkAuthToken(req)
+	claims, err := checkAccessToken(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

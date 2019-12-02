@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
@@ -17,12 +18,25 @@ func Refresh(rw http.ResponseWriter, req *http.Request) {
 	f := functionRefresh
 
 	// *********************************************************************
-	// * Check the existing access token
+	// * Check the existing refresh token and count
 	// *********************************************************************
-	claims, err := checkAuthToken(req)
+	refreshClaims, err := checkRefreshToken(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return
+	}
+
+	p, err := person.Load(refreshClaims.UserID)
+	if err != nil {
+		writeResponseError(rw, req, err)
+		return
+	}
+
+	if p.Count != refreshClaims.Count {
+		if err != nil {
+			writeResponseError(rw, req, err)
+			return
+		}
 	}
 
 	// *********************************************************************
@@ -30,7 +44,13 @@ func Refresh(rw http.ResponseWriter, req *http.Request) {
 	// *********************************************************************
 	accessToken := jwt.New(jwt.SigningMethodHS256)
 
-	setAccessClaims(accessToken, claims)
+	setAccessClaims(accessToken, &AccessClaims{
+		UserID:    refreshClaims.UserID,
+		ExpiresAt: time.Now().Add(time.Minute * 15).Unix(),
+		Role:      p.Role,
+		FirstName: p.FirstName,
+		LastName:  p.LastName,
+	})
 
 	accessTokenString, err := accessToken.SignedString(jwtKey)
 	if err != nil {
@@ -47,9 +67,10 @@ func Refresh(rw http.ResponseWriter, req *http.Request) {
 	refreshExpiration := time.Now().Add(time.Hour * 24)
 
 	refreshToken := jwt.New(jwt.SigningMethodHS256)
-	refreshClaims := refreshToken.Claims.(jwt.MapClaims)
-	refreshClaims["sub"] = claims.UserID
-	refreshClaims["exp"] = refreshExpiration.Unix()
+
+	refreshClaims.ExpiresAt = time.Now().Add(time.Hour * 24).Unix()
+	refreshClaims.Count++
+	setRefreshClaims(refreshToken, refreshClaims)
 
 	refreshTokenString, err := refreshToken.SignedString(jwtKey)
 	if err != nil {
@@ -65,6 +86,16 @@ func Refresh(rw http.ResponseWriter, req *http.Request) {
 		Expires:  refreshExpiration,
 		HttpOnly: true,
 	})
+
+	// *********************************************************************
+	// * Update the count
+	// *********************************************************************
+	p.Count++
+	err = p.Save(refreshClaims.UserID)
+	if err != nil {
+		writeResponseError(rw, req, err)
+		return
+	}
 
 	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 }

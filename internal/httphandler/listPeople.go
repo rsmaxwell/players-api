@@ -28,7 +28,7 @@ var (
 func ListPeople(rw http.ResponseWriter, req *http.Request) {
 	f := functionListPeople
 
-	_, err := checkAuthToken(req)
+	_, err := checkAccessToken(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

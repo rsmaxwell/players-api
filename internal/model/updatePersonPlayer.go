@@ -21,7 +21,7 @@ func UpdatePersonPlayer(userID string, id string, player bool) error {
 	}
 
 	if !p.CanUpdatePersonPlayer() {
-		return codeerror.NewUnauthorized("Not Authorized")
+		return codeerror.NewForbidden("Forbidden")
 	}
 
 	err = person.UpdatePlayer(id, player)

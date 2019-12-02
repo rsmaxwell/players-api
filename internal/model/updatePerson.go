@@ -21,7 +21,7 @@ func UpdatePerson(userID string, id string, fields map[string]interface{}) error
 	}
 
 	if !p.CanUpdatePerson(userID, id) {
-		return codeerror.NewUnauthorized("Not Authorized")
+		return codeerror.NewForbidden("Forbidden")
 	}
 
 	err = person.Update(id, fields)

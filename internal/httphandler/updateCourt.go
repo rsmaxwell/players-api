@@ -39,7 +39,7 @@ func UpdateCourt(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if !p.CanUpdateCourt() {
-		writeResponseMessage(rw, req, http.StatusUnauthorized, "", "Not Authorized")
+		writeResponseMessage(rw, req, http.StatusForbidden, "", "Forbidden")
 	}
 
 	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}

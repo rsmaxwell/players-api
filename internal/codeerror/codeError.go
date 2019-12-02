@@ -45,6 +45,11 @@ func NewNotFound(text string) *CodeError {
 	return &CodeError{http.StatusNotFound, "", text}
 }
 
+// NewForbidden function
+func NewForbidden(text string) *CodeError {
+	return &CodeError{http.StatusForbidden, "", text}
+}
+
 // NewUnauthorized function
 func NewUnauthorized(text string) *CodeError {
 	return &CodeError{http.StatusUnauthorized, "basic", text}

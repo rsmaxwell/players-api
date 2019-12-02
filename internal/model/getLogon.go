@@ -28,7 +28,7 @@ func Authenticate(id, password string) (*person.Person, error) {
 
 	if !p.CanLogin() {
 		f.DebugVerbose("person [%s] not authorized to login", id)
-		return nil, codeerror.NewUnauthorized("Not Authorized")
+		return nil, codeerror.NewForbidden("Forbidden")
 	}
 
 	return p, nil

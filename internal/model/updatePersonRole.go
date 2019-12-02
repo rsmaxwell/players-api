@@ -21,7 +21,7 @@ func UpdatePersonRole(userID string, id string, role string) error {
 	}
 
 	if !p.CanUpdatePersonRole(userID, id) {
-		return codeerror.NewUnauthorized("Not Authorized")
+		return codeerror.NewForbidden("Forbidden")
 	}
 
 	err = person.UpdateRole(id, role)

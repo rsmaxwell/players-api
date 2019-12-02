@@ -36,7 +36,7 @@ func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 
 	if !p.CanGetMetrics() {
 		f.DebugVerbose("unauthorized person[%s] attempted to get metrics", claims.UserID)
-		writeResponseMessage(rw, req, http.StatusUnauthorized, "", "Not Authorized")
+		writeResponseMessage(rw, req, http.StatusForbidden, "", "Forbidden")
 		return
 	}
 

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/rsmaxwell/players-api/internal/basic/person"
 
 	"github.com/gorilla/mux"
 
@@ -239,9 +242,14 @@ func checkAccessToken(req *http.Request) (*AccessClaims, error) {
 	}
 
 	if f.Level() >= debug.VerboseLevel {
+		unixTimeUTC := time.Unix(accessClaims.ExpiresAt, 0)
+		loc, _ := time.LoadLocation("Local")
+		localtime := unixTimeUTC.In(loc)
+		expiresAtFormatted := localtime.Format("2006-01-02 15:04:05")
+
 		f.DebugVerbose("accessClaims:")
 		f.DebugVerbose("    UserID:    %s", accessClaims.UserID)
-		f.DebugVerbose("    ExpiresAt: %d", accessClaims.ExpiresAt)
+		f.DebugVerbose("    ExpiresAt: %d (%s)", accessClaims.ExpiresAt, expiresAtFormatted)
 		f.DebugVerbose("    Role:      %s", accessClaims.Role)
 		f.DebugVerbose("    FirstName: %s", accessClaims.FirstName)
 		f.DebugVerbose("    LastName:  %s", accessClaims.LastName)
@@ -285,10 +293,29 @@ func checkRefreshToken(req *http.Request) (*RefreshClaims, error) {
 	}
 
 	if f.Level() >= debug.VerboseLevel {
+		unixTimeUTC := time.Unix(refreshClaims.ExpiresAt, 0)
+		loc, _ := time.LoadLocation("Local")
+		localtime := unixTimeUTC.In(loc)
+		expiresAtFormatted := localtime.Format("2006-01-02 15:04:05")
+
 		f.DebugVerbose("refreshClaims:")
 		f.DebugVerbose("    UserID:    %s", refreshClaims.UserID)
-		f.DebugVerbose("    ExpiresAt: %d", refreshClaims.ExpiresAt)
+		f.DebugVerbose("    ExpiresAt: %d (%s)", refreshClaims.ExpiresAt, expiresAtFormatted)
 		f.DebugVerbose("    Count:     %d", refreshClaims.Count)
+	}
+
+	p, err := person.Load(refreshClaims.UserID)
+	if err != nil {
+		return nil, codeerror.NewUnauthorized("Not Authorized")
+	}
+
+	if f.Level() >= debug.VerboseLevel {
+		f.DebugVerbose("person:")
+		f.DebugVerbose("    Count:     %d", p.Count)
+	}
+
+	if refreshClaims.Count != p.Count {
+		return nil, codeerror.NewUnauthorized("Not Authorized")
 	}
 
 	return &refreshClaims, nil

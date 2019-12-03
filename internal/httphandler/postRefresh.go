@@ -39,6 +39,14 @@ func Refresh(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	p.Count++
+
+	err = p.Save(refreshClaims.UserID)
+	if err != nil {
+		writeResponseError(rw, req, err)
+		return
+	}
+
 	// *********************************************************************
 	// * Make a new access token and save it in a header
 	// *********************************************************************
@@ -69,7 +77,7 @@ func Refresh(rw http.ResponseWriter, req *http.Request) {
 	refreshToken := jwt.New(jwt.SigningMethodHS256)
 
 	refreshClaims.ExpiresAt = time.Now().Add(time.Hour * 24).Unix()
-	refreshClaims.Count++
+	refreshClaims.Count = p.Count
 	setRefreshClaims(refreshToken, refreshClaims)
 
 	refreshTokenString, err := refreshToken.SignedString(jwtKey)
@@ -85,6 +93,7 @@ func Refresh(rw http.ResponseWriter, req *http.Request) {
 		Value:    refreshTokenString,
 		Expires:  refreshExpiration,
 		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	// *********************************************************************

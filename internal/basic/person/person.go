@@ -126,6 +126,7 @@ func New(firstname string, lastname string, email string, hashedPassword []byte,
 	person.HashedPassword = hashedPassword
 	person.Player = player
 	person.Role = RoleSuspended
+	person.Count = 0
 	return person
 }
 

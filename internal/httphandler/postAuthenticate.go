@@ -30,6 +30,14 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	p.Count++
+
+	err = p.Save(id)
+	if err != nil {
+		writeResponseError(rw, req, err)
+		return
+	}
+
 	// *********************************************************************
 	// * Make an access token and put it in the header
 	// *********************************************************************
@@ -62,7 +70,7 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 	setRefreshClaims(refreshToken, &RefreshClaims{
 		UserID:    id,
 		ExpiresAt: refreshExpiration.Unix(),
-		Count:     0,
+		Count:     p.Count,
 	})
 
 	refreshTokenString, err := refreshToken.SignedString(jwtKey)
@@ -78,6 +86,7 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 		Value:    refreshTokenString,
 		Expires:  refreshExpiration,
 		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	writeResponseMessage(rw, req, http.StatusOK, "", "ok")

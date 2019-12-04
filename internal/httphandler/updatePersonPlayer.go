@@ -25,9 +25,16 @@ var (
 func UpdatePersonPlayer(rw http.ResponseWriter, req *http.Request) {
 	f := functionUpdatePersonPlayer
 
-	claims, err := checkAccessToken(req)
+	sess, err := checkAuthenticated(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
+		return
+	}
+
+	userID, ok := sess.Values["userID"].(string)
+	if !ok {
+		f.DebugVerbose("could not get 'userID' from the session")
+		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "Error")
 		return
 	}
 
@@ -50,7 +57,7 @@ func UpdatePersonPlayer(rw http.ResponseWriter, req *http.Request) {
 	id := mux.Vars(req)["id"]
 	f.DebugVerbose("ID: %s", id)
 
-	err = model.UpdatePersonPlayer(claims.UserID, id, r.Player)
+	err = model.UpdatePersonPlayer(userID, id, r.Player)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

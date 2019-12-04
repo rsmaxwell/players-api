@@ -15,7 +15,7 @@ type GetQueueResponse struct {
 // GetQueue method
 func GetQueue(rw http.ResponseWriter, req *http.Request) {
 
-	_, err := checkAccessToken(req)
+	_, err := checkAuthenticated(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

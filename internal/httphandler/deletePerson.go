@@ -16,7 +16,7 @@ var (
 func DeletePerson(rw http.ResponseWriter, req *http.Request) {
 	f := functionDeletePerson
 
-	claims, err := checkAccessToken(req)
+	sess, err := checkAuthenticated(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return
@@ -25,7 +25,14 @@ func DeletePerson(rw http.ResponseWriter, req *http.Request) {
 	id := mux.Vars(req)["id"]
 	f.DebugVerbose("ID: %s", id)
 
-	if claims.UserID == id {
+	userID, ok := sess.Values["userID"].(string)
+	if !ok {
+		f.DebugVerbose("could not get 'userID' from the session")
+		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "Error")
+		return
+	}
+
+	if userID == id {
 		f.DebugVerbose("Attempt delete self: %s", id)
 		writeResponseMessage(rw, req, http.StatusUnauthorized, "", "Not Authorized")
 		return

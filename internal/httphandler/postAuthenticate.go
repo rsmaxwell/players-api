@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/sessions"
 
 	"github.com/rsmaxwell/players-api/internal/model"
@@ -44,67 +43,23 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// *********************************************************************
-	// * Make a new session
+	// * Create a new session
 	// *********************************************************************
-	session, err := store.Get(req, "players-api")
+	sess, err := store.Get(req, "players-api")
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return
 	}
 
-	session.Values["authenticated"] = true
-	session.Save(req, rw)
-
-	// *********************************************************************
-	// * Make an access token and put it in the header
-	// *********************************************************************
-	accessToken := jwt.New(jwt.SigningMethodHS256)
-
-	setAccessClaims(accessToken, &AccessClaims{
-		UserID:    id,
-		ExpiresAt: time.Now().Add(time.Minute * 15).Unix(),
-		Role:      p.Role,
-		FirstName: p.FirstName,
-		LastName:  p.LastName,
-	})
-
-	accessTokenString, err := accessToken.SignedString(jwtKey)
-	if err != nil {
-		writeResponseError(rw, req, err)
-		return
-	}
-
-	f.DebugVerbose("Access-Token: %s", accessTokenString)
-	rw.Header().Set("Access-Token", accessTokenString)
-
-	// *********************************************************************
-	// * Make a refresh token and put it in a cookie
-	// *********************************************************************
-	refreshExpiration := time.Now().Add(time.Hour * 24)
-
-	refreshToken := jwt.New(jwt.SigningMethodHS256)
-
-	setRefreshClaims(refreshToken, &RefreshClaims{
-		UserID:    id,
-		ExpiresAt: refreshExpiration.Unix(),
-		Count:     p.Count,
-	})
-
-	refreshTokenString, err := refreshToken.SignedString(jwtKey)
-	if err != nil {
-		writeResponseError(rw, req, err)
-		return
-	}
-
-	f.DebugVerbose("Refresh-Token: %s", refreshTokenString)
-
-	http.SetCookie(rw, &http.Cookie{
-		Name:     "players-api",
-		Value:    refreshTokenString,
-		Expires:  refreshExpiration,
+	sess.Options = &sessions.Options{
+		MaxAge:   3600 * 6,
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	}
+
+	sess.Values["userID"] = id
+	sess.Values["authenticated"] = true
+	sess.Values["expiresAt"] = time.Now().Add(time.Hour * 24).Unix()
+	sess.Save(req, rw)
 
 	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 }

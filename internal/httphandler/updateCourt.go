@@ -26,15 +26,22 @@ var (
 func UpdateCourt(rw http.ResponseWriter, req *http.Request) {
 	f := functionUpdateCourt
 
-	claims, err := checkAccessToken(req)
+	sess, err := checkAuthenticated(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return
 	}
 
-	p, err := person.Load(claims.UserID)
+	userID, ok := sess.Values["userID"].(string)
+	if !ok {
+		f.DebugVerbose("could not get 'userID' from the session")
+		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "Error")
+		return
+	}
+
+	p, err := person.Load(userID)
 	if err != nil {
-		f.Dump("Could not load the logged on user[%s]: %v", claims.UserID, err)
+		f.Dump("Could not load the logged on user[%s]: %v", userID, err)
 		writeResponseMessage(rw, req, http.StatusInternalServerError, "", err.Error())
 		return
 	}

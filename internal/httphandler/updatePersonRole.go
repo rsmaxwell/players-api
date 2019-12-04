@@ -24,9 +24,16 @@ var (
 func UpdatePersonRole(rw http.ResponseWriter, req *http.Request) {
 	f := functionUpdatePersonRole
 
-	claims, err := checkAccessToken(req)
+	sess, err := checkAuthenticated(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
+		return
+	}
+
+	userID, ok := sess.Values["userID"].(string)
+	if !ok {
+		f.DebugVerbose("could not get 'userID' from the session")
+		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "Error")
 		return
 	}
 
@@ -49,7 +56,7 @@ func UpdatePersonRole(rw http.ResponseWriter, req *http.Request) {
 	id := mux.Vars(req)["id"]
 	f.DebugVerbose("ID: %s", id)
 
-	err = model.UpdatePersonRole(claims.UserID, id, r.Role)
+	err = model.UpdatePersonRole(userID, id, r.Role)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

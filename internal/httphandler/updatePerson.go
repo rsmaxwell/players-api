@@ -24,9 +24,16 @@ var (
 func UpdatePerson(rw http.ResponseWriter, req *http.Request) {
 	f := functionUpdatePerson
 
-	claims, err := checkAccessToken(req)
+	sess, err := checkAuthenticated(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
+		return
+	}
+
+	userID, ok := sess.Values["userID"].(string)
+	if !ok {
+		f.DebugVerbose("could not get 'userID' from the session")
+		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "Error")
 		return
 	}
 
@@ -51,7 +58,7 @@ func UpdatePerson(rw http.ResponseWriter, req *http.Request) {
 	f.DebugVerbose("ID:     %s", id)
 	f.DebugVerbose("Person: %v", r.Person)
 
-	err = model.UpdatePerson(claims.UserID, id, r.Person)
+	err = model.UpdatePerson(userID, id, r.Person)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

@@ -30,7 +30,7 @@ var (
 func CreateCourt(rw http.ResponseWriter, req *http.Request) {
 	f := functionCreateCourt
 
-	_, err := checkAccessToken(req)
+	_, err := checkAuthenticated(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

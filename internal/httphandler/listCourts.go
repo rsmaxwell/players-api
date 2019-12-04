@@ -21,7 +21,7 @@ func ListCourts(rw http.ResponseWriter, req *http.Request) {
 	f := functionListCourts
 	f.DebugVerbose("")
 
-	_, err := checkAccessToken(req)
+	_, err := checkAuthenticated(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return

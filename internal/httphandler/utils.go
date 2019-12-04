@@ -2,16 +2,10 @@ package httphandler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"strings"
-	"time"
-
-	"github.com/rsmaxwell/players-api/internal/basic/person"
 
 	"github.com/gorilla/mux"
-
-	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/sessions"
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/common"
@@ -29,10 +23,9 @@ var (
 
 	pkg = debug.NewPackage("httphandler")
 
-	functionMiddleware        = debug.NewFunction(pkg, "Middleware")
-	functionCheckAccessToken  = debug.NewFunction(pkg, "checkAccessToken")
-	functionCheckRefreshToken = debug.NewFunction(pkg, "checkRefreshToken")
-	functionAuthenticate      = debug.NewFunction(pkg, "Authenticate")
+	functionMiddleware         = debug.NewFunction(pkg, "Middleware")
+	functionAuthenticate       = debug.NewFunction(pkg, "Authenticate")
+	functionCheckAuthenticated = debug.NewFunction(pkg, "checkAuthenticated")
 )
 
 // writeResponseMessage method
@@ -91,234 +84,25 @@ func writeResponseError(rw http.ResponseWriter, req *http.Request, err error) {
 	}
 }
 
-func stripBearerPrefixFromTokenString(tok string) (string, error) {
-	// Should be a bearer token
-	if len(tok) > 6 && strings.ToUpper(tok[0:7]) == "BEARER " {
-		return tok[7:], nil
-	}
-	return tok, nil
-}
+// checkAuthenticated method
+func checkAuthenticated(req *http.Request) (*sessions.Session, error) {
+	f := functionCheckAuthenticated
 
-// RefreshClaims struct
-type RefreshClaims struct {
-	UserID    string
-	ExpiresAt int64
-	Count     int
-}
-
-// setRefreshClaims function
-func setRefreshClaims(token *jwt.Token, claims *RefreshClaims) {
-
-	c := token.Claims.(jwt.MapClaims)
-
-	c["sub"] = claims.UserID
-	c["exp"] = claims.ExpiresAt
-	c["Count"] = claims.Count
-}
-
-// getRefreshClaims function
-func getRefreshClaims(claims jwt.MapClaims, refreshClaims *RefreshClaims) error {
-
-	var ok bool
-
-	value := claims["sub"]
-	refreshClaims.UserID, ok = value.(string)
-	if !ok {
-		return fmt.Errorf("The 'sub' value is not a 'string': %v, %t", value, value)
-	}
-
-	value = claims["exp"]
-	float64Value, ok := value.(float64)
-	if !ok {
-		return fmt.Errorf("The 'exp' value is not a 'int64': %v, %t", value, value)
-	}
-	refreshClaims.ExpiresAt = int64(float64Value)
-
-	value = claims["Count"]
-	float64Value, ok = value.(float64)
-	if !ok {
-		return fmt.Errorf("The 'Count' value is not a 'number': %v, %t", value, value)
-	}
-	refreshClaims.Count = int(float64Value)
-
-	return nil
-}
-
-// AccessClaims struct
-type AccessClaims struct {
-	UserID    string
-	ExpiresAt int64
-	Role      string
-	FirstName string
-	LastName  string
-}
-
-// setAccessClaims function
-func setAccessClaims(token *jwt.Token, claims *AccessClaims) {
-
-	c := token.Claims.(jwt.MapClaims)
-
-	c["sub"] = claims.UserID
-	c["exp"] = claims.ExpiresAt
-	c["Role"] = claims.Role
-	c["FirstName"] = claims.FirstName
-	c["LastName"] = claims.LastName
-}
-
-// getAccessClaims function
-func getAccessClaims(claims jwt.MapClaims, accessClaims *AccessClaims) error {
-
-	var ok bool
-
-	value := claims["sub"]
-	accessClaims.UserID, ok = value.(string)
-	if !ok {
-		return fmt.Errorf("The 'sub' value is not a 'string': %v, %t", value, value)
-	}
-
-	value = claims["exp"]
-	float64Value, ok := value.(float64)
-	if !ok {
-		return fmt.Errorf("The 'exp' value is not a 'int64': %v, %t", value, value)
-	}
-	accessClaims.ExpiresAt = int64(float64Value)
-
-	value = claims["Role"]
-	accessClaims.Role, ok = value.(string)
-	if !ok {
-		return fmt.Errorf("The 'Role' value is not a 'string': %v, %t", value, value)
-	}
-
-	value = claims["FirstName"]
-	accessClaims.FirstName, ok = value.(string)
-	if !ok {
-		return fmt.Errorf("The 'FirstName' value is not a 'string': %v, %t", value, value)
-	}
-
-	value = claims["LastName"]
-	accessClaims.LastName, ok = value.(string)
-	if !ok {
-		return fmt.Errorf("The 'LastName' value is not a 'string': %v, %t", value, value)
-	}
-
-	return nil
-}
-
-// checkAccessToken method
-func checkAccessToken(req *http.Request) (*AccessClaims, error) {
-	f := functionCheckAccessToken
-
-	// ********************************************************************
-	// * Get the access token from the Header
-	// ********************************************************************
-	authorizationString := req.Header.Get("Authorization")
-	if authorizationString == "" {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
-	}
-
-	accessTokenString, err := stripBearerPrefixFromTokenString(authorizationString)
+	sess, err := store.Get(req, "players-api")
 	if err != nil {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
-	}
-
-	claims := jwt.MapClaims{}
-	accessToken, err := jwt.ParseWithClaims(accessTokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-	if err != nil {
-		if err == jwt.ErrSignatureInvalid {
-			return nil, codeerror.NewUnauthorized("Not Authorized")
-		}
-		return nil, codeerror.NewBadRequest(err.Error())
-	}
-	if !accessToken.Valid {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
-	}
-
-	accessClaims := AccessClaims{}
-	err = getAccessClaims(claims, &accessClaims)
-	if err != nil {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
-	}
-
-	if f.Level() >= debug.VerboseLevel {
-		unixTimeUTC := time.Unix(accessClaims.ExpiresAt, 0)
-		loc, _ := time.LoadLocation("Local")
-		localtime := unixTimeUTC.In(loc)
-		expiresAtFormatted := localtime.Format("2006-01-02 15:04:05")
-
-		f.DebugVerbose("accessClaims:")
-		f.DebugVerbose("    UserID:    %s", accessClaims.UserID)
-		f.DebugVerbose("    ExpiresAt: %d (%s)", accessClaims.ExpiresAt, expiresAtFormatted)
-		f.DebugVerbose("    Role:      %s", accessClaims.Role)
-		f.DebugVerbose("    FirstName: %s", accessClaims.FirstName)
-		f.DebugVerbose("    LastName:  %s", accessClaims.LastName)
-	}
-
-	return &accessClaims, nil
-}
-
-// checkRefreshToken method
-func checkRefreshToken(req *http.Request) (*RefreshClaims, error) {
-	f := functionCheckRefreshToken
-
-	cookie, err := req.Cookie("players-api")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			return nil, codeerror.NewUnauthorized("Not Authorized")
-		}
+		f.Dump("could not get the 'players-api' cookie")
 		return nil, codeerror.NewInternalServerError(err.Error())
 	}
 
-	refreshTokenString := cookie.Value
-
-	claims := jwt.MapClaims{}
-	refreshToken, err := jwt.ParseWithClaims(refreshTokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-	if err != nil {
-		if err == jwt.ErrSignatureInvalid {
-			return nil, codeerror.NewUnauthorized("Not Authorized")
-		}
-		return nil, codeerror.NewBadRequest(err.Error())
+	auth, ok := sess.Values["authenticated"].(bool)
+	if !ok {
+		return nil, codeerror.NewForbidden("Forbidden")
 	}
-	if !refreshToken.Valid {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
+	if !auth {
+		return nil, codeerror.NewForbidden("Forbidden")
 	}
 
-	refreshClaims := RefreshClaims{}
-	err = getRefreshClaims(claims, &refreshClaims)
-	if err != nil {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
-	}
-
-	if f.Level() >= debug.VerboseLevel {
-		unixTimeUTC := time.Unix(refreshClaims.ExpiresAt, 0)
-		loc, _ := time.LoadLocation("Local")
-		localtime := unixTimeUTC.In(loc)
-		expiresAtFormatted := localtime.Format("2006-01-02 15:04:05")
-
-		f.DebugVerbose("refreshClaims:")
-		f.DebugVerbose("    UserID:    %s", refreshClaims.UserID)
-		f.DebugVerbose("    ExpiresAt: %d (%s)", refreshClaims.ExpiresAt, expiresAtFormatted)
-		f.DebugVerbose("    Count:     %d", refreshClaims.Count)
-	}
-
-	p, err := person.Load(refreshClaims.UserID)
-	if err != nil {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
-	}
-
-	if f.Level() >= debug.VerboseLevel {
-		f.DebugVerbose("person:")
-		f.DebugVerbose("    Count:     %d", p.Count)
-	}
-
-	if refreshClaims.Count != p.Count {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
-	}
-
-	return &refreshClaims, nil
+	return sess, nil
 }
 
 // SetupHandlers Handlers for REST API routes
@@ -328,7 +112,6 @@ func SetupHandlers(r *mux.Router) {
 
 	s.HandleFunc("/users/authenticate", Authenticate).Methods(http.MethodPost)
 	s.HandleFunc("/users/register", Register).Methods(http.MethodPost)
-	s.HandleFunc("/users/refresh", Refresh).Methods(http.MethodPost)
 	s.HandleFunc("/users", ListPeople).Methods(http.MethodGet)
 	s.HandleFunc("/users/{id}", DeletePerson).Methods(http.MethodDelete)
 	s.HandleFunc("/users/logout", Logout).Methods(http.MethodGet)

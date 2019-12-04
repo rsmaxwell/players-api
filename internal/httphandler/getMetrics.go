@@ -21,21 +21,28 @@ var (
 func GetMetrics(rw http.ResponseWriter, req *http.Request) {
 	f := functionGetMetrics
 
-	claims, err := checkAccessToken(req)
+	sess, err := checkAuthenticated(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return
 	}
 
-	p, err := person.Load(claims.UserID)
+	userID, ok := sess.Values["userID"].(string)
+	if !ok {
+		f.DebugVerbose("could not get 'userID' from the session")
+		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "Error")
+		return
+	}
+
+	p, err := person.Load(userID)
 	if err != nil {
-		f.Dump("Could not load the logged on user: %s", claims.UserID)
+		f.Dump("Could not load the logged on user: %s", userID)
 		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "Not Authorized")
 		return
 	}
 
 	if !p.CanGetMetrics() {
-		f.DebugVerbose("unauthorized person[%s] attempted to get metrics", claims.UserID)
+		f.DebugVerbose("unauthorized person[%s] attempted to get metrics", userID)
 		writeResponseMessage(rw, req, http.StatusForbidden, "", "Forbidden")
 		return
 	}

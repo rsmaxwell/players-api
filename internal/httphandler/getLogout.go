@@ -2,7 +2,6 @@ package httphandler
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/rsmaxwell/players-api/internal/debug"
 )
@@ -16,19 +15,19 @@ func Logout(rw http.ResponseWriter, req *http.Request) {
 	f := functionLogout
 	f.DebugVerbose("")
 
-	_, err := checkAccessToken(req)
+	sess, err := checkAuthenticated(req)
 	if err != nil {
 		writeResponseError(rw, req, err)
 		return
 	}
 
-	http.SetCookie(rw, &http.Cookie{
-		Name:     "players-api",
-		Value:    "",
-		Expires:  time.Now(),
-		MaxAge:   0,
-		HttpOnly: true,
-	})
+	sess.Options.MaxAge = -1
+
+	err = sess.Save(req, rw)
+	if err != nil {
+		writeResponseError(rw, req, err)
+		return
+	}
 
 	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
 }

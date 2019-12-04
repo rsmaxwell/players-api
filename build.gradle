@@ -62,9 +62,23 @@ task updateJWTSecretKey {
             (1..n).collect { alphabet[ nextInt( alphabet.length() ) ] }.join()
           }
         }
-        ext.jwtSecretKey = generator( (('A'..'Z')+('0'..'9')+('a'..'z')).join(), 64 )
+        ext.jwtSecretKey = generator( (('A'..'Z')+('0'..'9')+('a'..'z')).join(), 256 )
 
         ant.replace(dir: 'internal', includes: '**/postAuthenticate.go', token: '<JWT_SECRET_KEY>', value: jwtSecretKey)
+    }
+}
+
+task updateSessionSecretKey {
+    onlyIf { System.env.BUILD_ID != null }
+    doLast {
+        def generator = { String alphabet, int n ->
+          new Random().with {
+            (1..n).collect { alphabet[ nextInt( alphabet.length() ) ] }.join()
+          }
+        }
+        ext.jwtSecretKey = generator( (('A'..'Z')+('0'..'9')+('a'..'z')).join(), 256 )
+
+        ant.replace(dir: 'internal', includes: '**/postAuthenticate.go', token: '<SESSION_SECRET_KEY>', value: jwtSecretKey)
     }
 }
 
@@ -94,6 +108,9 @@ task prepare()  {
         }
         exec {
             commandLine 'go', 'get', "github.com/gorilla/mux"
+        }
+        exec {
+            commandLine 'go', 'get', "github.com/gorilla/sessions"
         }
         exec {
             commandLine 'go', 'get', "github.com/stretchr/testify/require"

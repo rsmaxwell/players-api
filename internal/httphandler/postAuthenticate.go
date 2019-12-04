@@ -5,12 +5,17 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/sessions"
 
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // Create the JWT key used to create the signature
-var jwtKey = []byte("<JWT_SECRET_KEY>")
+var (
+	jwtKey = []byte("<JWT_SECRET_KEY>")
+	key    = []byte("<SESSION_SECRET_KEY>")
+	store  = sessions.NewCookieStore(key)
+)
 
 // Authenticate method
 func Authenticate(rw http.ResponseWriter, req *http.Request) {
@@ -37,6 +42,18 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 		writeResponseError(rw, req, err)
 		return
 	}
+
+	// *********************************************************************
+	// * Make a new session
+	// *********************************************************************
+	session, err := store.Get(req, "players-api")
+	if err != nil {
+		writeResponseError(rw, req, err)
+		return
+	}
+
+	session.Values["authenticated"] = true
+	session.Save(req, rw)
 
 	// *********************************************************************
 	// * Make an access token and put it in the header

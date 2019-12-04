@@ -3,7 +3,6 @@ package httphandler
 import (
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 	"time"
 
@@ -42,24 +41,15 @@ func testLogin(t *testing.T, userID, password string) (string, *http.Cookie) {
 	response := rw.Result()
 	require.Equal(t, rw.Code, http.StatusOK, "authentication failed")
 
-	accessTokenArray := response.Header["Access-Token"]
-	require.Equal(t, len(accessTokenArray), 1, "accessToken array should have 1 entry. found: "+strconv.Itoa(len(accessTokenArray)))
-
-	accessTokenString := accessTokenArray[0]
-	require.NotEmpty(t, accessTokenString, "accessTokenString should not be empty")
-
 	cookies := map[string]*http.Cookie{}
 	for _, cookie := range response.Cookies() {
 		cookies[cookie.Name] = cookie
 	}
 
-	refreshTokenCookie := cookies["players-api"]
-	require.NotNil(t, refreshTokenCookie, "refreshTokenCookie should be something")
+	cookie := cookies["players-api"]
+	require.NotNil(t, cookie, "cookie should be something")
 
-	refreshTokenString := refreshTokenCookie.Value
-	require.NotEmpty(t, refreshTokenString, "refreshToken should not be empty")
-
-	return accessTokenString, refreshTokenCookie
+	return "", cookie
 }
 
 func setAccessToken(req *http.Request, setAccessToken bool, accessToken string) {

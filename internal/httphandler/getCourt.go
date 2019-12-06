@@ -19,25 +19,25 @@ var (
 )
 
 // GetCourt method
-func GetCourt(rw http.ResponseWriter, req *http.Request) {
+func GetCourt(w http.ResponseWriter, r *http.Request) {
 	f := functionGetCourt
 
-	_, err := checkAuthenticated(req)
+	_, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	id := mux.Vars(req)["id"]
+	id := mux.Vars(r)["id"]
 	f.DebugVerbose("ID: %s", id)
 
 	c, err := model.GetCourt(id)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseObject(rw, req, http.StatusOK, "", GetCourtResponse{
+	writeResponseObject(w, r, http.StatusOK, "", GetCourtResponse{
 		Court: *c,
 	})
 }

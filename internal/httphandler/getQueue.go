@@ -13,21 +13,21 @@ type GetQueueResponse struct {
 }
 
 // GetQueue method
-func GetQueue(rw http.ResponseWriter, req *http.Request) {
+func GetQueue(w http.ResponseWriter, r *http.Request) {
 
-	_, err := checkAuthenticated(req)
+	_, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
 	q, err := model.GetQueue()
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseObject(rw, req, http.StatusOK, "", GetQueueResponse{
+	writeResponseObject(w, r, http.StatusOK, "", GetQueueResponse{
 		Queue: *q,
 	})
 }

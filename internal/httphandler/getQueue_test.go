@@ -20,20 +20,17 @@ func TestGetQueue(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get tokens
+	// * Login
 	// ***************************************************************
-	accessTokenString, refreshTokenCookie := testLogin(t, "007", "topsecret")
+	logonCookie := testLogin(t, "007", "topsecret")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
 		testName              string
-		setAccessToken        bool
-		accessToken           string
-		useGoodRefreshToken   bool
-		setRefreshToken       bool
-		refreshToken          string
+		setLogonCookie        bool
+		logonCookie           *http.Cookie
 		userID                string
 		expectedStatus        int
 		expectedResultName    string
@@ -41,34 +38,9 @@ func TestGetQueue(t *testing.T) {
 	}{
 		{
 			testName:              "Good request",
-			setAccessToken:        true,
-			accessToken:           "Bearer " + accessTokenString,
-			useGoodRefreshToken:   true,
-			setRefreshToken:       false,
-			refreshToken:          "",
+			setLogonCookie:        true,
+			logonCookie:           logonCookie,
 			expectedStatus:        http.StatusOK,
-			expectedResultName:    "Queue",
-			expectedResultPlayers: []string{"one", "two"},
-		},
-		{
-			testName:              "no login cookie",
-			setAccessToken:        false,
-			accessToken:           "",
-			useGoodRefreshToken:   true,
-			setRefreshToken:       false,
-			refreshToken:          "",
-			expectedStatus:        http.StatusUnauthorized,
-			expectedResultName:    "Queue",
-			expectedResultPlayers: []string{"one", "two"},
-		},
-		{
-			testName:              "bad token",
-			setAccessToken:        true,
-			accessToken:           "junk",
-			useGoodRefreshToken:   true,
-			setRefreshToken:       false,
-			refreshToken:          "",
-			expectedStatus:        http.StatusBadRequest,
 			expectedResultName:    "Queue",
 			expectedResultPlayers: []string{"one", "two"},
 		},
@@ -83,24 +55,25 @@ func TestGetQueue(t *testing.T) {
 			// Set up the handlers on the router
 			router := mux.NewRouter()
 			SetupHandlers(router)
-			rw := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 
 			// Create a request
-			req, err := http.NewRequest("GET", contextPath+"/queue", nil)
+			r, err := http.NewRequest("GET", contextPath+"/queue", nil)
 			require.Nil(t, err, "err should be nothing")
 
-			setAccessToken(req, test.setAccessToken, test.accessToken)
-			setRefreshToken(req, test.useGoodRefreshToken, test.setRefreshToken, refreshTokenCookie, test.refreshToken)
+			if test.setLogonCookie {
+				r.AddCookie(test.logonCookie)
+			}
 
 			// Serve the request
-			router.ServeHTTP(rw, req)
-			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
+			router.ServeHTTP(w, r)
+			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the response
-			bytes, err := ioutil.ReadAll(rw.Body)
+			bytes, err := ioutil.ReadAll(w.Body)
 			require.Nil(t, err, "err should be nothing")
 
-			if rw.Code == http.StatusOK {
+			if w.Code == http.StatusOK {
 				var response GetQueueResponse
 				err = json.Unmarshal(bytes, &response)
 				require.Nil(t, err, "err should be nothing")

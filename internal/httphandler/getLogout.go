@@ -11,23 +11,23 @@ var (
 )
 
 // Logout method
-func Logout(rw http.ResponseWriter, req *http.Request) {
+func Logout(w http.ResponseWriter, r *http.Request) {
 	f := functionLogout
 	f.DebugVerbose("")
 
-	sess, err := checkAuthenticated(req)
+	sess, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
 	sess.Options.MaxAge = -1
 
-	err = sess.Save(req, rw)
+	err = sess.Save(r, w)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "", "ok")
 }

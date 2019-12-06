@@ -22,9 +22,9 @@ func TestListPeople(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get tokens
+	// * Login
 	// ***************************************************************
-	accessTokenString, refreshTokenCookie := testLogin(t, "007", "topsecret")
+	logonCookie := testLogin(t, "007", "topsecret")
 
 	// ***************************************************************
 	// * Get a list of all the people
@@ -36,48 +36,20 @@ func TestListPeople(t *testing.T) {
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName            string
-		setAccessToken      bool
-		accessToken         string
-		useGoodRefreshToken bool
-		setRefreshToken     bool
-		refreshToken        string
-		filter              []string
-		expectedStatus      int
-		expectedResult      []string
+		testName       string
+		setLogonCookie bool
+		logonCookie    *http.Cookie
+		filter         []string
+		expectedStatus int
+		expectedResult []string
 	}{
 		{
-			testName:            "Good request",
-			setAccessToken:      true,
-			accessToken:         "Bearer " + accessTokenString,
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			filter:              person.AllRoles,
-			expectedStatus:      http.StatusOK,
-			expectedResult:      allPeopleIDs,
-		},
-		{
-			testName:            "no login cookie",
-			setAccessToken:      false,
-			accessToken:         "",
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			filter:              person.AllRoles,
-			expectedStatus:      http.StatusUnauthorized,
-			expectedResult:      allPeopleIDs,
-		},
-		{
-			testName:            "bad token",
-			setAccessToken:      true,
-			accessToken:         "junk",
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			filter:              person.AllRoles,
-			expectedStatus:      http.StatusBadRequest,
-			expectedResult:      allPeopleIDs,
+			testName:       "Good request",
+			setLogonCookie: true,
+			logonCookie:    logonCookie,
+			filter:         person.AllRoles,
+			expectedStatus: http.StatusOK,
+			expectedResult: allPeopleIDs,
 		},
 	}
 
@@ -90,7 +62,7 @@ func TestListPeople(t *testing.T) {
 			// Set up the handlers on the router
 			router := mux.NewRouter()
 			SetupHandlers(router)
-			rw := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 
 			// Create a request
 			requestBody, err := json.Marshal(ListPeopleRequest{
@@ -98,19 +70,20 @@ func TestListPeople(t *testing.T) {
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			req, err := http.NewRequest("GET", contextPath+"/users", bytes.NewBuffer(requestBody))
+			r, err := http.NewRequest("GET", contextPath+"/users", bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
-			setAccessToken(req, test.setAccessToken, test.accessToken)
-			setRefreshToken(req, test.useGoodRefreshToken, test.setRefreshToken, refreshTokenCookie, test.refreshToken)
+			if test.setLogonCookie {
+				r.AddCookie(test.logonCookie)
+			}
 
 			// Serve the request
-			router.ServeHTTP(rw, req)
-			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
+			router.ServeHTTP(w, r)
+			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the response
-			if rw.Code == http.StatusOK {
-				bytes, err := ioutil.ReadAll(rw.Body)
+			if w.Code == http.StatusOK {
+				bytes, err := ioutil.ReadAll(w.Body)
 				require.Nil(t, err, "err should be nothing")
 
 				var response ListPeopleResponse

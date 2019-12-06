@@ -23,36 +23,36 @@ var (
 )
 
 // PostMove method
-func PostMove(rw http.ResponseWriter, req *http.Request) {
+func PostMove(w http.ResponseWriter, r *http.Request) {
 	f := functionPostMove
 
-	_, err := checkAuthenticated(req)
+	_, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
 	f.DebugRequestBody(b)
 
-	var r PostMoveRequest
-	err = json.Unmarshal(b, &r)
+	var request PostMoveRequest
+	err = json.Unmarshal(b, &request)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
-	err = model.PostMove(&r.Source, &r.Target, r.Players)
+	err = model.PostMove(&request.Source, &request.Target, request.Players)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "", "ok")
 }

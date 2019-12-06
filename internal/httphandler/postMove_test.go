@@ -24,32 +24,26 @@ func TestPostMove(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get tokens
+	// * Login
 	// ***************************************************************
-	accessTokenString, refreshTokenCookie := testLogin(t, "007", "topsecret")
+	logonCookie := testLogin(t, "007", "topsecret")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName            string
-		setAccessToken      bool
-		accessToken         string
-		useGoodRefreshToken bool
-		setRefreshToken     bool
-		refreshToken        string
-		source              common.Reference
-		target              common.Reference
-		players             []string
-		expectedStatus      int
+		testName       string
+		setLogonCookie bool
+		logonCookie    *http.Cookie
+		source         common.Reference
+		target         common.Reference
+		players        []string
+		expectedStatus int
 	}{
 		{
-			testName:            "Good request",
-			setAccessToken:      true,
-			accessToken:         "Bearer " + accessTokenString,
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
+			testName: "Good request",
+			setLogonCookie: true,
+			logonCookie:    logonCookie,
 			source: common.Reference{
 				Type: "queue",
 				ID:   "",
@@ -62,30 +56,9 @@ func TestPostMove(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			testName:            "no login cookie",
-			setAccessToken:      false,
-			accessToken:         "",
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			expectedStatus:      http.StatusUnauthorized,
-		},
-		{
-			testName:            "bad token",
-			setAccessToken:      true,
-			accessToken:         "junk",
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			expectedStatus:      http.StatusBadRequest,
-		},
-		{
-			testName:            "Bad player",
-			setAccessToken:      true,
-			accessToken:         "Bearer " + accessTokenString,
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
+			testName: "Bad player",
+			setLogonCookie: true,
+			logonCookie:    logonCookie,
 			source: common.Reference{
 				Type: "queue",
 				ID:   "",
@@ -108,7 +81,7 @@ func TestPostMove(t *testing.T) {
 			// Set up the handlers on the router
 			router := mux.NewRouter()
 			SetupHandlers(router)
-			rw := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 
 			// Create a request
 			requestBody, err := json.Marshal(PostMoveRequest{
@@ -118,18 +91,19 @@ func TestPostMove(t *testing.T) {
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			req, err := http.NewRequest("POST", contextPath+"/users/move", bytes.NewBuffer(requestBody))
+			r, err := http.NewRequest("POST", contextPath+"/users/move", bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
-			setAccessToken(req, test.setAccessToken, test.accessToken)
-			setRefreshToken(req, test.useGoodRefreshToken, test.setRefreshToken, refreshTokenCookie, test.refreshToken)
+			if test.setLogonCookie {
+				r.AddCookie(test.logonCookie)
+			}
 
 			// Serve the request
-			router.ServeHTTP(rw, req)
-			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
+			router.ServeHTTP(w, r)
+			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the response
-			if rw.Code == http.StatusOK {
+			if w.Code == http.StatusOK {
 
 				// Check the moved people have actually moved
 				for _, personID := range test.players {

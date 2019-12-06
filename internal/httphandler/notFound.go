@@ -11,9 +11,9 @@ var (
 )
 
 // NotFound method
-func NotFound(rw http.ResponseWriter, req *http.Request) {
+func NotFound(w http.ResponseWriter, r *http.Request) {
 	f := functionNotFound
 	f.DebugVerbose("")
 
-	writeResponseMessage(rw, req, http.StatusNotFound, "", "Not Found")
+	writeResponseMessage(w, r, http.StatusNotFound, "", "Not Found")
 }

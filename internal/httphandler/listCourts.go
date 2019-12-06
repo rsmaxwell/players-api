@@ -17,23 +17,23 @@ var (
 )
 
 // ListCourts method
-func ListCourts(rw http.ResponseWriter, req *http.Request) {
+func ListCourts(w http.ResponseWriter, r *http.Request) {
 	f := functionListCourts
 	f.DebugVerbose("")
 
-	_, err := checkAuthenticated(req)
+	_, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
 	listOfCourts, err := model.ListCourts()
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseObject(rw, req, http.StatusOK, "", ListCourtsResponse{
+	writeResponseObject(w, r, http.StatusOK, "", ListCourtsResponse{
 		Courts: listOfCourts,
 	})
 }

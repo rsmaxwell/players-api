@@ -54,19 +54,19 @@ func TestAuthenticate(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 
 			// Create a request to pass to our handler.
-			req, err := http.NewRequest("POST", contextPath+"/users/authenticate", nil)
+			r, err := http.NewRequest("POST", contextPath+"/users/authenticate", nil)
 			require.Nil(t, err, "err should be nothing")
 
-			req.Header.Set("Authorization", model.BasicAuth(test.userID, test.password))
+			r.Header.Set("Authorization", model.BasicAuth(test.userID, test.password))
 
 			router := mux.NewRouter()
 			SetupHandlers(router)
-			rw := httptest.NewRecorder()
-			router.ServeHTTP(rw, req)
-			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
-			if rw.Code == http.StatusOK {
-				_, err := ioutil.ReadAll(rw.Body)
+			if w.Code == http.StatusOK {
+				_, err := ioutil.ReadAll(w.Body)
 				if err != nil {
 					log.Fatalln(err)
 				}

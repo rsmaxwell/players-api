@@ -39,7 +39,7 @@ ext {
 
 task generate {
     dependsOn 'updateVersionGO'
-    dependsOn 'updateJWTSecretKey'
+    dependsOn 'updateSessionSecretKey'
     dependsOn 'writeVersionJSON'
 }
 
@@ -51,20 +51,6 @@ task updateVersionGO {
         ant.replace(dir: 'internal', includes: '**/version.go', token: '<GIT_COMMIT>', value: System.env.GIT_COMMIT)
         ant.replace(dir: 'internal', includes: '**/version.go', token: '<GIT_BRANCH>', value: System.env.GIT_BRANCH)
         ant.replace(dir: 'internal', includes: '**/version.go', token: '<GIT_URL>', value: System.env.GIT_URL)
-    }
-}
-
-task updateJWTSecretKey {
-    onlyIf { System.env.BUILD_ID != null }
-    doLast {
-        def generator = { String alphabet, int n ->
-          new Random().with {
-            (1..n).collect { alphabet[ nextInt( alphabet.length() ) ] }.join()
-          }
-        }
-        ext.jwtSecretKey = generator( (('A'..'Z')+('0'..'9')+('a'..'z')).join(), 256 )
-
-        ant.replace(dir: 'internal', includes: '**/postAuthenticate.go', token: '<JWT_SECRET_KEY>', value: jwtSecretKey)
     }
 }
 

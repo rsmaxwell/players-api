@@ -19,25 +19,25 @@ var (
 )
 
 // GetPerson method
-func GetPerson(rw http.ResponseWriter, req *http.Request) {
+func GetPerson(w http.ResponseWriter, r *http.Request) {
 	f := functionGetPerson
 
-	_, err := checkAuthenticated(req)
+	_, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	id := mux.Vars(req)["id"]
+	id := mux.Vars(r)["id"]
 	f.DebugVerbose("ID: %s", id)
 
 	p, err := model.GetPerson(id)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseObject(rw, req, http.StatusOK, "", GetPersonResponse{
+	writeResponseObject(w, r, http.StatusOK, "", GetPersonResponse{
 		Person: *p,
 	})
 }

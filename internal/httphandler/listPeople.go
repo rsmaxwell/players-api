@@ -25,40 +25,40 @@ var (
 )
 
 // ListPeople method
-func ListPeople(rw http.ResponseWriter, req *http.Request) {
+func ListPeople(w http.ResponseWriter, r *http.Request) {
 	f := functionListPeople
 
-	_, err := checkAuthenticated(req)
+	_, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
 	f.DebugRequestBody(b)
 
-	var r ListPeopleRequest
-	err = json.Unmarshal(b, &r)
+	var request ListPeopleRequest
+	err = json.Unmarshal(b, &request)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
-	f.DebugVerbose("Filter:    %s", r.Filter)
+	f.DebugVerbose("Filter:    %s", request.Filter)
 
-	listOfPeople, err := model.ListPeople(r.Filter)
+	listOfPeople, err := model.ListPeople(request.Filter)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseObject(rw, req, http.StatusOK, "", ListPeopleResponse{
+	writeResponseObject(w, r, http.StatusOK, "", ListPeopleResponse{
 		People: listOfPeople,
 	})
 }

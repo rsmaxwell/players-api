@@ -19,56 +19,26 @@ func TestDeleteCourt(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get tokens
+	// * Login
 	// ***************************************************************
-	accessTokenString, refreshTokenCookie := testLogin(t, "007", "topsecret")
-
-	// ***************************************************************
-	// * Testcases
-	// ***************************************************************
+	logonCookie := testLogin(t, "007", "topsecret")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName            string
-		setAccessToken      bool
-		accessToken         string
-		useGoodRefreshToken bool
-		setRefreshToken     bool
-		refreshToken        string
-		courtID             string
-		expectedStatus      int
+		testName       string
+		setLogonCookie bool
+		logonCookie    *http.Cookie
+		courtID        string
+		expectedStatus int
 	}{
 		{
-			testName:            "Good request",
-			setAccessToken:      true,
-			accessToken:         "Bearer " + accessTokenString,
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			courtID:             goodCourtID,
-			expectedStatus:      http.StatusOK,
-		},
-		{
-			testName:            "no login cookie",
-			setAccessToken:      false,
-			accessToken:         "",
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			courtID:             goodCourtID,
-			expectedStatus:      http.StatusUnauthorized,
-		},
-		{
-			testName:            "bad Token",
-			setAccessToken:      true,
-			accessToken:         "junk",
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			courtID:             goodCourtID,
-			expectedStatus:      http.StatusBadRequest,
+			testName:       "Good request",
+			setLogonCookie: true,
+			logonCookie:    logonCookie,
+			courtID:        goodCourtID,
+			expectedStatus: http.StatusOK,
 		},
 	}
 
@@ -84,24 +54,25 @@ func TestDeleteCourt(t *testing.T) {
 			// Set up the handlers on the router
 			router := mux.NewRouter()
 			SetupHandlers(router)
-			rw := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 
 			// Create a request
-			req, err := http.NewRequest("DELETE", contextPath+"/court/"+test.courtID, nil)
+			r, err := http.NewRequest("DELETE", contextPath+"/court/"+test.courtID, nil)
 			require.Nil(t, err, "err should be nothing")
 
-			setAccessToken(req, test.setAccessToken, test.accessToken)
-			setRefreshToken(req, test.useGoodRefreshToken, test.setRefreshToken, refreshTokenCookie, test.refreshToken)
+			if test.setLogonCookie {
+				r.AddCookie(test.logonCookie)
+			}
 
 			// Serve the request
-			router.ServeHTTP(rw, req)
-			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
+			router.ServeHTTP(w, r)
+			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the response
 			finalNumberOfCourts, err := court.Size()
 			require.Nil(t, err, "err should be nothing")
 
-			if rw.Code == http.StatusOK {
+			if w.Code == http.StatusOK {
 				require.Equal(t, initialNumberOfCourts, finalNumberOfCourts+1, "Court was not deleted")
 			} else {
 				require.Equal(t, initialNumberOfCourts, finalNumberOfCourts, "Unexpected number of courts")

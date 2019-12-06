@@ -27,39 +27,39 @@ var (
 )
 
 // CreateCourt method
-func CreateCourt(rw http.ResponseWriter, req *http.Request) {
+func CreateCourt(w http.ResponseWriter, r *http.Request) {
 	f := functionCreateCourt
 
-	_, err := checkAuthenticated(req)
+	_, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
 	f.DebugRequestBody(b)
 
-	var r CreateCourtRequest
-	err = json.Unmarshal(b, &r)
+	var request CreateCourtRequest
+	err = json.Unmarshal(b, &request)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
-	id, err := model.CreateCourt(&r.Court)
+	id, err := model.CreateCourt(&request.Court)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
-	json.NewEncoder(rw).Encode(CreateCourtResponse{
+	writeResponseMessage(w, r, http.StatusOK, "", "ok")
+	json.NewEncoder(w).Encode(CreateCourtResponse{
 		ID: id,
 	})
 }

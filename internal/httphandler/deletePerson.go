@@ -13,36 +13,36 @@ var (
 )
 
 // DeletePerson method
-func DeletePerson(rw http.ResponseWriter, req *http.Request) {
+func DeletePerson(w http.ResponseWriter, r *http.Request) {
 	f := functionDeletePerson
 
-	sess, err := checkAuthenticated(req)
+	sess, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	id := mux.Vars(req)["id"]
+	id := mux.Vars(r)["id"]
 	f.DebugVerbose("ID: %s", id)
 
 	userID, ok := sess.Values["userID"].(string)
 	if !ok {
 		f.DebugVerbose("could not get 'userID' from the session")
-		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "Error")
+		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
 		return
 	}
 
 	if userID == id {
 		f.DebugVerbose("Attempt delete self: %s", id)
-		writeResponseMessage(rw, req, http.StatusUnauthorized, "", "Not Authorized")
+		writeResponseMessage(w, r, http.StatusUnauthorized, "", "Not Authorized")
 		return
 	}
 
 	err = model.DeletePerson(id)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "", "ok")
 }

@@ -2,25 +2,26 @@ package httphandler
 
 import (
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/sessions"
-
+	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // Create the JWT key used to create the signature
 var (
-	jwtKey = []byte("<JWT_SECRET_KEY>")
-	key    = []byte("<SESSION_SECRET_KEY>")
-	store  = sessions.NewCookieStore(key)
+	key          = []byte("<SESSION_SECRET_KEY>")
+	sessionsPath = common.RootDir + "/sessions"
+	store        = sessions.NewFilesystemStore(sessionsPath, key)
 )
 
 // Authenticate method
-func Authenticate(rw http.ResponseWriter, req *http.Request) {
+func Authenticate(w http.ResponseWriter, r *http.Request) {
 	f := functionAuthenticate
 
-	id, password, _ := req.BasicAuth()
+	id, password, _ := r.BasicAuth()
 
 	f.DebugVerbose("id:       %s", id)
 	f.DebugVerbose("password: %s", password)
@@ -28,26 +29,18 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 	// *********************************************************************
 	// * Authenticate the user
 	// *********************************************************************
-	p, err := model.Authenticate(id, password)
+	_, err := model.Authenticate(id, password)
 	if err != nil {
-		writeResponseError(rw, req, err)
-		return
-	}
-
-	p.Count++
-
-	err = p.Save(id)
-	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
 	// *********************************************************************
 	// * Create a new session
 	// *********************************************************************
-	sess, err := store.Get(req, "players-api")
+	sess, err := store.New(r, "players-api")
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
@@ -59,7 +52,17 @@ func Authenticate(rw http.ResponseWriter, req *http.Request) {
 	sess.Values["userID"] = id
 	sess.Values["authenticated"] = true
 	sess.Values["expiresAt"] = time.Now().Add(time.Hour * 24).Unix()
-	sess.Save(req, rw)
 
-	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
+	err = os.MkdirAll(sessionsPath, 700)
+	if err != nil {
+		writeResponseError(w, r, err)
+	}
+
+	err = sess.Save(r, w)
+	if err != nil {
+		writeResponseError(w, r, err)
+		return
+	}
+
+	writeResponseMessage(w, r, http.StatusOK, "", "ok")
 }

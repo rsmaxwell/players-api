@@ -24,36 +24,36 @@ var (
 )
 
 // Register method
-func Register(rw http.ResponseWriter, req *http.Request) {
+func Register(w http.ResponseWriter, r *http.Request) {
 	f := functionRegister
 
-	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
 	f.DebugRequestBody(b)
 
-	var r RegisterRequest
-	err = json.Unmarshal(b, &r)
+	var request RegisterRequest
+	err = json.Unmarshal(b, &request)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
-	f.DebugVerbose("UserID:    %s", r.UserID)
-	f.DebugVerbose("Password:  %s", r.Password)
-	f.DebugVerbose("FirstName: %s", r.FirstName)
-	f.DebugVerbose("LastName:  %s", r.LastName)
-	f.DebugVerbose("Email:     %s", r.Email)
+	f.DebugVerbose("UserID:    %s", request.UserID)
+	f.DebugVerbose("Password:  %s", request.Password)
+	f.DebugVerbose("FirstName: %s", request.FirstName)
+	f.DebugVerbose("LastName:  %s", request.LastName)
+	f.DebugVerbose("Email:     %s", request.Email)
 
-	err = model.Register(r.UserID, r.Password, r.FirstName, r.LastName, r.Email)
+	err = model.Register(request.UserID, request.Password, request.FirstName, request.LastName, request.Email)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "", "ok")
 }

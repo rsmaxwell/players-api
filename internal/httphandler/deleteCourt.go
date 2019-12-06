@@ -13,23 +13,23 @@ var (
 )
 
 // DeleteCourt method
-func DeleteCourt(rw http.ResponseWriter, req *http.Request) {
+func DeleteCourt(w http.ResponseWriter, r *http.Request) {
 	f := functionDeleteCourt
 
-	_, err := checkAuthenticated(req)
+	_, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	id := mux.Vars(req)["id"]
+	id := mux.Vars(r)["id"]
 	f.DebugVerbose("ID: %s", id)
 
 	err = model.DeleteCourt(id)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "", "ok")
 }

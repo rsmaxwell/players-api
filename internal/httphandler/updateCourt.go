@@ -23,56 +23,56 @@ var (
 )
 
 // UpdateCourt method
-func UpdateCourt(rw http.ResponseWriter, req *http.Request) {
+func UpdateCourt(w http.ResponseWriter, r *http.Request) {
 	f := functionUpdateCourt
 
-	sess, err := checkAuthenticated(req)
+	sess, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
 	userID, ok := sess.Values["userID"].(string)
 	if !ok {
 		f.DebugVerbose("could not get 'userID' from the session")
-		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "Error")
+		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
 		return
 	}
 
 	p, err := person.Load(userID)
 	if err != nil {
 		f.Dump("Could not load the logged on user[%s]: %v", userID, err)
-		writeResponseMessage(rw, req, http.StatusInternalServerError, "", err.Error())
+		writeResponseMessage(w, r, http.StatusInternalServerError, "", err.Error())
 		return
 	}
 	if !p.CanUpdateCourt() {
-		writeResponseMessage(rw, req, http.StatusForbidden, "", "Forbidden")
+		writeResponseMessage(w, r, http.StatusForbidden, "", "Forbidden")
 	}
 
-	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
 	f.DebugRequestBody(b)
 
-	var r UpdateCourtRequest
-	err = json.Unmarshal(b, &r)
+	var request UpdateCourtRequest
+	err = json.Unmarshal(b, &request)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
-	id := mux.Vars(req)["id"]
+	id := mux.Vars(r)["id"]
 	f.DebugVerbose("ID: %s", id)
 
-	err = model.UpdateCourt(id, r.Court)
+	err = model.UpdateCourt(id, request.Court)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "", "ok")
 }

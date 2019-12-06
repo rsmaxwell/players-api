@@ -21,48 +21,48 @@ var (
 )
 
 // UpdatePerson method
-func UpdatePerson(rw http.ResponseWriter, req *http.Request) {
+func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	f := functionUpdatePerson
 
-	sess, err := checkAuthenticated(req)
+	sess, err := checkAuthenticated(r)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
 	userID, ok := sess.Values["userID"].(string)
 	if !ok {
 		f.DebugVerbose("could not get 'userID' from the session")
-		writeResponseMessage(rw, req, http.StatusInternalServerError, "", "Error")
+		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
 		return
 	}
 
-	limitedReader := &io.LimitedReader{R: req.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
 	f.DebugRequestBody(b)
 
-	var r UpdatePersonRequest
-	err = json.Unmarshal(b, &r)
+	var request UpdatePersonRequest
+	err = json.Unmarshal(b, &request)
 	if err != nil {
-		writeResponseMessage(rw, req, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
 		return
 	}
 
-	id := mux.Vars(req)["id"]
+	id := mux.Vars(r)["id"]
 
 	f.DebugVerbose("ID:     %s", id)
-	f.DebugVerbose("Person: %v", r.Person)
+	f.DebugVerbose("Person: %v", request.Person)
 
-	err = model.UpdatePerson(userID, id, r.Person)
+	err = model.UpdatePerson(userID, id, request.Person)
 	if err != nil {
-		writeResponseError(rw, req, err)
+		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(rw, req, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "", "ok")
 }

@@ -68,7 +68,7 @@ func TestRegister(t *testing.T) {
 			// Set up the handlers on the router
 			router := mux.NewRouter()
 			SetupHandlers(router)
-			rw := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 
 			// Create a request
 			requestBody, err := json.Marshal(RegisterRequest{
@@ -82,15 +82,15 @@ func TestRegister(t *testing.T) {
 				log.Fatalln(err)
 			}
 
-			req, err := http.NewRequest("POST", contextPath+"/users/register", bytes.NewBuffer(requestBody))
+			r, err := http.NewRequest("POST", contextPath+"/users/register", bytes.NewBuffer(requestBody))
 			require.Nil(t, err)
 
 			// Serve the request
-			router.ServeHTTP(rw, req)
-			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
+			router.ServeHTTP(w, r)
+			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the response
-			if rw.Code == http.StatusOK {
+			if w.Code == http.StatusOK {
 				finalNumberOfPeople, err := person.Size()
 				require.Nil(t, err)
 				require.Equal(t, initialNumberOfPeople+1, finalNumberOfPeople, "Person was not registered")

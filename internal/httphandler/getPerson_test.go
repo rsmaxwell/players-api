@@ -20,56 +20,28 @@ func TestGetPerson(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get tokens
+	// * Login
 	// ***************************************************************
-	accessTokenString, refreshTokenCookie := testLogin(t, "007", "topsecret")
+	logonCookie := testLogin(t, "007", "topsecret")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName            string
-		setAccessToken      bool
-		accessToken         string
-		useGoodRefreshToken bool
-		setRefreshToken     bool
-		refreshToken        string
-		userID              string
-		expectedStatus      int
-		expectedResultName  string
+		testName           string
+		setLogonCookie bool
+		logonCookie    *http.Cookie
+		userID             string
+		expectedStatus     int
+		expectedResultName string
 	}{
 		{
-			testName:            "Good request",
-			setAccessToken:      true,
-			accessToken:         "Bearer " + accessTokenString,
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			userID:              goodUserID,
-			expectedStatus:      http.StatusOK,
-			expectedResultName:  "James",
-		},
-		{
-			testName:            "no login cookie",
-			setAccessToken:      false,
-			accessToken:         "",
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			userID:              "junk",
-			expectedStatus:      http.StatusUnauthorized,
-			expectedResultName:  "",
-		},
-		{
-			testName:            "bad token",
-			setAccessToken:      true,
-			accessToken:         "junk",
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			userID:              "junk",
-			expectedStatus:      http.StatusBadRequest,
-			expectedResultName:  "",
+			testName:           "Good request",
+			setLogonCookie: true,
+			logonCookie:    logonCookie,
+			userID:             goodUserID,
+			expectedStatus:     http.StatusOK,
+			expectedResultName: "James",
 		},
 	}
 
@@ -83,24 +55,25 @@ func TestGetPerson(t *testing.T) {
 			router := mux.NewRouter()
 			router2 := Middleware(router)
 			SetupHandlers(router)
-			rw := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 
 			// Create a request
-			req, err := http.NewRequest("GET", contextPath+"/users/"+test.userID, nil)
+			r, err := http.NewRequest("GET", contextPath+"/users/"+test.userID, nil)
 			require.Nil(t, err, "err should be nothing")
 
-			setAccessToken(req, test.setAccessToken, test.accessToken)
-			setRefreshToken(req, test.useGoodRefreshToken, test.setRefreshToken, refreshTokenCookie, test.refreshToken)
+			if test.setLogonCookie {
+				r.AddCookie(test.logonCookie)
+			}
 
 			// Serve the request
-			router2.ServeHTTP(rw, req)
-			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
+			router2.ServeHTTP(w, r)
+			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the response
-			bytes, err := ioutil.ReadAll(rw.Body)
+			bytes, err := ioutil.ReadAll(w.Body)
 			require.Nil(t, err, "err should be nothing")
 
-			if rw.Code == http.StatusOK {
+			if w.Code == http.StatusOK {
 				var response GetPersonResponse
 				err = json.Unmarshal(bytes, &response)
 				require.Nil(t, err, "err should be nothing")

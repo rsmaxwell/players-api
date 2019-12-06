@@ -22,67 +22,36 @@ func TestUpdatePersonPlayer(t *testing.T) {
 	defer teardown(t)
 
 	// ***************************************************************
-	// * Login to get tokens
+	// * Login
 	// ***************************************************************
-	accessTokenString, refreshTokenCookie := testLogin(t, "007", "topsecret")
+	logonCookie := testLogin(t, "007", "topsecret")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName            string
-		setAccessToken      bool
-		accessToken         string
-		useGoodRefreshToken bool
-		setRefreshToken     bool
-		refreshToken        string
-		id                  string
-		player              bool
-		expectedStatus      int
+		testName       string
+		setLogonCookie bool
+		logonCookie    *http.Cookie
+		id             string
+		player         bool
+		expectedStatus int
 	}{
 		{
-			testName:            "Good request - false",
-			setAccessToken:      true,
-			accessToken:         "Bearer " + accessTokenString,
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			id:                  goodUserID,
-			player:              false,
-			expectedStatus:      http.StatusOK,
+			testName:       "Good request - false",
+			setLogonCookie: true,
+			logonCookie:    logonCookie,
+			id:             goodUserID,
+			player:         false,
+			expectedStatus: http.StatusOK,
 		},
 		{
-			testName:            "Good request - true",
-			setAccessToken:      true,
-			accessToken:         "Bearer " + accessTokenString,
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			id:                  goodUserID,
-			player:              true,
-			expectedStatus:      http.StatusOK,
-		},
-		{
-			testName:            "no login cookie",
-			setAccessToken:      false,
-			accessToken:         "",
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			id:                  goodUserID,
-			player:              false,
-			expectedStatus:      http.StatusUnauthorized,
-		},
-		{
-			testName:            "Bad userID",
-			setAccessToken:      true,
-			accessToken:         "Bearer " + accessTokenString,
-			useGoodRefreshToken: true,
-			setRefreshToken:     false,
-			refreshToken:        "",
-			id:                  "junk",
-			player:              false,
-			expectedStatus:      http.StatusNotFound,
+			testName:       "Bad userID",
+			setLogonCookie: true,
+			logonCookie:    logonCookie,
+			id:             "junk",
+			player:         false,
+			expectedStatus: http.StatusNotFound,
 		},
 	}
 
@@ -95,7 +64,7 @@ func TestUpdatePersonPlayer(t *testing.T) {
 			// Set up the handlers on the router
 			router := mux.NewRouter()
 			SetupHandlers(router)
-			rw := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 
 			// Create a request
 			requestBody, err := json.Marshal(UpdatePersonPlayerRequest{
@@ -103,18 +72,19 @@ func TestUpdatePersonPlayer(t *testing.T) {
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			req, err := http.NewRequest("PUT", contextPath+"/users/player/"+test.id, bytes.NewBuffer(requestBody))
+			r, err := http.NewRequest("PUT", contextPath+"/users/player/"+test.id, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
-			setAccessToken(req, test.setAccessToken, test.accessToken)
-			setRefreshToken(req, test.useGoodRefreshToken, test.setRefreshToken, refreshTokenCookie, test.refreshToken)
+			if test.setLogonCookie {
+				r.AddCookie(test.logonCookie)
+			}
 
 			// Serve the request
-			router.ServeHTTP(rw, req)
-			require.Equal(t, test.expectedStatus, rw.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", rw.Code, test.expectedStatus))
+			router.ServeHTTP(w, r)
+			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the person was actually updated
-			if rw.Code == http.StatusOK {
+			if w.Code == http.StatusOK {
 				p, err := person.Load(test.id)
 				require.Nil(t, err, "err should be nothing")
 				assert.Equal(t, p.Player, test.player, "The Person Player was not updated correctly")

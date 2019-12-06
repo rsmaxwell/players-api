@@ -24,7 +24,6 @@ type Person struct {
 	HashedPassword []byte `json:"hashedpassword" validate:"required,len=60"`
 	Role           string `json:"role" validate:"required,oneof=admin normal suspended"`
 	Player         bool   `json:"player"`
-	Count          int    `json:"count"`
 }
 
 const (
@@ -126,7 +125,6 @@ func New(firstname string, lastname string, email string, hashedPassword []byte,
 	person.HashedPassword = hashedPassword
 	person.Player = player
 	person.Role = RoleSuspended
-	person.Count = 0
 	return person
 }
 

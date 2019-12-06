@@ -38,7 +38,7 @@ func testLogin(t *testing.T, userID, password string) *http.Cookie {
 	router.ServeHTTP(w, r)
 
 	response := w.Result()
-	require.Equal(t, w.Code, http.StatusOK, "authentication failed")
+	require.Equal(t, http.StatusOK, w.Code, "authentication failed")
 
 	cookies := map[string]*http.Cookie{}
 	for _, cookie := range response.Cookies() {

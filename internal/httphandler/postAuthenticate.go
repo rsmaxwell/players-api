@@ -2,19 +2,16 @@ package httphandler
 
 import (
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gorilla/sessions"
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // Create the JWT key used to create the signature
 var (
-	key          = []byte("<SESSION_SECRET_KEY>")
-	sessionsPath = common.RootDir + "/sessions"
-	store        = sessions.NewFilesystemStore(sessionsPath, key)
+	key   = []byte("<SESSION_SECRET_KEY>")
+	store = sessions.NewCookieStore(key)
 )
 
 // Authenticate method
@@ -52,11 +49,6 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 	sess.Values["userID"] = id
 	sess.Values["authenticated"] = true
 	sess.Values["expiresAt"] = time.Now().Add(time.Hour * 24).Unix()
-
-	err = os.MkdirAll(sessionsPath, 700)
-	if err != nil {
-		writeResponseError(w, r, err)
-	}
 
 	err = sess.Save(r, w)
 	if err != nil {

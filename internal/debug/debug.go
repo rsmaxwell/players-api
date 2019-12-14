@@ -282,7 +282,7 @@ func (f *Function) DebugRequestBody(data []byte) {
 			}
 			text3 = text3 + " }"
 		}
-		f.DebugAPI("request: %s", text3) // sanitised!
+		f.DebugAPI("request body: %s", text3) // sanitised!
 	}
 }
 

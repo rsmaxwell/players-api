@@ -2,6 +2,7 @@ package httphandler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/rsmaxwell/players-api/internal/debug"
 )
@@ -22,6 +23,8 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sess.Options.MaxAge = -1
+	sess.Values["expiresAt"] = time.Now().Unix()
+	sess.Values["authenticated"] = false
 
 	err = sess.Save(r, w)
 	if err != nil {

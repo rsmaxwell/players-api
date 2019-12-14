@@ -70,7 +70,7 @@ func TestListPeople(t *testing.T) {
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			r, err := http.NewRequest("GET", contextPath+"/users", bytes.NewBuffer(requestBody))
+			r, err := http.NewRequest("POST", contextPath+"/users", bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {

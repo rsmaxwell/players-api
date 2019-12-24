@@ -53,15 +53,15 @@ func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int, quali
 		origin = "http://localhost:4200"
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", origin)
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers",
+	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add("Access-Control-Allow-Origin", origin)
+	w.Header().Add("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
+	w.Header().Add("Access-Control-Allow-Headers",
 		"Origin, XMLHttpRequest, Content-Type, X-Auth-Token, Accept, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Access-Control-Allow-Methods, Access-Control-Allow-Headers, Authorization")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Add("Access-Control-Allow-Credentials", "true")
 
 	if statusCode == http.StatusUnauthorized {
-		w.Header().Set("WWW-Authenticate", "Basic realm=\"players-api: "+qualifier+"\"")
+		w.Header().Add("WWW-Authenticate", "Basic realm=\"players-api: "+qualifier+"\"")
 	}
 
 	w.WriteHeader(statusCode)

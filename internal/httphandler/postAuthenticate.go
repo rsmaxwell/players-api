@@ -21,6 +21,7 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		f.DebugVerbose("returning from 'Options' request")
 		writeResponseMessage(w, r, http.StatusOK, "", "ok")
+		return
 	}
 
 	// *********************************************************************

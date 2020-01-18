@@ -14,4 +14,4 @@ export DEBUG_DUMP_DIR=${PROJECT_DIR}/build/dumps
 
 export repoUrl="https://server.rsmaxwell.co.uk/archiva"
 
-gradle clean prepare generate build
+gradle clean generate build

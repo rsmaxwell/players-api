@@ -1,26 +1,29 @@
 package httphandler
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/stretchr/testify/require"
 
-	"github.com/rsmaxwell/players-api/internal/model"
+	_ "github.com/jackc/pgx/stdlib"
 )
 
 func TestLogout(t *testing.T) {
 
-	teardown := model.SetupFull(t)
+	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := testLogin(t, "007", "topsecret")
+	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
 
 	// ***************************************************************
 	// * Testcases
@@ -58,8 +61,18 @@ func TestLogout(t *testing.T) {
 				r.AddCookie(test.logonCookie)
 			}
 
+			// ---------------------------------------
+
+			ctx, cancel := context.WithTimeout(r.Context(), time.Duration(60*time.Second))
+			defer cancel()
+			r2 := r.WithContext(ctx)
+
+			ctx = context.WithValue(r2.Context(), ContextDatabaseKey, db)
+			r3 := r.WithContext(ctx)
+
+			// ---------------------------------------
 			// Serve the request
-			router.ServeHTTP(w, r)
+			router.ServeHTTP(w, r3)
 			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 		})
 	}

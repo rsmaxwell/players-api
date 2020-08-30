@@ -1,3 +1,0 @@
-#!/bin/bash
-
-~/scripts/update-players-api 1>>/var/log/players-api/update-players-api.log 2>&1

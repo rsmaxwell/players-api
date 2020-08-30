@@ -2,59 +2,69 @@ package httphandler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 
-	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/model"
+
+	_ "github.com/jackc/pgx/stdlib"
 )
 
 func TestRegister(t *testing.T) {
 
-	teardown := model.SetupEmpty(t)
+	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
 	tests := []struct {
 		testName       string
-		userID         string
-		password       string
-		firstName      string
-		lastName       string
-		email          string
+		registration   model.Registration
 		expectedStatus int
 	}{
 		{
-			testName:       "Good request",
-			userID:         "007",
-			password:       "topsecret",
-			firstName:      "James",
-			lastName:       "Bond",
-			email:          "james@mi6.co.uk",
+			testName: "Good request",
+			registration: model.Registration{
+				FirstName:   "James",
+				LastName:    "Bond",
+				DisplayName: "aaa",
+				UserName:    "bbb",
+				Email:       "james@mi6.co.uk",
+				Phone:       "012345 123456",
+				Password:    "topsecret",
+			},
 			expectedStatus: http.StatusOK,
 		},
 		{
-			testName:       "Space in userID",
-			userID:         "0 7",
-			password:       "topsecret",
-			firstName:      "James",
-			lastName:       "Bond",
-			email:          "james@mi6.co.uk",
+			testName: "Space in userID",
+			registration: model.Registration{
+				FirstName:   "James",
+				LastName:    "Bond",
+				DisplayName: "aaa",
+				UserName:    "bbb",
+				Email:       "james@mi6.co.uk",
+				Phone:       "012345 123456",
+				Password:    "topsecret",
+			},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			testName:       "Path in userID",
-			userID:         "../007",
-			password:       "topsecret",
-			firstName:      "James",
-			lastName:       "Bond",
-			email:          "james@mi6.co.uk",
+			testName: "Path in userID",
+			registration: model.Registration{
+				FirstName:   "James",
+				LastName:    "Bond",
+				DisplayName: "aaa",
+				UserName:    "bbb",
+				Email:       "james@mi6.co.uk",
+				Phone:       "012345 123456",
+				Password:    "topsecret",
+			},
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
@@ -62,8 +72,9 @@ func TestRegister(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			initialNumberOfPeople, err := person.Size()
+			listOfPeople, err := model.ListPeople(db, model.AllStates)
 			require.Nil(t, err)
+			initialNumberOfPeople := len(listOfPeople)
 
 			// Set up the handlers on the router
 			router := mux.NewRouter()
@@ -72,11 +83,7 @@ func TestRegister(t *testing.T) {
 
 			// Create a request
 			requestBody, err := json.Marshal(RegisterRequest{
-				UserID:    test.userID,
-				Password:  test.password,
-				FirstName: test.firstName,
-				LastName:  test.lastName,
-				Email:     test.email,
+				Registration: test.registration,
 			})
 			if err != nil {
 				log.Fatalln(err)
@@ -85,24 +92,42 @@ func TestRegister(t *testing.T) {
 			r, err := http.NewRequest("POST", contextPath+"/users/register", bytes.NewBuffer(requestBody))
 			require.Nil(t, err)
 
+			// ---------------------------------------
+
+			ctx, cancel := context.WithTimeout(r.Context(), time.Duration(60*time.Second))
+			defer cancel()
+			r2 := r.WithContext(ctx)
+
+			ctx = context.WithValue(r2.Context(), ContextDatabaseKey, db)
+			r3 := r.WithContext(ctx)
+
+			// ---------------------------------------
+
 			// Serve the request
-			router.ServeHTTP(w, r)
-			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
+			router.ServeHTTP(w, r3)
 
 			// Check the response
 			if w.Code == http.StatusOK {
-				finalNumberOfPeople, err := person.Size()
+
+				listOfPeople, err = model.ListPeople(db, model.AllStates)
 				require.Nil(t, err)
+				finalNumberOfPeople := len(listOfPeople)
+
 				require.Equal(t, initialNumberOfPeople+1, finalNumberOfPeople, "Person was not registered")
 
 				// Check the status of the new person
-				p, err := person.Load(test.userID)
+				p, err := model.FindPersonByUserName(db, test.registration.UserName)
 				require.Nil(t, err)
 				if initialNumberOfPeople == 0 {
-					require.Equal(t, person.RoleAdmin, p.Role, "Unexpected role")
+					require.Equal(t, model.StatusAdmin, p.Status, "Unexpected role")
 				} else {
-					require.Equal(t, person.RoleSuspended, p.Role, "Unexpected role")
+					require.Equal(t, model.StatusSuspended, p.Status, "Unexpected role")
 				}
+			}
+
+			if w.Code != test.expectedStatus {
+				t.Logf("handler returned wrong status code: expected:%v actual:%v", test.expectedStatus, w.Code)
+				t.FailNow()
 			}
 		})
 	}

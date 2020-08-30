@@ -1,51 +1,45 @@
 package httphandler
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
-	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/stretchr/testify/require"
 
 	"github.com/gorilla/mux"
+
+	_ "github.com/jackc/pgx/stdlib"
 )
 
 func TestAuthenticate(t *testing.T) {
 
-	teardown := model.SetupOne(t)
+	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
 	tests := []struct {
 		testName       string
-		userID         string
+		username       string
 		password       string
-		role           string
 		expectedStatus int
 	}{
 		{
-			testName:       "Good request from admin",
-			userID:         "007",
-			password:       "topsecret",
-			role:           person.RoleAdmin,
+			testName:       "Good request",
+			username:       model.GoodUserName,
+			password:       model.GoodPassword,
 			expectedStatus: http.StatusOK,
 		},
 		{
-			testName:       "Space in userID",
-			userID:         "0 7",
-			password:       "topsecret",
-			role:           person.RoleNormal,
-			expectedStatus: http.StatusUnauthorized,
-		},
-		{
-			testName:       "Path in userID",
-			userID:         "../007",
-			password:       "topsecret",
-			role:           person.RoleSuspended,
+			testName:       "Bad userid",
+			username:       "junk",
+			password:       "junk",
 			expectedStatus: http.StatusUnauthorized,
 		},
 	}
@@ -54,22 +48,44 @@ func TestAuthenticate(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 
 			// Create a request to pass to our handler.
-			r, err := http.NewRequest("POST", contextPath+"/users/authenticate", nil)
+			command := fmt.Sprintf("/users/authenticate")
+			r, err := http.NewRequest("POST", contextPath+command, nil)
 			require.Nil(t, err, "err should be nothing")
 
-			r.Header.Set("Authorization", model.BasicAuth(test.userID, test.password))
+			r.Header.Set("Authorization", BasicAuth(test.username, test.password))
 
 			router := mux.NewRouter()
 			SetupHandlers(router)
 			w := httptest.NewRecorder()
-			router.ServeHTTP(w, r)
-			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
+
+			// ---------------------------------------
+
+			ctx, cancel := context.WithTimeout(r.Context(), time.Duration(60*time.Second))
+			defer cancel()
+			r2 := r.WithContext(ctx)
+
+			ctx = context.WithValue(r2.Context(), ContextDatabaseKey, db)
+			r3 := r.WithContext(ctx)
+
+			// ---------------------------------------
+
+			router.ServeHTTP(w, r3)
 
 			if w.Code == http.StatusOK {
-				_, err := ioutil.ReadAll(w.Body)
+				bytes, err := ioutil.ReadAll(w.Body)
 				if err != nil {
 					log.Fatalln(err)
 				}
+
+				var resp PostAuthenticateResponse
+				err = json.Unmarshal(bytes, &resp)
+				require.Nil(t, err, "err should be nothing")
+				require.Equal(t, resp.Person.UserName, test.username)
+			}
+
+			if w.Code != test.expectedStatus {
+				t.Logf("Unexpected status: expected:%v actual:%v", test.expectedStatus, w.Code)
+				t.FailNow()
 			}
 		})
 	}

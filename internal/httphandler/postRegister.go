@@ -1,22 +1,23 @@
 package httphandler
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/internal/debug"
+	"github.com/jackc/pgconn"
+	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/model"
+
+	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
 // RegisterRequest structure
 type RegisterRequest struct {
-	UserID    string `json:"userID"`
-	Password  string `json:"password"`
-	FirstName string `json:"firstname"`
-	LastName  string `json:"lastname"`
-	Email     string `json:"email"`
+	Registration model.Registration `json:"registration"`
 }
 
 var (
@@ -43,14 +44,37 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f.DebugVerbose("UserID:    %s", request.UserID)
-	f.DebugVerbose("Password:  %s", request.Password)
-	f.DebugVerbose("FirstName: %s", request.FirstName)
-	f.DebugVerbose("LastName:  %s", request.LastName)
-	f.DebugVerbose("Email:     %s", request.Email)
+	f.DebugVerbose("FirstName: %s", request.Registration.FirstName)
+	f.DebugVerbose("LastName:  %s", request.Registration.LastName)
+	f.DebugVerbose("DisplayName: %s", request.Registration.DisplayName)
+	f.DebugVerbose("UserName:  %s", request.Registration.UserName)
+	f.DebugVerbose("Email:     %s", request.Registration.Email)
+	f.DebugVerbose("Phone:     %s", request.Registration.Phone)
+	f.DebugVerbose("Password:  %s", request.Registration.Password)
 
-	err = model.Register(request.UserID, request.Password, request.FirstName, request.LastName, request.Email)
+	p, err := request.Registration.ToPerson()
 	if err != nil {
+		writeResponseError(w, r, err)
+		return
+	}
+
+	object := r.Context().Value(ContextDatabaseKey)
+	db, ok := object.(*sql.DB)
+	if !ok {
+		err = fmt.Errorf("Unexpected context type")
+		writeResponseError(w, r, err)
+		return
+	}
+
+	err = p.SavePerson(db)
+	if err != nil {
+		pgerr, ok := err.(*pgconn.PgError)
+		if ok {
+			if pgerr.Code == "23505" {
+				err = codeerror.NewBadRequest(pgerr.Message)
+			}
+		}
+
 		writeResponseError(w, r, err)
 		return
 	}

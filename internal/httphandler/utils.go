@@ -1,16 +1,18 @@
 package httphandler
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 
 	"github.com/rsmaxwell/players-api/internal/codeerror"
-	"github.com/rsmaxwell/players-api/internal/common"
 	"github.com/rsmaxwell/players-api/internal/debug"
+	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/rsmaxwell/players-api/internal/response"
 )
 
@@ -19,9 +21,17 @@ type messageResponse struct {
 	Message string `json:"message"`
 }
 
-var (
+// ContextKey type
+type ContextKey string
+
+const (
 	contextPath = "/players-api"
 
+	// ContextDatabaseKey constant
+	ContextDatabaseKey ContextKey = "database"
+)
+
+var (
 	pkg = debug.NewPackage("httphandler")
 
 	functionMiddleware         = debug.NewFunction(pkg, "Middleware")
@@ -46,7 +56,7 @@ func writeResponseObject(w http.ResponseWriter, r *http.Request, statusCode int,
 // writeResponse method
 func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int, qualifier string) {
 
-	common.MetricsData.StatusCodes[statusCode]++
+	model.MetricsData.StatusCodes[statusCode]++
 
 	origin := r.Header.Get("Origin")
 	if origin == "" {
@@ -84,9 +94,6 @@ func writeResponseError(w http.ResponseWriter, r *http.Request, err error) {
 func checkAuthenticated(r *http.Request) (*sessions.Session, error) {
 	f := functionCheckAuthenticated
 
-	cookieHeader := r.Header.Get("Cookie")
-	fmt.Printf("cookieHeader: %s\n", cookieHeader)
-
 	sess, err := store.Get(r, "players-api")
 	if err != nil {
 		f.Dump("could not get the 'players-api' cookie")
@@ -112,16 +119,16 @@ func SetupHandlers(w *mux.Router) {
 
 	s := w.PathPrefix("/players-api").Subrouter()
 
-	s.HandleFunc("/users/authenticate", Authenticate).Methods(http.MethodOptions, http.MethodPost)
 	s.HandleFunc("/users/register", Register).Methods(http.MethodPost)
-	s.HandleFunc("/users", ListPeople).Methods(http.MethodPost)
+	s.HandleFunc("/users/authenticate", Authenticate).Methods(http.MethodOptions, http.MethodPost)
+	s.HandleFunc("/users", ListPeople).Methods(http.MethodGet)
 	s.HandleFunc("/users/{id}", DeletePerson).Methods(http.MethodDelete)
 	s.HandleFunc("/users/logout", Logout).Methods(http.MethodGet)
 	s.HandleFunc("/users/{id}", GetPerson).Methods(http.MethodGet)
 	s.HandleFunc("/users/{id}", UpdatePerson).Methods(http.MethodPut)
-	s.HandleFunc("/users/player/{id}", UpdatePersonPlayer).Methods(http.MethodPut)
-	s.HandleFunc("/users/role/{id}", UpdatePersonRole).Methods(http.MethodPut)
-	s.HandleFunc("/users/move", PostMove).Methods(http.MethodPost)
+	s.HandleFunc("/users/toplaying/{id1}/{id2}", MakePlaying).Methods(http.MethodPut)
+	s.HandleFunc("/users/towaiting/{id}", MakeWaiting).Methods(http.MethodPut)
+	s.HandleFunc("/users/toinactive/{id}", MakeInactive).Methods(http.MethodPut)
 
 	s.HandleFunc("/court", ListCourts).Methods(http.MethodGet)
 	s.HandleFunc("/court/{id}", GetCourt).Methods(http.MethodGet)
@@ -129,20 +136,26 @@ func SetupHandlers(w *mux.Router) {
 	s.HandleFunc("/court/{id}", UpdateCourt).Methods(http.MethodPut)
 	s.HandleFunc("/court/{id}", DeleteCourt).Methods(http.MethodDelete)
 
-	s.HandleFunc("/queue", GetQueue).Methods(http.MethodGet)
 	s.HandleFunc("/metrics", GetMetrics).Methods(http.MethodGet)
 
 	w.NotFoundHandler = http.HandlerFunc(NotFound)
 }
 
 // Middleware method
-func Middleware(h http.Handler) http.Handler {
+func Middleware(h http.Handler, db *sql.DB) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f := functionMiddleware
 
 		w2 := response.New(w)
 
-		f.DebugRequest(r)
-		h.ServeHTTP(w2, r)
+		ctx, cancel := context.WithTimeout(r.Context(), time.Duration(60*time.Second))
+		defer cancel()
+		r2 := r.WithContext(ctx)
+
+		ctx = context.WithValue(r2.Context(), ContextDatabaseKey, db)
+		r3 := r.WithContext(ctx)
+
+		f.DebugRequest(r3)
+		h.ServeHTTP(w2, r3)
 	})
 }

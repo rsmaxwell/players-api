@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"runtime/debug"
@@ -13,8 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rsmaxwell/players-api/internal/basic/version"
-	"github.com/rsmaxwell/players-api/internal/common"
+	"github.com/jackc/pgconn"
+	"github.com/lib/pq"
+	"github.com/rsmaxwell/players-api/internal/basic"
 )
 
 // Package type
@@ -60,7 +62,12 @@ var (
 	level                int
 	defaultPackageLevel  int
 	defaultFunctionLevel int
-	dumpRoot             string
+	rootDir              string
+	rootDumpDir          string
+	dumpFields           map[string]string
+	dumpGroupID          string
+	dumpArtifact         string
+	dumpRepositoryURL    string
 )
 
 func init() {
@@ -68,14 +75,25 @@ func init() {
 	defaultPackageLevel, _ = getEnvInteger("DEBUG_DEFAULT_PACKAGE_LEVEL", InfoLevel)
 	defaultFunctionLevel, _ = getEnvInteger("DEBUG_DEFAULT_FUNCTION_LEVEL", InfoLevel)
 
-	dir, ok := os.LookupEnv("DEBUG_DUMP_DIR")
-	if ok {
-		dumpRoot = dir
-	} else {
-		dumpRoot = common.HomeDir() + "/players-api-dump"
+	path, ok := os.LookupEnv("DEBUG_DUMP_DIR")
+	if !ok {
+		callinfo, ok := basic.GetCallInfo(1)
+		if !ok {
+			panic("common.GetCallInfo failed")
+		}
+		path = filepath.Join(basic.HomeDir(), callinfo.ProjectName)
 	}
 
-	os.MkdirAll(dumpRoot, 0755)
+	rootDir = path
+	rootDumpDir = filepath.Join(rootDir, "dump")
+	os.MkdirAll(rootDumpDir, 0755)
+
+	dumpFields = make(map[string]string)
+}
+
+// RootDir returns the application root dir
+func RootDir() string {
+	return rootDir
 }
 
 func getEnvInteger(name string, def int) (int, error) {
@@ -126,6 +144,13 @@ func NewFunction(pkg *Package, name string) *Function {
 }
 
 // --------------------------------------------------------
+
+// InitDump initialise the static dump fields
+func InitDump(groupID, artifact, repositoryURL string) {
+	dumpGroupID = groupID
+	dumpArtifact = artifact
+	dumpRepositoryURL = repositoryURL
+}
 
 // DebugError prints an 'error' message
 func (f *Function) DebugError(format string, a ...interface{}) {
@@ -288,8 +313,8 @@ func (f *Function) DebugRequestBody(data []byte) {
 
 // Dump type
 type Dump struct {
-	directory string
-	err       error
+	Directory string
+	Err       error
 }
 
 // DumpInfo type
@@ -320,55 +345,52 @@ func (f *Function) Dump(format string, a ...interface{}) *Dump {
 
 	t := time.Now()
 	now := fmt.Sprintf(t.Format("2006-01-02_15-04-05.999999999"))
-	dump.directory = dumpRoot + "/" + now
+	dump.Directory = filepath.Join(rootDumpDir, now)
 
-	f.DebugError("DUMP: writing dump:[%s]", dump.directory)
-	err := os.MkdirAll(dump.directory, 0755)
+	f.DebugError("DUMP: writing dump:[%s]", dump.Directory)
+	err := os.MkdirAll(dump.Directory, 0755)
 	if err != nil {
-		dump.err = err
+		dump.Err = err
 		return dump
-	}
-
-	pc, fn, line, ok := runtime.Caller(1)
-	if ok {
-		fmt.Println(fmt.Sprintf("package.function: %s.%s", f.pkg.name, f.name))
-		fmt.Println(fmt.Sprintf("package.function: %s", runtime.FuncForPC(pc).Name()))
-		fmt.Println(fmt.Sprintf("filename: %s[%d]", fn, line))
 	}
 
 	// *****************************************************************
 	// * Main dump info
 	// *****************************************************************
 	info := new(DumpInfo)
-	info.GroupID = "com.rsmaxwell.players"
-	info.Artifact = "players-api"
-	info.RepositoryURL = "https://server.rsmaxwell.co.uk/archiva"
+	info.GroupID = dumpGroupID
+	info.Artifact = dumpArtifact
+	info.RepositoryURL = dumpRepositoryURL
 	info.Timestamp = now
 	info.TimeUnix = t.Unix()
 	info.TimeUnixNano = t.UnixNano()
+	info.Version = basic.Version()
+	info.BuildDate = basic.BuildDate()
+	info.GitCommit = basic.GitCommit()
+	info.GitBranch = basic.GitBranch()
+	info.GitURL = basic.GitURL()
+	info.Message = fmt.Sprintf(format, a...)
 	info.Package = f.pkg.name
 	info.Function = f.name
-	info.FuncForPC = runtime.FuncForPC(pc).Name()
-	info.Filename = fn
-	info.Line = line
-	info.Version = version.Version()
-	info.BuildDate = version.BuildDate()
-	info.GitCommit = version.GitCommit()
-	info.GitBranch = version.GitBranch()
-	info.GitURL = version.GitURL()
-	info.Message = fmt.Sprintf(format, a...)
+
+	pc, fn, line, ok := runtime.Caller(1)
+	if ok {
+		info.FuncForPC = runtime.FuncForPC(pc).Name()
+		info.Filename = fn
+		info.Line = line
+	}
 
 	json, err := json.Marshal(info)
 	if err != nil {
-		dump.err = err
+		dump.Err = err
 		return dump
 	}
 
-	filename := dump.directory + "/dump.json"
+	filename := dump.Directory + "/dump.json"
 
 	err = ioutil.WriteFile(filename, json, 0644)
 	if err != nil {
-		dump.err = err
+		dump.Err = err
 		return dump
 	}
 
@@ -376,33 +398,35 @@ func (f *Function) Dump(format string, a ...interface{}) *Dump {
 	// * Call stack
 	// *****************************************************************
 	stacktrace := debug.Stack()
-	filename = dump.directory + "/callstack.txt"
+	filename = dump.Directory + "/callstack.txt"
 
 	err = ioutil.WriteFile(filename, stacktrace, 0644)
 	if err != nil {
-		dump.err = err
+		dump.Err = err
 		return dump
 	}
 
 	return dump
 }
 
-// AddByteArray method
-func (dump *Dump) AddByteArray(title string, data []byte) *Dump {
+// AddString method
+func (d *Dump) AddString(title string, data string) {
+	d.AddByteArray(title, []byte(data))
+}
 
-	if dump.err != nil {
-		return dump
+// AddByteArray method
+func (d *Dump) AddByteArray(title string, data []byte) {
+
+	if d.Err != nil {
+		return
 	}
 
-	filename := dump.directory + "/" + title
+	filename := d.Directory + "/" + title
 
 	err := ioutil.WriteFile(filename, data, 0644)
 	if err != nil {
-		dump.err = err
-		return dump
+		return
 	}
-
-	return dump
 }
 
 // MarkDumps type
@@ -416,7 +440,7 @@ func Mark() *MarkDumps {
 
 	mark := new(MarkDumps)
 
-	files, err := ioutil.ReadDir(dumpRoot)
+	files, err := ioutil.ReadDir(rootDumpDir)
 	if err != nil {
 		mark.err = err
 		return mark
@@ -440,7 +464,7 @@ func (mark *MarkDumps) ListNewDumps() ([]*Dump, error) {
 		return nil, mark.err
 	}
 
-	files, err := ioutil.ReadDir(dumpRoot)
+	files, err := ioutil.ReadDir(rootDumpDir)
 	if err != nil {
 		mark.err = err
 		return nil, err
@@ -453,7 +477,7 @@ func (mark *MarkDumps) ListNewDumps() ([]*Dump, error) {
 			if !mark.dumps[file.Name()] {
 
 				dump := new(Dump)
-				dump.directory = dumpRoot + "/" + file.Name()
+				dump.Directory = rootDumpDir + "/" + file.Name()
 
 				newdumps = append(newdumps, dump)
 			}
@@ -466,7 +490,7 @@ func (mark *MarkDumps) ListNewDumps() ([]*Dump, error) {
 // ListDumps method
 func ListDumps() ([]*Dump, error) {
 
-	files, err := ioutil.ReadDir(dumpRoot)
+	files, err := ioutil.ReadDir(rootDumpDir)
 	if err != nil {
 		return nil, err
 	}
@@ -476,7 +500,7 @@ func ListDumps() ([]*Dump, error) {
 	for _, file := range files {
 		if file.IsDir() {
 			dump := new(Dump)
-			dump.directory = dumpRoot + "/" + file.Name()
+			dump.Directory = rootDumpDir + "/" + file.Name()
 
 			newdumps = append(newdumps, dump)
 		}
@@ -486,9 +510,9 @@ func ListDumps() ([]*Dump, error) {
 }
 
 // Remove function
-func (dump *Dump) Remove() error {
+func (d *Dump) Remove() error {
 
-	err := os.RemoveAll(dump.directory)
+	err := os.RemoveAll(d.Directory)
 	if err != nil {
 		return err
 	}
@@ -497,9 +521,9 @@ func (dump *Dump) Remove() error {
 }
 
 // GetInfo function
-func (dump *Dump) GetInfo() (*DumpInfo, error) {
+func (d *Dump) GetInfo() (*DumpInfo, error) {
 
-	infofile := dump.directory + "/dump.json"
+	infofile := d.Directory + "/dump.json"
 
 	data, err := ioutil.ReadFile(infofile)
 	if err != nil {
@@ -531,4 +555,47 @@ func ClearDumps() error {
 	}
 
 	return nil
+}
+
+// DumpSQLError dumps a database error
+func (f *Function) DumpSQLError(err error, message string, sql string) *Dump {
+	d := f.DumpError(err, message)
+	d.AddString("sql.txt", sql)
+	return d
+}
+
+// DumpError dumps a database error
+func (f *Function) DumpError(err error, message string) *Dump {
+
+	d := f.Dump(message)
+
+	d.AddString("error.txt", fmt.Sprintf("%T\n\n%s", err, err.Error()))
+
+	var title string
+	var filename string
+	var data []byte
+	var err3 error
+
+	if err2, ok := err.(*pq.Error); ok {
+		title = "pg.error"
+		data, err3 = json.Marshal(err2)
+	} else if err2, ok := err.(*pgconn.PgError); ok {
+		title = "pgconn.error"
+		data, err3 = json.Marshal(err2)
+	} else {
+		title = "error"
+		data, err3 = json.Marshal(err)
+	}
+
+	if err3 != nil {
+		fmt.Println("could not marshal error: " + err3.Error())
+	} else {
+		filename = filepath.Join(d.Directory, title+".json")
+		err = ioutil.WriteFile(filename, data, 0644)
+		if err != nil {
+			f.Errorf("could not write error to dump\n")
+		}
+	}
+
+	return d
 }

@@ -1,7 +1,10 @@
 package httphandler
 
 import (
+	"database/sql"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/internal/debug"
@@ -22,10 +25,17 @@ func DeletePerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := mux.Vars(r)["id"]
-	f.DebugVerbose("ID: %s", id)
+	str := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(str)
+	if err != nil {
+		f.DebugVerbose("Count not convert '" + str + "' into an int")
+		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
+		return
+	}
 
-	userID, ok := sess.Values["userID"].(string)
+	f.DebugVerbose("ID: %d", id)
+
+	userID, ok := sess.Values["userID"].(int)
 	if !ok {
 		f.DebugVerbose("could not get 'userID' from the session")
 		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
@@ -33,12 +43,20 @@ func DeletePerson(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if userID == id {
-		f.DebugVerbose("Attempt delete self: %s", id)
+		f.DebugVerbose("Attempt delete self: %d", id)
 		writeResponseMessage(w, r, http.StatusUnauthorized, "", "Not Authorized")
 		return
 	}
 
-	err = model.DeletePerson(id)
+	object := r.Context().Value(ContextDatabaseKey)
+	db, ok := object.(*sql.DB)
+	if !ok {
+		err = fmt.Errorf("Unexpected context type")
+		writeResponseError(w, r, err)
+		return
+	}
+
+	err = model.DeletePerson(db, id)
 	if err != nil {
 		writeResponseError(w, r, err)
 		return

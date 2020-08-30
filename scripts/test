@@ -1,0 +1,959 @@
+#!/bin/bash
+
+#ENDPOINT="https://server.rsmaxwell.co.uk/players-api"
+ENDPOINT="http://localhost:4201/players-api"
+
+#random="$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 13)"
+random="CbrqBFyMNGGWo"
+
+
+if [ -z "${PLAYERS_ADMIN_FIRST_NAME}" ];    then echo "PLAYERS_ADMIN_FIRST_NAME is empty"; exit 1; fi
+if [ -z "${PLAYERS_ADMIN_LAST_NAME}" ];     then echo "PLAYERS_ADMIN_LAST_NAME is empty"; exit 1; fi
+if [ -z "${PLAYERS_ADMIN_DISPLAY_NAME}" ];  then echo "PLAYERS_ADMIN_DISPLAY_NAME is empty"; exit 1; fi
+if [ -z "${PLAYERS_ADMIN_USERNAME}" ];      then echo "PLAYERS_ADMIN_USERNAME is empty"; exit 1; fi
+if [ -z "${PLAYERS_ADMIN_EMAIL}" ];         then echo "PLAYERS_ADMIN_EMAIL is empty"; exit 1; fi
+if [ -z "${PLAYERS_ADMIN_PHONE}" ];         then echo "PLAYERS_ADMIN_PHONE is empty"; exit 1; fi
+if [ -z "${PLAYERS_ADMIN_PASSWORD}" ];      then echo "PLAYERS_ADMIN_PASSWORD is empty"; exit 1; fi
+
+EMAIL="${random}@mi6.gov.uk"
+USERNAME="007-${random}"
+PHONE="+44 ${random}"
+PASSWORD="TopSecret"
+
+#if false; then
+
+echo "DeleteRecords"
+players-DeleteRecords
+result=$?
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+echo "------------------------------------------------------------------"
+echo "Register"
+
+COMMAND="/users/register"
+
+rm -rf dump-header.txt output.json status.txt cookie-jar.txt
+
+cat <<EOF > data.json
+{
+    "registration": {
+        "firstname": "James",
+        "lastname": "Bond",
+        "displayname": "007",
+        "username": "${USERNAME}",
+        "email": "${EMAIL}",
+        "phone": "${PHONE}",
+        "password": "${PASSWORD}"
+    }
+}
+EOF
+
+echo "data.json"
+jq . data.json
+
+set -x
+curl ${OPTIONS} -X POST ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--data-binary "@data.json" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+userID=$(jq -r '.person.id' output.json)
+echo "userID: ${userID}"
+
+echo "------------------------------------------------------------------"
+
+
+#fi
+
+
+echo "=================================================================="
+echo "admin Authenticate"
+
+COMMAND="/users/authenticate"
+
+rm -rf dump-header.txt output.json status.txt
+
+set -x
+curl ${OPTIONS} -X POST -u "${PLAYERS_ADMIN_USERNAME}:${PLAYERS_ADMIN_PASSWORD}" ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+
+
+word=$(grep Access-Token dump-header.txt | cut -d " " -f 2)
+AccessToken=${word%%[[:space:]]}
+echo "AccessToken: [${AccessToken}]"
+
+RefreshToken=$(grep Set-Cookie dump-header.txt | cut -d " " -f 2 | cut -d "=" -f 2)
+echo "RefreshToken: [${RefreshToken}]"
+
+adminID=$(jq -r '.person.id' output.json)
+echo "adminID: ${adminID}"
+echo "------------------------------------------------------------------"
+
+
+echo "------------------------------------------------------------------"
+echo "admin - Find the ID of the new user"
+
+COMMAND="/users"
+
+rm -rf dump-header.txt output.json status.txt
+
+cat <<EOF > data.json
+{
+    "where":[
+        {
+            "field":"username",
+            "operation":"=",
+            "value":"${USERNAME}"
+        }
+    ]
+}
+EOF
+
+set -x
+curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--data-binary "@data.json" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+count=$(jq '.people | length' output.json)
+if [ "${count}" -eq "0" ]; then
+    echo "Person not found"
+    exit 1
+elif [ "${count}" -gt "1" ]; then
+    echo "Too many Person found"
+    exit 1
+fi
+
+userID=$(jq '.people[0].id' output.json)
+
+echo "------------------------------------------------------------------"
+
+
+
+
+echo "------------------------------------------------------------------"
+echo "admin - Allow the new user to log in"
+
+COMMAND="/users/${userID}"
+
+rm -rf dump-header.txt output.json status.txt
+
+cat <<EOF > data.json
+{
+    "person": {
+        "status": "normal"        
+    }
+}
+EOF
+
+set -x
+curl ${OPTIONS} -X PUT ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--data-binary "@data.json" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+echo "------------------------------------------------------------------"
+
+echo "------------------------------------------------------------------"
+echo "admin - Log out"
+
+COMMAND="/users/logout"
+
+rm -rf dump-header.txt output.json status.txt
+
+cat <<EOF > data.json
+{
+    "person": {
+        "username": "${USERNAME}"
+        "status": "normal"        
+    }
+}
+EOF
+
+set -x
+curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--data-binary "@data.json" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+echo "------------------------------------------------------------------"
+
+
+
+
+
+
+echo "=================================================================="
+
+
+echo "------------------------------------------------------------------"
+echo "Login as the new user"
+
+COMMAND="/users/authenticate"
+
+rm -rf dump-header.txt output.json status.txt
+
+set -x
+curl ${OPTIONS} -X POST -u "${USERNAME}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+
+echo "------------------------------------------------------------------"
+echo "Read the new person"
+
+COMMAND="/users/${userID}"
+
+rm -rf dump-header.txt output.json status.txt
+
+set -x
+curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+echo "------------------------------------------------------------------"
+echo "Update the person"
+
+COMMAND="/users/${userID}"
+
+rm -rf dump-header.txt output.json status.txt
+
+cat <<EOF > data.json
+{
+    "person": {
+        "lastName": "McGrathson"
+    }
+}
+EOF
+
+set -x
+curl ${OPTIONS} -X PUT ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--data-binary "@data.json" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+
+
+
+
+echo "------------------------------------------------------------------"
+echo "Create a new court"
+
+COMMAND="/court"
+EMAIL="smcgrath@pinky.com"
+PASSWORD="changeme"
+
+rm -rf dump-header.txt output.json status.txt
+
+cat <<EOF > data.json
+{
+    "court": {
+        "name": "xxxxx"
+    }
+}
+EOF
+
+set -x
+curl ${OPTIONS} -X POST -u "${EMAIL}:${PASSWORD}" ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--data-binary "@data.json" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+courtID=$(jq -r '.court.id' output.json)
+echo "courtID: ${courtID}"
+
+
+echo "------------------------------------------------------------------"
+echo "Update the court"
+
+COMMAND="/court/${courtID}"
+
+rm -rf dump-header.txt output.json status.txt
+
+cat <<EOF > data.json
+{
+    "court": {
+        "name": "A"
+    }
+}
+EOF
+
+set -x
+curl ${OPTIONS} -X PUT ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--data-binary "@data.json" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+
+echo "------------------------------------------------------------------"
+echo "Make a player play"
+
+COMMAND="/users/toplaying/${userID}/${courtID}"
+
+rm -rf dump-header.txt output.json status.txt
+
+set -x
+curl ${OPTIONS} -X PUT ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+
+
+echo "------------------------------------------------------------------"
+echo "Make a player wait"
+
+COMMAND="/users/towaiting/${userID}"
+
+rm -rf dump-header.txt output.json status.txt
+
+set -x
+curl ${OPTIONS} -X PUT ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+
+echo "------------------------------------------------------------------"
+echo "Make a player inactive"
+
+COMMAND="/users/toinactive/${userID}"
+
+rm -rf dump-header.txt output.json status.txt
+
+set -x
+curl ${OPTIONS} -X PUT ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+echo "------------------------------------------------------------------"
+echo "Get metrics"
+
+COMMAND="/metrics"
+
+rm -rf dump-header.txt output.json status.txt
+
+set -x
+curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+
+
+echo "------------------------------------------------------------------"
+echo "List people"
+
+COMMAND="/users"
+
+rm -rf dump-header.txt output.json status.txt
+
+cat <<EOF > data.json
+{
+    "filter": [
+        "one", "two", "three"
+    ]
+}
+EOF
+
+set -x
+curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--data-binary "@data.json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+
+people=$(jq .people output.json)
+for row in $(echo "${people}" | jq -r '.[] | @base64'); do
+    _jq() {
+     echo ${row} | base64 --decode | jq -r ${1}
+    }
+
+    person=$(_jq '.id')
+
+    if [ "${person}" -eq "${adminID}" ]; then
+        echo "skipping admin!"
+    elif [ "${person}" -eq "${userID}" ]; then
+        echo "skipping myself!"
+    else
+        echo "------------------------------------------------------------------"
+        echo "Delete person"
+        
+        COMMAND="/users/${person}"
+        
+        rm -rf dump-header.txt output.json status.txt
+        
+        set -x
+        curl ${OPTIONS} -X DELETE ${ENDPOINT}${COMMAND} \
+        --silent \
+        --cookie cookie-jar.txt \
+        --cookie-jar cookie-jar.txt \
+        --header "Content-Type: application/json" \
+        --header "Accept: application/json" \
+        --header "Authorization: Bearer ${AccessToken}" \
+        --dump-header dump-header.txt \
+        --output output.json \
+        --write-out %{http_code} > status.txt
+        result=$?
+        set +x
+        
+        echo "result: ${result}"
+        if [ ! ${result} -eq 0 ]; then
+            echo "Error: $0[${LINENO}]"
+            exit 1
+        fi
+        
+        if [ -f output.json ]; then
+            jq . output.json
+        fi
+        
+        status=$(cat status.txt)
+        echo "status: ${status}"
+        if [ "${status}" -eq 200 ]; then
+            : # ok
+        else
+            echo "Error: $0[${LINENO}]"
+            echo "status: ${status}"
+            exit 1
+        fi
+    fi
+done
+
+
+
+
+
+
+echo "------------------------------------------------------------------"
+echo "List courts"
+
+COMMAND="/court"
+
+rm -rf dump-header.txt output.json status.txt
+
+cat <<EOF > data.json
+{
+    "filter": [
+        "one", "two", "three"
+    ]
+}
+EOF
+
+set -x
+curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
+--silent \
+--cookie cookie-jar.txt \
+--cookie-jar cookie-jar.txt \
+--header "Content-Type: application/json" \
+--header "Accept: application/json" \
+--data-binary "@data.json" \
+--header "Authorization: Bearer ${AccessToken}" \
+--dump-header dump-header.txt \
+--output output.json \
+--write-out %{http_code} > status.txt
+result=$?
+set +x
+
+echo "result: ${result}"
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+if [ -f output.json ]; then
+    jq . output.json
+fi
+
+status=$(cat status.txt)
+echo "status: ${status}"
+if [ "${status}" -eq 200 ]; then
+    : # ok
+else
+    echo "Error: $0[${LINENO}]"
+    echo "status: ${status}"
+    exit 1
+fi
+
+courts=$(jq .courts output.json)
+for court in $(echo "${courts}" | jq -r '.[]'); do
+
+    echo "------------------------------------------------------------------"
+    echo "Delete court"
+    
+    COMMAND="/court/${court}"
+    
+    rm -rf dump-header.txt output.json status.txt
+    
+    set -x
+    curl ${OPTIONS} -X DELETE ${ENDPOINT}${COMMAND} \
+    --silent \
+    --cookie cookie-jar.txt \
+    --cookie-jar cookie-jar.txt \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json" \
+    --header "Authorization: Bearer ${AccessToken}" \
+    --dump-header dump-header.txt \
+    --output output.json \
+    --write-out %{http_code} > status.txt
+    result=$?
+    set +x
+    
+    echo "result: ${result}"
+    if [ ! ${result} -eq 0 ]; then
+        echo "Error: $0[${LINENO}]"
+        exit 1
+    fi
+    
+    if [ -f output.json ]; then
+        jq . output.json
+    fi
+    
+    status=$(cat status.txt)
+    echo "status: ${status}"
+    if [ "${status}" -eq 200 ]; then
+        : # ok
+    else
+        echo "Error: $0[${LINENO}]"
+        echo "status: ${status}"
+        exit 1
+    fi
+done
+
+echo ""
+echo "****************"
+echo "* Success"
+echo "****************"

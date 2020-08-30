@@ -1,28 +1,32 @@
 package httphandler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/stretchr/testify/require"
 
-	"github.com/rsmaxwell/players-api/internal/model"
+	_ "github.com/jackc/pgx/stdlib"
 )
 
 func TestGetCourt(t *testing.T) {
 
-	teardown := model.SetupFull(t)
+	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := testLogin(t, "007", "topsecret")
+	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
+	firstCourt := GetFirstCourt(t, db)
 
 	// ***************************************************************
 	// * Testcases
@@ -31,7 +35,7 @@ func TestGetCourt(t *testing.T) {
 		testName       string
 		setLogonCookie bool
 		logonCookie    *http.Cookie
-		courtID        string
+		courtID        int
 		expectedStatus int
 		expectedResult string
 	}{
@@ -39,15 +43,15 @@ func TestGetCourt(t *testing.T) {
 			testName:       "Good request",
 			setLogonCookie: true,
 			logonCookie:    logonCookie,
-			courtID:        goodCourtID,
+			courtID:        firstCourt.ID,
 			expectedStatus: http.StatusOK,
-			expectedResult: "Court 1",
+			expectedResult: firstCourt.Name,
 		},
 		{
 			testName:       "bad courtID",
 			setLogonCookie: true,
 			logonCookie:    logonCookie,
-			courtID:        "junk",
+			courtID:        999999999,
 			expectedStatus: http.StatusNotFound,
 			expectedResult: "",
 		},
@@ -65,15 +69,26 @@ func TestGetCourt(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Create a request
-			r, err := http.NewRequest("GET", contextPath+"/court/"+test.courtID, nil)
+			command := fmt.Sprintf("/court/%d", test.courtID)
+			r, err := http.NewRequest("GET", contextPath+command, nil)
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
 			}
 
+			// ---------------------------------------
+
+			ctx, cancel := context.WithTimeout(r.Context(), time.Duration(60*time.Second))
+			defer cancel()
+			r2 := r.WithContext(ctx)
+
+			ctx = context.WithValue(r2.Context(), ContextDatabaseKey, db)
+			r3 := r.WithContext(ctx)
+
+			// ---------------------------------------
 			// Serve the request
-			router.ServeHTTP(w, r)
+			router.ServeHTTP(w, r3)
 			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the response
@@ -84,7 +99,7 @@ func TestGetCourt(t *testing.T) {
 			err = json.Unmarshal(bytes, &response)
 			require.Nil(t, err, "err should be nothing")
 
-			actual := response.Court.Container.Name
+			actual := response.Court.Name
 			if actual != test.expectedResult {
 				require.Fail(t, fmt.Sprintf("handler returned unexpected body: got %v want %v", actual, test.expectedResult))
 			}

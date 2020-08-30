@@ -1,25 +1,26 @@
 package httphandler
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/debug"
-
-	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // CreateCourtRequest structure
 type CreateCourtRequest struct {
-	Court court.Court `json:"court"`
+	Court model.Court `json:"court"`
 }
 
 // CreateCourtResponse structure
 type CreateCourtResponse struct {
-	ID string `json:"id"`
+	Message string      `json:"message"`
+	Court   model.Court `json:"court"`
 }
 
 var (
@@ -52,14 +53,23 @@ func CreateCourt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := model.CreateCourt(&request.Court)
+	object := r.Context().Value(ContextDatabaseKey)
+	db, ok := object.(*sql.DB)
+	if !ok {
+		err = fmt.Errorf("Unexpected context type")
+		writeResponseError(w, r, err)
+		return
+	}
+
+	c := model.NewCourt(request.Court.Name)
+	err = c.SaveCourt(db)
 	if err != nil {
 		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(w, r, http.StatusOK, "", "ok")
 	json.NewEncoder(w).Encode(CreateCourtResponse{
-		ID: id,
+		Message: "ok",
+		Court:   *c,
 	})
 }

@@ -2,30 +2,31 @@ package httphandler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/rsmaxwell/players-api/internal/basic/court"
-	"github.com/rsmaxwell/players-api/internal/common"
-	"github.com/rsmaxwell/players-api/internal/model"
+	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/stretchr/testify/assert"
+	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/stretchr/testify/require"
+
+	_ "github.com/jackc/pgx/stdlib"
 )
 
 func TestUpdateCourt(t *testing.T) {
 
-	teardown := model.SetupFull(t)
+	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := testLogin(t, "007", "topsecret")
+	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
+	goodCourt := GetFirstCourt(t, db)
 
 	// ***************************************************************
 	// * Testcases
@@ -34,7 +35,7 @@ func TestUpdateCourt(t *testing.T) {
 		testName       string
 		setLogonCookie bool
 		logonCookie    *http.Cookie
-		id             string
+		id             int
 		court          map[string]interface{}
 		expectedStatus int
 	}{
@@ -42,12 +43,9 @@ func TestUpdateCourt(t *testing.T) {
 			testName:       "Good request",
 			setLogonCookie: true,
 			logonCookie:    logonCookie,
-			id:             goodCourtID,
+			id:             goodCourt.ID,
 			court: map[string]interface{}{
-				"Container": map[string]interface{}{
-					"Name":    "COURT 101",
-					"Players": []string{"bob", "jill", "alice"},
-				},
+				"name": "COURT 101",
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -55,25 +53,9 @@ func TestUpdateCourt(t *testing.T) {
 			testName:       "Bad userID",
 			setLogonCookie: true,
 			logonCookie:    logonCookie,
-			id:             "junk",
+			id:             999999999,
 			court: map[string]interface{}{
-				"Container": map[string]interface{}{
-					"Name":    "COURT 101",
-					"Players": []string{},
-				},
-			},
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			testName:       "Bad player",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			id:             goodCourtID,
-			court: map[string]interface{}{
-				"Container": map[string]interface{}{
-					"Name":    "COURT 101",
-					"Players": []string{"junk"},
-				},
+				"name": "COURT 101",
 			},
 			expectedStatus: http.StatusNotFound,
 		},
@@ -96,42 +78,47 @@ func TestUpdateCourt(t *testing.T) {
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			r, err := http.NewRequest("PUT", contextPath+"/court/"+test.id, bytes.NewBuffer(requestBody))
+			command := fmt.Sprintf("/court/%d", test.id)
+			r, err := http.NewRequest("PUT", contextPath+command, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
 			}
 
+			// ---------------------------------------
+
+			ctx, cancel := context.WithTimeout(r.Context(), time.Duration(60*time.Second))
+			defer cancel()
+			r2 := r.WithContext(ctx)
+
+			ctx = context.WithValue(r2.Context(), ContextDatabaseKey, db)
+			r3 := r.WithContext(ctx)
+
+			// ---------------------------------------
+
 			// Serve the request
-			router.ServeHTTP(w, r)
-			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
+			router.ServeHTTP(w, r3)
 
 			// Check the response
 			if w.Code == http.StatusOK {
-				ref := common.Reference{Type: "court", ID: test.id}
-				c, err := court.Load(&ref)
+				var c model.Court
+				c.ID = test.id
+				err := c.LoadCourt(db)
 				require.Nil(t, err, "err should be nothing")
 
-				if i, ok := test.court["Name"]; ok {
-					value, ok := i.(string)
-					if !ok {
-						t.Errorf("The type of 'test.court[\"Name\"]' should be a string")
+				if value, ok := test.court["name"]; ok {
+					if name, ok := value.(string); ok {
+						if c.Name != name {
+							t.Errorf("Expected %s, actual: %s", name, c.Name)
+						}
 					}
-					c.Container.Name = value
-					assert.Equal(t, c.Container.Name, value, "The Court name was not updated correctly")
 				}
+			}
 
-				if i, ok := test.court["Players"]; ok {
-					value, ok := i.([]string)
-					if !ok {
-						t.Errorf("The type of 'test.court[\"Players\"]' should be an array of strings")
-					}
-					c.Container.Players = value
-					if !common.EqualArrayOfStrings(c.Container.Players, value) {
-						t.Errorf("The Court name was not updated correctly:\n got %v\n want %v", c.Container.Players, value)
-					}
-				}
+			if w.Code != test.expectedStatus {
+				t.Errorf("Unexpectred status. Expected %d, actual: %d", test.expectedStatus, w.Code)
+				t.FailNow()
 			}
 		})
 	}

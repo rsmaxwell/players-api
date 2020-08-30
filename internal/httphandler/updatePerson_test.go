@@ -2,29 +2,32 @@ package httphandler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"github.com/rsmaxwell/players-api/internal/basic/person"
 	"github.com/rsmaxwell/players-api/internal/model"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
+
+	_ "github.com/jackc/pgx/stdlib"
 )
 
 func TestUpdatePerson(t *testing.T) {
 
-	teardown := model.SetupFull(t)
+	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := testLogin(t, "007", "topsecret")
+	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
+	goodPerson := FindPersonByUserName(t, db, model.GoodUserName)
 
 	// ***************************************************************
 	// * Testcases
@@ -33,7 +36,7 @@ func TestUpdatePerson(t *testing.T) {
 		testName       string
 		setLogonCookie bool
 		logonCookie    *http.Cookie
-		id             string
+		id             int
 		person         map[string]interface{}
 		expectedStatus int
 	}{
@@ -41,13 +44,12 @@ func TestUpdatePerson(t *testing.T) {
 			testName:       "Good request",
 			setLogonCookie: true,
 			logonCookie:    logonCookie,
-			id:             goodUserID,
+			id:             goodPerson.ID,
 			person: map[string]interface{}{
-				"FirstName": "aaa",
-				"LastName":  "bbb",
-				"Email":     "123.456@xxx.com",
-				"Player":    false,
-				"Password":  "another",
+				"firstname": goodPerson.FirstName,
+				"lastname":  goodPerson.LastName,
+				"email":     goodPerson.Email,
+				"password":  model.GoodPassword,
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -55,14 +57,7 @@ func TestUpdatePerson(t *testing.T) {
 			testName:       "Bad userID",
 			setLogonCookie: true,
 			logonCookie:    logonCookie,
-			id:             "junk",
-			person: map[string]interface{}{
-				"FirstName": "aaa",
-				"LastName":  "bbb",
-				"Email":     "123.456@xxx.com",
-				"Player":    false,
-				"Password":  "another",
-			},
+			id:             999999999,
 			expectedStatus: http.StatusNotFound,
 		},
 	}
@@ -84,57 +79,72 @@ func TestUpdatePerson(t *testing.T) {
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			r, err := http.NewRequest("PUT", contextPath+"/users/"+test.id, bytes.NewBuffer(requestBody))
+			command := fmt.Sprintf("/users/%d", test.id)
+			r, err := http.NewRequest("PUT", contextPath+command, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
 			}
 
+			// ---------------------------------------
+
+			ctx, cancel := context.WithTimeout(r.Context(), time.Duration(60*time.Second))
+			defer cancel()
+			r2 := r.WithContext(ctx)
+
+			ctx = context.WithValue(r2.Context(), ContextDatabaseKey, db)
+			r3 := r.WithContext(ctx)
+
+			// ---------------------------------------
+
 			// Serve the request
-			router.ServeHTTP(w, r)
-			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
+			router.ServeHTTP(w, r3)
 
 			// Check the person was actually updated
 			if w.Code == http.StatusOK {
-				person, err := person.Load(test.id)
+				var p model.Person
+				p.ID = test.id
+				err := p.LoadPerson(db)
 				require.Nil(t, err, "err should be nothing")
 
-				if i, ok := test.person["FirstName"]; ok {
-					value, ok := i.(string)
-					if !ok {
-						t.Errorf("The type of 'test.person[\"FirstName\"]' should be a string")
+				if value, ok := test.person["firstname"]; ok {
+					if firstName, ok := value.(string); ok {
+						if p.FirstName != firstName {
+							t.Errorf("Expected %s, actual: %s", firstName, p.FirstName)
+						}
 					}
-					person.FirstName = value
-					assert.Equal(t, person.FirstName, value, "The Person firstname was not updated correctly")
 				}
 
-				if i, ok := test.person["LastName"]; ok {
-					value, ok := i.(string)
-					if !ok {
-						t.Errorf("The type of 'test.person[\"LastName\"]' should be a string")
+				if value, ok := test.person["lastname"]; ok {
+					if lastName, ok := value.(string); ok {
+						if p.LastName != lastName {
+							t.Errorf("Expected %s, actual: %s", lastName, p.LastName)
+						}
 					}
-					person.LastName = value
-					assert.Equal(t, person.LastName, value, "The Person lastname was not updated correctly")
 				}
 
-				if i, ok := test.person["Email"]; ok {
-					value, ok := i.(string)
-					if !ok {
-						t.Errorf("The type of 'test.person[\"Email\"]' should be a string")
+				if value, ok := test.person["email"]; ok {
+					if email, ok := value.(string); ok {
+						if p.Email != email {
+							t.Errorf("Expected %s, actual: %s", email, p.Email)
+						}
 					}
-					person.Email = value
-					assert.Equal(t, person.Email, value, "The Person email was not updated correctly")
 				}
 
-				if i, ok := test.person["Player"]; ok {
-					value, ok := i.(bool)
-					if !ok {
-						t.Errorf("The type of 'test.person[\"Player\"]' should be a boolean")
+				if value, ok := test.person["password"]; ok {
+					if password, ok := value.(string); ok {
+						err = bcrypt.CompareHashAndPassword([]byte(p.Hash), []byte(password))
+						if err != nil {
+							t.Errorf("The password was not updated correctly")
+						}
 					}
-					person.Player = value
-					assert.Equal(t, person.Player, value, "The Person Player was not updated correctly")
 				}
+			}
+
+			if w.Code != test.expectedStatus {
+				t.Logf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus)
+				t.FailNow()
 			}
 		})
 	}

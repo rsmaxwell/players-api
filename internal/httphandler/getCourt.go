@@ -1,17 +1,20 @@
 package httphandler
 
 import (
+	"database/sql"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/rsmaxwell/players-api/internal/basic/court"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // GetCourtResponse structure
 type GetCourtResponse struct {
-	Court court.Court `json:"court"`
+	Message string      `json:"message"`
+	Court   model.Court `json:"court"`
 }
 
 var (
@@ -28,16 +31,32 @@ func GetCourt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := mux.Vars(r)["id"]
-	f.DebugVerbose("ID: %s", id)
+	str := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(str)
+	if err != nil {
+		f.DebugVerbose("Could not convert '" + str + "' into an int")
+		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
+		return
+	}
 
-	c, err := model.GetCourt(id)
+	object := r.Context().Value(ContextDatabaseKey)
+	db, ok := object.(*sql.DB)
+	if !ok {
+		err = fmt.Errorf("Unexpected context type")
+		writeResponseError(w, r, err)
+		return
+	}
+
+	var c model.Court
+	c.ID = id
+	err = c.LoadCourt(db)
 	if err != nil {
 		writeResponseError(w, r, err)
 		return
 	}
 
 	writeResponseObject(w, r, http.StatusOK, "", GetCourtResponse{
-		Court: *c,
+		Message: "ok",
+		Court:   c,
 	})
 }

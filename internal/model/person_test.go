@@ -1,145 +1,165 @@
 package model
 
 import (
-	"fmt"
+	"database/sql"
 	"testing"
 
-	"github.com/rsmaxwell/players-api/internal/basic/person"
-
-	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
+
+	_ "github.com/jackc/pgx/stdlib"
 )
 
-var (
-	junkHashedPassword []byte
-	junkEmail          string
-)
-
-func init() {
-	junkHashedPassword = []byte("123456789012345678901234567890123456789012345678901234567890")
-	junkEmail = "123@hotmail.com"
-}
-
-func TestOverwriteExistingPerson(t *testing.T) {
-	teardown := SetupFull(t)
+func TestPeopleBasic(t *testing.T) {
+	teardown, db, _ := Setup(t)
 	defer teardown(t)
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("topsecret"), bcrypt.DefaultCost)
-	require.Nil(t, err, "err should be nothing")
+	r := Registration{
+		FirstName: "James2", LastName: "Bond2", DisplayName: "038", UserName: "018", Email: "018@mi6.gov.uk", Phone: "+44 1234 222222", Password: "TopSecret",
+	}
 
-	list1, err := person.List(person.AllRoles)
-	require.Nil(t, err, "err should be nothing")
+	p, err := r.ToPerson()
+	if err != nil {
+		t.Log(err.Error())
+		t.FailNow()
+	}
 
-	err = person.New("John", "Buutler", "butler@ghj.co.uk", hashedPassword, false).Save("007")
-	require.Nil(t, err, "err should be nothing")
+	err = p.SavePerson(db)
+	if err != nil {
+		t.Log("Could not create new person")
+		t.Logf("%T   %s", err, err.Error())
+		t.FailNow()
+	}
 
-	list2, err := person.List(person.AllRoles)
-	require.Nil(t, err, "err should be nothing")
-	require.Equal(t, len(list1), len(list2), "List of people not updated correctly")
+	p.CheckPerson(t, db, r.FirstName, r.LastName, r.DisplayName, r.UserName, r.Email, r.Phone, r.Password, StatusSuspended)
+
+	FirstName2 := "Smersh11"
+	LastName2 := "Bomb11"
+	DisplayName2 := "00711"
+	UserName2 := "00711"
+	Email2 := "00811@mi6.gov.uk"
+	Phone2 := "+44 1234 222222"
+	Password2 := "qwerty"
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(Password2), bcrypt.DefaultCost)
+	if err != nil {
+		t.Log(err.Error())
+		t.FailNow()
+	}
+
+	p.FirstName = FirstName2
+	p.LastName = LastName2
+	p.DisplayName = DisplayName2
+	p.UserName = UserName2
+	p.Email = Email2
+	p.Phone = Phone2
+	p.Hash = hash
+	p.Status = StatusNormal
+
+	err = p.UpdatePerson(db)
+	if err != nil {
+		t.Log("Could not update person")
+		t.FailNow()
+	}
+
+	p.CheckPerson(t, db, FirstName2, LastName2, DisplayName2, UserName2, Email2, Phone2, Password2, StatusNormal)
+
+	var p2 Person
+	p2.ID = p.ID
+	err = p2.LoadPerson(db)
+	if err != nil {
+		t.Log("Could not load person")
+		t.FailNow()
+	}
+
+	FirstName3 := "xxxxx"
+	LastName3 := "yyyyy"
+	DisplayName3 := "008"
+	UserName3 := "009"
+	Email3 := "010@mi6.gov.uk"
+	Phone3 := "+44 1234 333333"
+	Password3 := "topcat"
+
+	hash, err = bcrypt.GenerateFromPassword([]byte(Password3), bcrypt.DefaultCost)
+	if err != nil {
+		t.Log(err.Error())
+		t.FailNow()
+	}
+
+	p.FirstName = FirstName3
+	p.LastName = LastName3
+	p.DisplayName = DisplayName3
+	p.UserName = UserName3
+	p.Email = Email3
+	p.Phone = Phone3
+	p.Hash = hash
+	p.Status = StatusNormal
+
+	err = p.SavePerson(db)
+	if err != nil {
+		t.Log("Could not save person")
+		t.FailNow()
+	}
+
+	p.CheckPerson(t, db, FirstName3, LastName3, DisplayName3, UserName3, Email3, Phone3, Password3, StatusNormal)
+
+	err = p.DeletePersonBasic(db)
+	if err != nil {
+		t.Log("Could not delete person")
+		t.FailNow()
+	}
+	err = p2.DeletePersonBasic(db)
+	if err != nil {
+		t.Log("Could not delete person")
+		t.FailNow()
+	}
 }
 
-func TestUpdatePerson(t *testing.T) {
-	teardown := SetupFull(t)
-	defer teardown(t)
+func (p *Person) CheckPerson(t *testing.T, db *sql.DB, firstname string, lastname string, displayname string, username string, email string, phone string, password string, status string) {
 
-	// Add a couple of people
-	datapeople := []struct {
-		id        string
-		firstname string
-		lastname  string
-		email     string
-		password  string
-	}{
-		{id: "007", firstname: "aaa", lastname: "bbb", email: junkEmail, password: "junk"},
+	err := p.LoadPerson(db)
+	if err != nil {
+		t.Log(err.Error())
+		t.FailNow()
 	}
 
-	for _, i := range datapeople {
-
-		fields := make(map[string]interface{})
-
-		fields["FirstName"] = i.firstname
-		fields["LastName"] = i.lastname
-		fields["Email"] = i.email
-		fields["Password"] = i.password
-
-		err := person.Update("007", fields)
-		require.Nil(t, err, "err should be nothing")
-
-		// Check the expected People have been created
-		p, err := person.Load(i.id)
-		require.Nil(t, err, "err should be nothing")
-
-		require.Equal(t, p.FirstName, i.firstname, fmt.Sprintf("Person[%s] not updated correctly: 'Firstname': expected %s, got: %s", i.id, i.firstname, p.FirstName))
-		require.Equal(t, p.LastName, i.lastname, fmt.Sprintf("Person[%s] not updated correctly: 'LastName': expected %s, got: %s", i.id, i.lastname, p.LastName))
-		require.Equal(t, p.Email, i.email, fmt.Sprintf("Person[%s] not updated correctly: 'Email': expected %s, got: %s", i.id, i.email, p.Email))
-
-		if !p.CheckPassword(i.password) {
-			require.Fail(t, fmt.Sprintf("Person[%s] not updated correctly: 'Password': not valid: %s", i.id, i.password))
-		}
-	}
-}
-
-func TestUpdatePersonPlayer(t *testing.T) {
-	teardown := SetupFull(t)
-	defer teardown(t)
-
-	datapeople := []struct {
-		id             string
-		player         bool
-		expectedResult error
-	}{
-		{id: "007", player: false, expectedResult: nil},
-		{id: "alice", player: true, expectedResult: nil},
+	if p.FirstName != firstname {
+		t.Logf("Unexpected FirstName. expected: '%s' actual: '%s'", firstname, p.FirstName)
+		t.FailNow()
 	}
 
-	for _, i := range datapeople {
-
-		err := person.UpdatePlayer(i.id, i.player)
-		require.Nil(t, err, "err should be nothing")
-
-		// Check the expected People have been created
-		p, err := person.Load(i.id)
-		require.Nil(t, err, "err should be nothing")
-		require.Equal(t, i.expectedResult, err, "Unexpected error")
-		require.Equal(t, p.Player, i.player, "Unexpected Player: wanted:%s, got:%s", p.Player, i.player)
-	}
-}
-
-func TestPersonCanLogin(t *testing.T) {
-	teardown := SetupFull(t)
-	defer teardown(t)
-
-	// Add a couple of people
-	tests := []struct {
-		testName       string
-		id             string
-		role           string
-		player         bool
-		expectedResult bool
-	}{
-		{testName: "admin", id: "007", role: person.RoleAdmin, player: true, expectedResult: true},
-		{testName: "suspended non-player", id: "nigel", role: person.RoleSuspended, player: false, expectedResult: false},
-		{testName: "suspended player", id: "jeremy", role: person.RoleSuspended, player: true, expectedResult: false},
-		{testName: "normal non-player", id: "joanna", role: person.RoleNormal, player: false, expectedResult: true},
+	if p.LastName != lastname {
+		t.Logf("Unexpected LastName. expected: '%s' actual: '%s'", lastname, p.LastName)
+		t.FailNow()
 	}
 
-	// ***************************************************************
-	// * Run the tests
-	// ***************************************************************
-	for _, test := range tests {
-		t.Run(test.testName, func(t *testing.T) {
+	if p.DisplayName != displayname {
+		t.Logf("Unexpected displayName. expected: '%s' actual: '%s'", displayname, p.DisplayName)
+		t.FailNow()
+	}
 
-			err := person.UpdateRole(test.id, test.role)
-			require.Nil(t, err, "err should be nothing")
+	if p.UserName != username {
+		t.Logf("Unexpected userName. expected: '%s' actual: '%s'", username, p.UserName)
+		t.FailNow()
+	}
 
-			err = person.UpdatePlayer(test.id, test.player)
-			require.Nil(t, err, "err should be nothing")
+	if p.Email != email {
+		t.Logf("Unexpected Email. expected: '%s' actual: '%s'", email, p.Email)
+		t.FailNow()
+	}
 
-			p, err := person.Load(test.id)
-			require.Nil(t, err, "err should be nothing")
+	if p.Phone != phone {
+		t.Logf("Unexpected Phone. expected: '%s' actual: '%s'", phone, p.Phone)
+		t.FailNow()
+	}
 
-			ok := p.CanLogin()
-			require.Equal(t, ok, test.expectedResult, "Unexpected error")
-		})
+	if p.Status != status {
+		t.Logf("Unexpected Status. expected: '%s' actual: '%s'", status, p.Status)
+		t.FailNow()
+	}
+
+	err = bcrypt.CompareHashAndPassword(p.Hash, []byte(password))
+	if err != nil {
+		t.Log(err.Error())
+		t.FailNow()
 	}
 }

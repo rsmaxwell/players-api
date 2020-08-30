@@ -1,23 +1,27 @@
 package httphandler
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 
+	"github.com/rsmaxwell/players-api/internal/basic"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // ListPeopleRequest structure
 type ListPeopleRequest struct {
-	Filter []string `json:"filter"`
+	Where basic.WhereClause `json:"where"`
 }
 
 // ListPeopleResponse structure
 type ListPeopleResponse struct {
-	People []string `json:"people"`
+	Message string                 `json:"message"`
+	People  []*model.LimitedPerson `json:"people"`
 }
 
 var (
@@ -50,15 +54,24 @@ func ListPeople(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f.DebugVerbose("Filter:    %s", request.Filter)
+	f.DebugVerbose("Where:    %s", request.Where)
 
-	listOfPeople, err := model.ListPeople(request.Filter)
+	object := r.Context().Value(ContextDatabaseKey)
+	db, ok := object.(*sql.DB)
+	if !ok {
+		err = fmt.Errorf("Unexpected context type")
+		writeResponseError(w, r, err)
+		return
+	}
+
+	listOfPeople, err := model.ListPeople(db, request.Where)
 	if err != nil {
 		writeResponseError(w, r, err)
 		return
 	}
 
 	writeResponseObject(w, r, http.StatusOK, "", ListPeopleResponse{
-		People: listOfPeople,
+		Message: "ok",
+		People:  listOfPeople,
 	})
 }

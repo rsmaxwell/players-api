@@ -1,50 +1,46 @@
 package httphandler
 
 import (
-	"net/http"
-	"net/http/httptest"
+	"database/sql"
 	"testing"
 
 	"github.com/rsmaxwell/players-api/internal/model"
-
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
-)
 
-var (
-	goodUserID    = "007"
-	goodPassword  = "topsecret"
-	goodCourtID   = "1000"
-	anotherUserID = "bob"
+	_ "github.com/jackc/pgx/stdlib"
 )
 
 func TestGetLoginToken(t *testing.T) {
 
-	teardown := model.SetupFull(t)
+	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
-	testLogin(t, goodUserID, goodPassword)
+	cookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
+
+	t.Logf("cookie: %s", cookie)
 }
 
-func testLogin(t *testing.T, userID, password string) *http.Cookie {
-	r, err := http.NewRequest("POST", contextPath+"/users/authenticate", nil)
+// FindPersonByUsername function
+func FindPersonByUserName(t *testing.T, db *sql.DB, email string) *model.Person {
+
+	p, err := model.FindPersonByUserName(db, email)
 	require.Nil(t, err, "err should be nothing")
 
-	r.Header.Set("Authorization", model.BasicAuth(userID, password))
-	w := httptest.NewRecorder()
+	return p
+}
 
-	router := mux.NewRouter()
-	SetupHandlers(router)
-	router.ServeHTTP(w, r)
+func GetFirstCourt(t *testing.T, db *sql.DB) *model.Court {
 
-	response := w.Result()
-	require.Equal(t, http.StatusOK, w.Code, "authentication failed")
+	listOfCourts, err := model.ListCourts(db)
+	require.Nil(t, err, "err should be nothing")
 
-	cookies := map[string]*http.Cookie{}
-	for _, cookie := range response.Cookies() {
-		cookies[cookie.Name] = cookie
-	}
+	numberOfCourts := len(listOfCourts)
+	require.True(t, numberOfCourts > 0, "There are no courts")
 
-	cookie := cookies["players-api"]
-	return cookie
+	var c model.Court
+	c.ID = listOfCourts[0]
+	err = c.LoadCourt(db)
+	require.Nil(t, err, "err should be nothing")
+
+	return &c
 }

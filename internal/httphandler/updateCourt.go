@@ -1,14 +1,16 @@
 package httphandler
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/rsmaxwell/players-api/internal/basic/person"
+	"strconv"
 
 	"github.com/gorilla/mux"
+
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
@@ -32,20 +34,31 @@ func UpdateCourt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := sess.Values["userID"].(string)
+	userID, ok := sess.Values["userID"].(int)
 	if !ok {
 		f.DebugVerbose("could not get 'userID' from the session")
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
+		writeResponseMessage(w, r, http.StatusBadRequest, "", "Error")
 		return
 	}
 
-	p, err := person.Load(userID)
+	object := r.Context().Value(ContextDatabaseKey)
+	db, ok := object.(*sql.DB)
+	if !ok {
+		err = fmt.Errorf("Unexpected context type")
+		writeResponseError(w, r, err)
+		return
+	}
+
+	user := model.Person{ID: userID}
+	err = user.LoadPerson(db)
 	if err != nil {
-		f.Dump("Could not load the logged on user[%s]: %v", userID, err)
+		f.Dump("Could not load the logged on user[%d]: %v", userID, err)
 		writeResponseMessage(w, r, http.StatusInternalServerError, "", err.Error())
 		return
 	}
-	if !p.CanUpdateCourt() {
+	err = user.CanEditCourt()
+	if err != nil {
+		f.DebugVerbose("Not allowed to edit court")
 		writeResponseMessage(w, r, http.StatusForbidden, "", "Forbidden")
 	}
 
@@ -65,10 +78,31 @@ func UpdateCourt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := mux.Vars(r)["id"]
-	f.DebugVerbose("ID: %s", id)
+	str := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(str)
+	if err != nil {
+		f.DebugVerbose("Count not convert '" + str + "' into an int")
+		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
+		return
+	}
 
-	err = model.UpdateCourt(id, request.Court)
+	c := model.Court{ID: id}
+	err = c.LoadCourt(db)
+	if err != nil {
+		writeResponseError(w, r, err)
+		return
+	}
+
+	if val, ok := request.Court["name"]; ok {
+		c.Name, ok = val.(string)
+		if !ok {
+			err = fmt.Errorf("Unexpected type for 'name'")
+			writeResponseError(w, r, err)
+			return
+		}
+	}
+
+	err = c.UpdateCourt(db)
 	if err != nil {
 		writeResponseError(w, r, err)
 		return

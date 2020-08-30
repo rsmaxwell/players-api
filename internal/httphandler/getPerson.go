@@ -1,17 +1,21 @@
 package httphandler
 
 import (
+	"database/sql"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/rsmaxwell/players-api/internal/basic/person"
+	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // GetPersonResponse structure
 type GetPersonResponse struct {
-	Person person.Person `json:"person"`
+	Message string              `json:"message"`
+	Person  model.LimitedPerson `json:"person"`
 }
 
 var (
@@ -28,16 +32,36 @@ func GetPerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := mux.Vars(r)["id"]
-	f.DebugVerbose("ID: %s", id)
+	str := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(str)
+	if err != nil {
+		message := "Could not convert '" + str + "' into an int"
+		f.Errorf(message)
+		err = codeerror.NewBadRequest(message)
+		writeResponseError(w, r, err)
+		return
+	}
 
-	p, err := model.GetPerson(id)
+	f.DebugVerbose("ID: %d", id)
+
+	object := r.Context().Value(ContextDatabaseKey)
+	db, ok := object.(*sql.DB)
+	if !ok {
+		err = fmt.Errorf("Unexpected context type")
+		writeResponseError(w, r, err)
+		return
+	}
+
+	var p model.Person
+	p.ID = id
+	err = p.LoadPerson(db)
 	if err != nil {
 		writeResponseError(w, r, err)
 		return
 	}
 
 	writeResponseObject(w, r, http.StatusOK, "", GetPersonResponse{
-		Person: *p,
+		Message: "ok",
+		Person:  *p.ToLimited(),
 	})
 }

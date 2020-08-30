@@ -175,7 +175,7 @@ func DeletePerson(db *sql.DB, id int) error {
 	}
 
 	// Remove the Person
-	sqlStatement = "DELETE FROM " + PersonTable + " WHERE ID=" + strconv.Itoa(id)
+	sqlStatement = "DELETE FROM " + PersonTable + " WHERE ID=" + strconv.Itoa(id) + " AND status != '" + StatusAdmin + "'"
 	_, err = db.ExecContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not delete person"

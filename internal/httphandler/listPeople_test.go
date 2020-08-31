@@ -31,7 +31,7 @@ func TestListPeople(t *testing.T) {
 	// ***************************************************************
 	// * Get a list of all the people
 	// ***************************************************************
-	allPeopleIDs, err := model.ListPeople(db, model.AllStates)
+	allPeopleIDs, err := model.ListPeople(db, nil)
 	require.Nil(t, err, "err should be nothing")
 
 	// ***************************************************************
@@ -41,7 +41,7 @@ func TestListPeople(t *testing.T) {
 		testName       string
 		setLogonCookie bool
 		logonCookie    *http.Cookie
-		filter         []string
+		query          model.Query
 		expectedStatus int
 		expectedResult []int
 	}{
@@ -49,7 +49,11 @@ func TestListPeople(t *testing.T) {
 			testName:       "Good request",
 			setLogonCookie: true,
 			logonCookie:    logonCookie,
-			filter:         model.AllStates,
+			query: model.Query{
+				Conditions: map[string]model.Condition{
+					"status": model.Condition{Operation: "<>", Value: "suspended"},
+				},
+			},
 			expectedStatus: http.StatusOK,
 			expectedResult: allPeopleIDs,
 		},
@@ -67,10 +71,11 @@ func TestListPeople(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Create a request
-			requestBody, err := json.Marshal(ListPeopleRequest{
-				Filter: test.filter,
-			})
+			requestBody, err := json.Marshal(ListPeopleRequest{Query: test.query})
 			require.Nil(t, err, "err should be nothing")
+
+			requestString := string(requestBody)
+			t.Errorf("requestString: %s", requestString)
 
 			command := fmt.Sprintf("/users")
 			r, err := http.NewRequest("GET", contextPath+command, bytes.NewBuffer(requestBody))

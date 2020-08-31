@@ -21,12 +21,29 @@ func TestGetLoginToken(t *testing.T) {
 }
 
 // FindPersonByUsername function
-func FindPersonByUserName(t *testing.T, db *sql.DB, email string) *model.Person {
+func FindPersonByUserName(t *testing.T, db *sql.DB, userName string) *model.Person {
 
-	p, err := model.FindPersonByUserName(db, email)
-	require.Nil(t, err, "err should be nothing")
+	q := model.Query{}
+	q.Conditions = make(map[string]model.Condition)
+	q.Conditions["username"] = model.Condition{"=", userName}
 
-	return p
+	arrayOfPeopleIDs, err := model.ListPeople(db, &q)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	if len(arrayOfPeopleIDs) < 1 {
+		t.Errorf(err.Error())
+	}
+
+	id := arrayOfPeopleIDs[0]
+	p := model.Person{ID: id}
+	err = p.LoadPerson(db)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	return &p
 }
 
 func GetFirstCourt(t *testing.T, db *sql.DB) *model.Court {

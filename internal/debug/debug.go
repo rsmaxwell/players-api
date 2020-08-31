@@ -409,21 +409,42 @@ func (f *Function) Dump(format string, a ...interface{}) *Dump {
 	return dump
 }
 
+// AddIntArray method
+func (d *Dump) AddIntArray(filename string, array []int) {
+
+	var list []string
+	for _, x := range array {
+		list = append(list, fmt.Sprintf("%v", x))
+	}
+
+	d.AddString(filename, strings.Join(list, "\n"))
+}
+
+// AddArray method
+func (d *Dump) AddArray(filename string, array []interface{}) {
+
+	var list []string
+	for _, x := range array {
+		list = append(list, fmt.Sprintf("%v", x))
+	}
+
+	d.AddString(filename, strings.Join(list, "\n"))
+}
+
 // AddString method
-func (d *Dump) AddString(title string, data string) {
-	d.AddByteArray(title, []byte(data))
+func (d *Dump) AddString(filename string, data string) {
+	d.AddByteArray(filename, []byte(data))
 }
 
 // AddByteArray method
-func (d *Dump) AddByteArray(title string, data []byte) {
+func (d *Dump) AddByteArray(filename string, data []byte) {
 
 	if d.Err != nil {
 		return
 	}
 
-	filename := d.Directory + "/" + title
-
-	err := ioutil.WriteFile(filename, data, 0644)
+	pathname := filepath.Join(d.Directory, filename)
+	err := ioutil.WriteFile(pathname, data, 0644)
 	if err != nil {
 		return
 	}
@@ -571,26 +592,21 @@ func (f *Function) DumpError(err error, message string) *Dump {
 
 	d.AddString("error.txt", fmt.Sprintf("%T\n\n%s", err, err.Error()))
 
-	var title string
-	var filename string
 	var data []byte
 	var err3 error
 
 	if err2, ok := err.(*pq.Error); ok {
-		title = "pg.error"
 		data, err3 = json.Marshal(err2)
 	} else if err2, ok := err.(*pgconn.PgError); ok {
-		title = "pgconn.error"
 		data, err3 = json.Marshal(err2)
 	} else {
-		title = "error"
 		data, err3 = json.Marshal(err)
 	}
 
 	if err3 != nil {
 		fmt.Println("could not marshal error: " + err3.Error())
 	} else {
-		filename = filepath.Join(d.Directory, title+".json")
+		filename := filepath.Join(d.Directory, "error.json")
 		err = ioutil.WriteFile(filename, data, 0644)
 		if err != nil {
 			f.Errorf("could not write error to dump\n")

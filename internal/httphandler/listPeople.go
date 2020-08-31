@@ -8,20 +8,19 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/rsmaxwell/players-api/internal/basic"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // ListPeopleRequest structure
 type ListPeopleRequest struct {
-	Where basic.WhereClause `json:"where"`
+	Query model.Query `json:"query"`
 }
 
 // ListPeopleResponse structure
 type ListPeopleResponse struct {
-	Message string                 `json:"message"`
-	People  []*model.LimitedPerson `json:"people"`
+	Message string `json:"message"`
+	People  []int  `json:"people"`
 }
 
 var (
@@ -54,8 +53,6 @@ func ListPeople(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f.DebugVerbose("Where:    %s", request.Where)
-
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
@@ -64,7 +61,7 @@ func ListPeople(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	listOfPeople, err := model.ListPeople(db, request.Where)
+	listOfPeople, err := model.ListPeople(db, &request.Query)
 	if err != nil {
 		writeResponseError(w, r, err)
 		return

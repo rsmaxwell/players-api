@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgconn"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/rsmaxwell/players-api/internal/basic"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/debug"
 )
@@ -61,11 +60,11 @@ const (
 var (
 	functionUpdatePerson         = debug.NewFunction(pkg, "UpdatePerson")
 	functionSavePerson           = debug.NewFunction(pkg, "SavePerson")
+	functionFindPersonByUserName = debug.NewFunction(pkg, "FindPersonByUserName")
 	functionListPeople           = debug.NewFunction(pkg, "ListPeople")
 	functionPersonExists         = debug.NewFunction(pkg, "PersonExists")
 	functionLoadPerson           = debug.NewFunction(pkg, "LoadPerson")
 	functionDeletePersonBasic    = debug.NewFunction(pkg, "DeletePersonBasic")
-	functionFindPersonByUserName = debug.NewFunction(pkg, "FindPersonByUserName")
 	functionAuthenticate         = debug.NewFunction(pkg, "Authenticate")
 	functionCheckPassword        = debug.NewFunction(pkg, "CheckPassword")
 )
@@ -253,51 +252,71 @@ func (p *Person) DeletePersonBasic(db *sql.DB) error {
 	return nil
 }
 
+// FindPersonByUserName function
+func FindPersonByUserName(db *sql.DB, username string) (*Person, error) {
+	f := functionFindPersonByUserName
+
+	q := make(Query)
+	q["username"] = Condition{Operation: "=", Value: username}
+
+	arrayOfPeopleIDs, err := ListPeople(db, &q)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(arrayOfPeopleIDs) <= 0 {
+		err := codeerror.NewNotFound(fmt.Sprintf("Person not found: username:%s", username))
+		return nil, err
+	}
+
+	if len(arrayOfPeopleIDs) > 1 {
+		message := fmt.Sprintf("Too many matches. username:%s, count:%d", username, len(arrayOfPeopleIDs))
+		err := codeerror.NewNotFound(message)
+		d := f.DumpError(err, message)
+		d.AddIntArray("peopleIDs.txt", arrayOfPeopleIDs)
+		return nil, err
+	}
+
+	id := arrayOfPeopleIDs[0]
+	p := Person{ID: id}
+	err = p.LoadPerson(db)
+	if err != nil {
+		return nil, err
+	}
+
+	return &p, nil
+}
+
 // ListPeople returns a list of the people IDs
-func ListPeople(db *sql.DB, where basic.WhereClause) ([]*LimitedPerson, error) {
+func ListPeople(db *sql.DB, query *Query) ([]int, error) {
 	f := functionListPeople
 
-	// Query the court
-	fields := "id, firstname, lastname, displayname, username, email, phone, status"
-	sqlStatement := "SELECT " + fields + " FROM " + PersonTable
-	rows, err := db.Query(sqlStatement)
+	// Query the people
+	allFields := []string{"id", "firstname", "lastname", "displayname", "username", "email", "phone", "status"}
+	returnedFields := []string{"id"}
+	sqlStatement, values, err := BuildQuery(PersonTable, allFields, returnedFields, query)
+	rows, err := db.Query(sqlStatement, values...)
 	if err != nil {
 		message := "Could not select all from " + PersonTable
 		f.Errorf(message)
-		f.DumpSQLError(err, message, sqlStatement)
+		d := f.DumpSQLError(err, message, sqlStatement)
+		d.AddArray("values.txt", values)
 		return nil, err
 	}
 	defer rows.Close()
 
-	var list []*LimitedPerson
+	var list []int
 	for rows.Next() {
 
-		var np NullPerson
-		err := rows.Scan(&np.ID, &np.FirstName, &np.LastName, &np.DisplayName, &np.UserName, &np.Email, &np.Phone, &np.Status)
+		var id int
+		err := rows.Scan(&id)
 		if err != nil {
 			message := "Could not scan the person"
 			f.Errorf(message)
 			f.DumpError(err, message)
 			return nil, err
 		}
-
-		matches := true
-		if where != nil {
-			for _, c := range where {
-				m := np.Matches(&c)
-				if !m {
-					matches = false
-					break
-				}
-			}
-		}
-
-		if !matches {
-			continue
-		}
-
-		lp := np.ToLimitedPerson()
-		list = append(list, lp)
+		list = append(list, id)
 	}
 	err = rows.Err()
 	if err != nil {
@@ -347,96 +366,6 @@ func (p *Person) PersonExists(db *sql.DB) (bool, error) {
 	}
 
 	return true, nil
-}
-
-// FindPersonByUserName returns the person with a matching email
-func FindPersonByUserName(db *sql.DB, username string) (*Person, error) {
-	f := functionFindPersonByUserName
-
-	// Query the person
-	fields := "id, firstname, lastname, displayname, username, email, phone, hash, status"
-	sqlStatement := "SELECT " + fields + " FROM " + PersonTable + " WHERE username=" + basic.Quote(username)
-	rows, err := db.Query(sqlStatement)
-	if err != nil {
-		message := "Could not select person"
-		f.Errorf(message)
-		f.DumpSQLError(err, message, sqlStatement)
-		return nil, err
-	}
-	defer rows.Close()
-
-	count := 0
-	var p Person
-	for rows.Next() {
-		count++
-
-		var np NullPerson
-		err := rows.Scan(&np.ID, &np.FirstName, &np.LastName, &np.DisplayName, &np.UserName, &np.Email, &np.Phone, &np.Hash, &np.Status)
-		if err != nil {
-			message := "Could not scan the person"
-			f.Errorf(message)
-			f.DumpError(err, message)
-			return nil, err
-		}
-
-		p.ID = np.ID
-
-		if np.FirstName.Valid {
-			p.FirstName = np.FirstName.String
-		}
-
-		if np.LastName.Valid {
-			p.LastName = np.LastName.String
-		}
-
-		if np.DisplayName.Valid {
-			p.DisplayName = np.DisplayName.String
-		}
-
-		if np.UserName.Valid {
-			p.UserName = np.UserName.String
-		}
-
-		if np.Email.Valid {
-			p.Email = np.Email.String
-		}
-
-		if np.Phone.Valid {
-			p.Phone = np.Phone.String
-		}
-
-		if np.Hash.Valid {
-			p.Hash, err = hex.DecodeString(np.Hash.String)
-			if err != nil {
-				message := "Could not scan the Hash HexString"
-				f.Errorf(message)
-				f.DumpError(err, message)
-				return nil, err
-			}
-		}
-
-		if np.Status.Valid {
-			p.Status = np.Status.String
-		}
-	}
-	err = rows.Err()
-	if err != nil {
-		message := "Could not list the people"
-		f.Errorf(message)
-		f.DumpError(err, message)
-		return nil, err
-	}
-
-	if count == 0 {
-		return nil, codeerror.NewBadRequest(fmt.Sprintf("Username '%s' not found", username))
-	} else if count > 1 {
-		message := "Found " + string(count) + " people with username '" + username + "'"
-		f.Errorf(message)
-		f.DumpError(err, message)
-		return nil, errors.New(message)
-	}
-
-	return &p, nil
 }
 
 // Authenticate method
@@ -595,52 +524,4 @@ func (p *Person) Dump(d *debug.Dump) {
 
 	title := fmt.Sprintf("person.%d.json", p.ID)
 	d.AddByteArray(title, bytearray)
-}
-
-// Matches function
-func (np *NullPerson) Matches(c *basic.Condition) bool {
-
-	fields := []struct {
-		name   string
-		myType basic.My
-	}{
-		{
-			name:   "ID",
-			myType: basic.MyInt{Value: np.ID},
-		},
-		{
-			name:   "firstname",
-			myType: basic.MyNullString{Value: np.FirstName},
-		},
-		{
-			name:   "displayname",
-			myType: basic.MyNullString{Value: np.DisplayName},
-		},
-		{
-			name:   "username",
-			myType: basic.MyNullString{Value: np.UserName},
-		},
-		{
-			name:   "email",
-			myType: basic.MyNullString{Value: np.Email},
-		},
-		{
-			name:   "phone",
-			myType: basic.MyNullString{Value: np.Phone},
-		},
-		{
-			name:   "status",
-			myType: basic.MyNullString{Value: np.Status},
-		},
-	}
-
-	for _, field := range fields {
-		if c.Field == field.name {
-			if !field.myType.Check(c) {
-				return false
-			}
-		}
-	}
-
-	return true
 }

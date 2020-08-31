@@ -161,13 +161,12 @@ rm -rf dump-header.txt output.json status.txt
 
 cat <<EOF > data.json
 {
-    "where":[
-        {
-            "field":"username",
-            "operation":"=",
-            "value":"${USERNAME}"
+    "query": {
+        "username": {
+            "operation": "=",
+            "value": "${USERNAME}"
         }
-    ]
+    }
 }
 EOF
 
@@ -205,7 +204,7 @@ else
     echo "status: ${status}"
     exit 1
 fi
-
+set -x
 count=$(jq '.people | length' output.json)
 if [ "${count}" -eq "0" ]; then
     echo "Person not found"
@@ -215,9 +214,7 @@ elif [ "${count}" -gt "1" ]; then
     exit 1
 fi
 
-userID=$(jq '.people[0].id' output.json)
-
-echo "------------------------------------------------------------------"
+userID=$(jq '.people[0]' output.json)
 
 
 
@@ -755,9 +752,12 @@ rm -rf dump-header.txt output.json status.txt
 
 cat <<EOF > data.json
 {
-    "filter": [
-        "one", "two", "three"
-    ]
+    "query": {
+        "status": {
+            "operation": "=",
+            "value": "normal"
+        }
+    }
 }
 EOF
 
@@ -803,7 +803,7 @@ for row in $(echo "${people}" | jq -r '.[] | @base64'); do
      echo ${row} | base64 --decode | jq -r ${1}
     }
 
-    person=$(_jq '.id')
+    person=$(_jq '.')
 
     if [ "${person}" -eq "${adminID}" ]; then
         echo "skipping admin!"

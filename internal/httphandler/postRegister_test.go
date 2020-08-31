@@ -72,7 +72,7 @@ func TestRegister(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			listOfPeople, err := model.ListPeople(db, model.AllStates)
+			listOfPeople, err := model.ListPeople(db, nil)
 			require.Nil(t, err)
 			initialNumberOfPeople := len(listOfPeople)
 
@@ -109,7 +109,7 @@ func TestRegister(t *testing.T) {
 			// Check the response
 			if w.Code == http.StatusOK {
 
-				listOfPeople, err = model.ListPeople(db, model.AllStates)
+				listOfPeople, err = model.ListPeople(db, nil)
 				require.Nil(t, err)
 				finalNumberOfPeople := len(listOfPeople)
 

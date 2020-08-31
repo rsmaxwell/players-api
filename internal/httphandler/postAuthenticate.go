@@ -52,7 +52,7 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 
 	p, err := model.FindPersonByUserName(db, userName)
 	if err != nil {
-		writeResponseError(w, r, codeerror.NewUnauthorized("Not Authorised"))
+		writeResponseError(w, r, codeerror.NewUnauthorized("Not Authenticated"))
 		return
 	}
 

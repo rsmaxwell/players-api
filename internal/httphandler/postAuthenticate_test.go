@@ -26,19 +26,19 @@ func TestAuthenticate(t *testing.T) {
 
 	tests := []struct {
 		testName       string
-		username       string
+		email          string
 		password       string
 		expectedStatus int
 	}{
 		{
 			testName:       "Good request",
-			username:       model.GoodUserName,
+			email:          model.GoodUserName,
 			password:       model.GoodPassword,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			testName:       "Bad userid",
-			username:       "junk",
+			email:          "junk",
 			password:       "junk",
 			expectedStatus: http.StatusUnauthorized,
 		},
@@ -52,7 +52,7 @@ func TestAuthenticate(t *testing.T) {
 			r, err := http.NewRequest("POST", contextPath+command, nil)
 			require.Nil(t, err, "err should be nothing")
 
-			r.Header.Set("Authorization", BasicAuth(test.username, test.password))
+			r.Header.Set("Authorization", BasicAuth(test.email, test.password))
 
 			router := mux.NewRouter()
 			SetupHandlers(router)
@@ -80,7 +80,7 @@ func TestAuthenticate(t *testing.T) {
 				var resp PostAuthenticateResponse
 				err = json.Unmarshal(bytes, &resp)
 				require.Nil(t, err, "err should be nothing")
-				require.Equal(t, resp.Person.UserName, test.username)
+				require.Equal(t, resp.Person.Email, test.email)
 			}
 
 			if w.Code != test.expectedStatus {

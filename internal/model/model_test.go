@@ -94,7 +94,6 @@ func TestPeople(t *testing.T) {
 
 	p2.FirstName = "xxxxx"
 	p2.Email = "fabdelkader.browx@balaways.com"
-	p2.UserName = "ghjngfdfc.browx@balaways.com"
 	p2.Phone = "+44 012 098765"
 	err = p2.SavePerson(db)
 	if err != nil {

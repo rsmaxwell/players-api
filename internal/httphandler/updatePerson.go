@@ -45,7 +45,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("Unexpected context type")
+		err = fmt.Errorf("unexpected context type")
 		writeResponseError(w, r, err)
 		return
 	}
@@ -112,7 +112,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["firstname"]; ok {
 		p.FirstName, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("Unexpected type for 'firstName'")
+			err = fmt.Errorf("unexpected type for 'firstName'")
 			writeResponseError(w, r, err)
 			return
 		}
@@ -121,7 +121,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["lastname"]; ok {
 		p.LastName, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("Unexpected type for 'lastName'")
+			err = fmt.Errorf("unexpected type for 'lastName'")
 			writeResponseError(w, r, err)
 			return
 		}
@@ -130,16 +130,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["displayname"]; ok {
 		p.DisplayName, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("Unexpected type for 'displayname'")
-			writeResponseError(w, r, err)
-			return
-		}
-	}
-
-	if val, ok := request.Person["username"]; ok {
-		p.UserName, ok = val.(string)
-		if !ok {
-			err = fmt.Errorf("Unexpected type for 'username'")
+			err = fmt.Errorf("unexpected type for 'displayname'")
 			writeResponseError(w, r, err)
 			return
 		}
@@ -148,7 +139,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["email"]; ok {
 		p.Email, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("Unexpected type for 'email'")
+			err = fmt.Errorf("unexpected type for 'email'")
 			writeResponseError(w, r, err)
 			return
 		}
@@ -157,7 +148,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["phone"]; ok {
 		p.Phone, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("Unexpected type for 'phone'")
+			err = fmt.Errorf("unexpected type for 'phone'")
 			writeResponseError(w, r, err)
 			return
 		}
@@ -166,7 +157,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["password"]; ok {
 		password, ok := val.(string)
 		if !ok {
-			err = fmt.Errorf("Unexpected type for 'email'")
+			err = fmt.Errorf("unexpected type for 'email'")
 			writeResponseError(w, r, err)
 			return
 		}
@@ -181,7 +172,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["status"]; ok {
 		p.Status, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("Unexpected type for 'status'")
+			err = fmt.Errorf("unexpected type for 'status'")
 			writeResponseError(w, r, err)
 			return
 		}

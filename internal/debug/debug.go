@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -286,29 +285,41 @@ func (f *Function) DebugRequest(req *http.Request) {
 func (f *Function) DebugRequestBody(data []byte) {
 
 	if f.Level() >= APILevel {
-		text1 := string(data) // multi-line json
-
-		space := regexp.MustCompile(`\s+`)
-		text2 := space.ReplaceAllString(text1, " ") // may contain a 'password' field
-
-		text3 := text2
-		var m map[string]interface{}
-		err := json.Unmarshal([]byte(text2), &m)
-		if err == nil {
-			text3 = "{ "
-			sep := ""
-			for k, v := range m {
-				v2 := v
-				if strings.ToLower(k) == "password" {
-					v2 = interface{}("********")
-				}
-				text3 = fmt.Sprintf("%s%s\"%s\": \"%s\"", text3, sep, k, v2)
-				sep = ", "
-			}
-			text3 = text3 + " }"
-		}
-		f.DebugAPI("request body: %s", text3) // sanitised!
+		data2, _ := hidePasswords(data)
+		f.DebugAPI("request body: %s", string(data2))
 	}
+}
+
+func hidePasswords(data []byte) ([]byte, error) {
+	var input map[string]interface{}
+	err := json.Unmarshal(data, &input)
+	if err != nil {
+		return nil, err
+	}
+
+	output := walk(input)
+
+	var array []byte
+	array, err = json.Marshal(output)
+	if err != nil {
+		return nil, err
+	}
+	return array, nil
+}
+
+func walk(input map[string]interface{}) map[string]interface{} {
+	output := make(map[string]interface{})
+	for k, v := range input {
+		z, ok := v.(map[string]interface{})
+		if ok {
+			output[k] = walk(z)
+		} else if k == "password" {
+			output[k] = "********"
+		} else {
+			output[k] = v
+		}
+	}
+	return output
 }
 
 // Dump type

@@ -77,18 +77,18 @@ func Populate(db *sql.DB) error {
 	f := functionPopulate
 
 	peopleData := []Registration{
-		{FirstName: GoodFirstName, LastName: GoodLastName, DisplayName: GoodDisplayName, UserName: GoodUserName, Email: GoodEmail, Phone: GoodPhone, Password: GoodPassword},
-		{FirstName: AnotherFirstName, LastName: AnotherLastName, DisplayName: AnotherDisplayName, UserName: AnotherUserName, Email: AnotherEmail, Phone: AnotherPhone, Password: AnotherPassword},
-		{FirstName: "Robert", LastName: "Brown", DisplayName: "Bob", UserName: "bob1843", Email: "bob@ntl.co.uk", Phone: "012345 123010", Password: "Browneyes"},
-		{FirstName: "Charles", LastName: "Winsor", DisplayName: "Charlie", UserName: "cw8765", Email: "charles@o2.co.uk", Phone: "012345 123011", Password: "hrhcharles"},
-		{FirstName: "David", LastName: "Townsend", DisplayName: "Dave", UserName: "dtownsend1970", Email: "david@bt.co.uk", Phone: "012345 123012", Password: "miltonkeynes"},
-		{FirstName: "Edward", LastName: "French", DisplayName: "Ed", UserName: "efrench87", Email: "immissadda-1167@yopmail.com", Phone: "012345 123013", Password: "romeroandjuliet"},
-		{FirstName: "Hana", LastName: "Johnson", DisplayName: "Han", UserName: "hjohn7654", Email: "uddobareqi-9086@yopmail.com", Phone: "012345 123014", Password: "tabithathecat"},
-		{FirstName: "Annette", LastName: "Mack", DisplayName: "Nettie", UserName: "amack456", Email: "benagassuf-0898@yopmail.com", Phone: "012345 123015", Password: "kayleightown"},
-		{FirstName: "Karen", LastName: "Curry", DisplayName: "Kara", UserName: "kcurry45", Email: "pyffacisi-2285@yopmail.com", Phone: "012345 123016", Password: "sparkleykeira"},
-		{FirstName: "Halima", LastName: "Frazier", DisplayName: "Hal", UserName: "hf1234", Email: "esunnassuppa-5488@yopmail.com", Phone: "012345 123017", Password: "glitterma"},
-		{FirstName: "Laila", LastName: "Mcgrath", DisplayName: "La", UserName: "lmcgrath98", Email: "enarula-8425@yopmail.com", Phone: "012345 123018", Password: "tinkerham"},
-		{FirstName: "Caroline", LastName: "Clarke", DisplayName: "Carol", UserName: "cc7654", Email: "hossemmibe-4189@yopmail.com", Phone: "012345 123019", Password: "ruificent"},
+		{FirstName: GoodFirstName, LastName: GoodLastName, DisplayName: GoodDisplayName, Email: GoodEmail, Phone: GoodPhone, Password: GoodPassword},
+		{FirstName: AnotherFirstName, LastName: AnotherLastName, DisplayName: AnotherDisplayName, Email: AnotherEmail, Phone: AnotherPhone, Password: AnotherPassword},
+		{FirstName: "Robert", LastName: "Brown", DisplayName: "Bob", Email: "bob@ntl.co.uk", Phone: "012345 123010", Password: "Browneyes"},
+		{FirstName: "Charles", LastName: "Winsor", DisplayName: "Charlie", Email: "charles@o2.co.uk", Phone: "012345 123011", Password: "hrhcharles"},
+		{FirstName: "David", LastName: "Townsend", DisplayName: "Dave", Email: "david@bt.co.uk", Phone: "012345 123012", Password: "miltonkeynes"},
+		{FirstName: "Edward", LastName: "French", DisplayName: "Ed", Email: "immissadda-1167@yopmail.com", Phone: "012345 123013", Password: "romeroandjuliet"},
+		{FirstName: "Hana", LastName: "Johnson", DisplayName: "Han", Email: "uddobareqi-9086@yopmail.com", Phone: "012345 123014", Password: "tabithathecat"},
+		{FirstName: "Annette", LastName: "Mack", DisplayName: "Nettie", Email: "benagassuf-0898@yopmail.com", Phone: "012345 123015", Password: "kayleightown"},
+		{FirstName: "Karen", LastName: "Curry", DisplayName: "Kara", Email: "pyffacisi-2285@yopmail.com", Phone: "012345 123016", Password: "sparkleykeira"},
+		{FirstName: "Halima", LastName: "Frazier", DisplayName: "Hal", Email: "esunnassuppa-5488@yopmail.com", Phone: "012345 123017", Password: "glitterma"},
+		{FirstName: "Laila", LastName: "Mcgrath", DisplayName: "La", Email: "enarula-8425@yopmail.com", Phone: "012345 123018", Password: "tinkerham"},
+		{FirstName: "Caroline", LastName: "Clarke", DisplayName: "Carol", Email: "hossemmibe-4189@yopmail.com", Phone: "012345 123019", Password: "ruificent"},
 	}
 
 	peopleIDs := make(map[int]int)

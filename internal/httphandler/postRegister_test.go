@@ -34,7 +34,6 @@ func TestRegister(t *testing.T) {
 				FirstName:   "James",
 				LastName:    "Bond",
 				DisplayName: "aaa",
-				UserName:    "bbb",
 				Email:       "james@mi6.co.uk",
 				Phone:       "012345 123456",
 				Password:    "topsecret",
@@ -47,7 +46,6 @@ func TestRegister(t *testing.T) {
 				FirstName:   "James",
 				LastName:    "Bond",
 				DisplayName: "aaa",
-				UserName:    "bbb",
 				Email:       "james@mi6.co.uk",
 				Phone:       "012345 123456",
 				Password:    "topsecret",
@@ -60,7 +58,6 @@ func TestRegister(t *testing.T) {
 				FirstName:   "James",
 				LastName:    "Bond",
 				DisplayName: "aaa",
-				UserName:    "bbb",
 				Email:       "james@mi6.co.uk",
 				Phone:       "012345 123456",
 				Password:    "topsecret",
@@ -116,7 +113,7 @@ func TestRegister(t *testing.T) {
 				require.Equal(t, initialNumberOfPeople+1, finalNumberOfPeople, "Person was not registered")
 
 				// Check the status of the new person
-				p, err := model.FindPersonByUserName(db, test.registration.UserName)
+				p, err := model.FindPersonByEmail(db, test.registration.Email)
 				require.Nil(t, err)
 				if initialNumberOfPeople == 0 {
 					require.Equal(t, model.StatusAdmin, p.Status, "Unexpected role")

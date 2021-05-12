@@ -141,15 +141,14 @@ fi
 
 
 word=$(grep Access-Token dump-header.txt | cut -d " " -f 2)
-AccessToken=${word%%[[:space:]]}
-echo "AccessToken: [${AccessToken}]"
+AdminAccessToken=${word%%[[:space:]]}
+echo "AdminAccessToken: [${AdminAccessToken}]"
 
-RefreshToken=$(grep Set-Cookie dump-header.txt | cut -d " " -f 2 | cut -d "=" -f 2)
-echo "RefreshToken: [${RefreshToken}]"
+AdminRefreshToken=$(grep Set-Cookie dump-header.txt | cut -d " " -f 2 | cut -d "=" -f 2)
+echo "AdminRefreshToken: [${AdminRefreshToken}]"
 
 adminID=$(jq -r '.person.id' output.json)
 echo "adminID: ${adminID}"
-echo "------------------------------------------------------------------"
 
 
 echo "------------------------------------------------------------------"
@@ -177,7 +176,7 @@ curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
 --cookie-jar cookie-jar.txt \
 --header "Content-Type: application/json" \
 --header "Accept: application/json" \
---header "Authorization: Bearer ${AccessToken}" \
+--header "Authorization: Bearer ${AdminAccessToken}" \
 --data-binary "@data.json" \
 --dump-header dump-header.txt \
 --output output.json \
@@ -241,7 +240,7 @@ curl ${OPTIONS} -X PUT ${ENDPOINT}${COMMAND} \
 --cookie-jar cookie-jar.txt \
 --header "Content-Type: application/json" \
 --header "Accept: application/json" \
---header "Authorization: Bearer ${AccessToken}" \
+--header "Authorization: Bearer ${AdminAccessToken}" \
 --data-binary "@data.json" \
 --dump-header dump-header.txt \
 --output output.json \
@@ -278,15 +277,6 @@ COMMAND="/users/logout"
 
 rm -rf dump-header.txt output.json status.txt
 
-cat <<EOF > data.json
-{
-    "person": {
-        "username": "${USERNAME}"
-        "status": "normal"        
-    }
-}
-EOF
-
 set -x
 curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
 --silent \
@@ -294,8 +284,7 @@ curl ${OPTIONS} -X GET ${ENDPOINT}${COMMAND} \
 --cookie-jar cookie-jar.txt \
 --header "Content-Type: application/json" \
 --header "Accept: application/json" \
---header "Authorization: Bearer ${AccessToken}" \
---data-binary "@data.json" \
+--header "Authorization: Bearer ${AdminAccessToken}" \
 --dump-header dump-header.txt \
 --output output.json \
 --write-out %{http_code} > status.txt
@@ -372,6 +361,12 @@ else
     exit 1
 fi
 
+word=$(grep Access-Token dump-header.txt | cut -d " " -f 2)
+AccessToken=${word%%[[:space:]]}
+echo "AccessToken: [${AccessToken}]"
+
+RefreshToken=$(grep Set-Cookie dump-header.txt | cut -d " " -f 2 | cut -d "=" -f 2)
+echo "RefreshToken: [${RefreshToken}]"
 
 echo "------------------------------------------------------------------"
 echo "Read the new person"

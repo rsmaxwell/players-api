@@ -39,7 +39,7 @@ func GetMetrics(w http.ResponseWriter, r *http.Request) {
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("Unexpected context type")
+		err = fmt.Errorf("unexpected context type")
 		writeResponseError(w, r, err)
 		return
 	}

@@ -21,7 +21,6 @@ type LimitedPerson struct {
 	FirstName   string `json:"firstName"`
 	LastName    string `json:"lastName"`
 	DisplayName string `json:"displayName"`
-	UserName    string `json:"userName"`
 	Email       string `json:"email"`
 	Phone       string `json:"phone"`
 }
@@ -32,7 +31,6 @@ type Person struct {
 	FirstName   string `json:"firstName" validate:"required,min=3,max=20"`
 	LastName    string `json:"lastName" validate:"required,min=3,max=20"`
 	DisplayName string `json:"displayName" validate:"required,min=3,max=20"`
-	UserName    string `json:"userName" validate:"required,min=3,max=20"`
 	Email       string `json:"email" validate:"required,email"`
 	Phone       string `json:"phone" validate:"required,min=3,max=20"`
 	Hash        []byte `json:"hash"`
@@ -45,7 +43,6 @@ type NullPerson struct {
 	FirstName   sql.NullString `db:"firstname"`
 	LastName    sql.NullString `db:"lastname"`
 	DisplayName sql.NullString `db:"displayname"`
-	UserName    sql.NullString `db:"username"`
 	Email       sql.NullString `db:"email"`
 	Phone       sql.NullString `db:"phone"`
 	Hash        sql.NullString `db:"hash"`
@@ -58,15 +55,15 @@ const (
 )
 
 var (
-	functionUpdatePerson         = debug.NewFunction(pkg, "UpdatePerson")
-	functionSavePerson           = debug.NewFunction(pkg, "SavePerson")
-	functionFindPersonByUserName = debug.NewFunction(pkg, "FindPersonByUserName")
-	functionListPeople           = debug.NewFunction(pkg, "ListPeople")
-	functionPersonExists         = debug.NewFunction(pkg, "PersonExists")
-	functionLoadPerson           = debug.NewFunction(pkg, "LoadPerson")
-	functionDeletePersonBasic    = debug.NewFunction(pkg, "DeletePersonBasic")
-	functionAuthenticate         = debug.NewFunction(pkg, "Authenticate")
-	functionCheckPassword        = debug.NewFunction(pkg, "CheckPassword")
+	functionUpdatePerson      = debug.NewFunction(pkg, "UpdatePerson")
+	functionSavePerson        = debug.NewFunction(pkg, "SavePerson")
+	functionFindPersonByEmail = debug.NewFunction(pkg, "FindPersonByEmail")
+	functionListPeople        = debug.NewFunction(pkg, "ListPeople")
+	functionPersonExists      = debug.NewFunction(pkg, "PersonExists")
+	functionLoadPerson        = debug.NewFunction(pkg, "LoadPerson")
+	functionDeletePersonBasic = debug.NewFunction(pkg, "DeletePersonBasic")
+	functionAuthenticate      = debug.NewFunction(pkg, "Authenticate")
+	functionCheckPassword     = debug.NewFunction(pkg, "CheckPassword")
 )
 
 const (
@@ -91,12 +88,11 @@ func init() {
 }
 
 // NewPerson initialises a Person object
-func NewPerson(firstname string, lastname string, displayName string, userName string, email string, phone string, hash []byte) *Person {
+func NewPerson(firstname string, lastname string, displayName string, email string, phone string, hash []byte) *Person {
 	p := new(Person)
 	p.FirstName = firstname
 	p.LastName = lastname
 	p.DisplayName = displayName
-	p.UserName = userName
 	p.Email = email
 	p.Phone = phone
 	p.Hash = hash
@@ -112,7 +108,7 @@ func (p *Person) SavePerson(db *sql.DB) error {
 	values := "$1, $2, $3, $4, $5, $6, $7, $8"
 	sqlStatement := "INSERT INTO " + PersonTable + " (" + fields + ") VALUES (" + values + ") RETURNING id"
 
-	err := db.QueryRow(sqlStatement, p.FirstName, p.LastName, p.DisplayName, p.UserName, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status).Scan(&p.ID)
+	err := db.QueryRow(sqlStatement, p.FirstName, p.LastName, p.DisplayName, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status).Scan(&p.ID)
 	if err != nil {
 		pgerr, ok := err.(*pgconn.PgError)
 		if ok {
@@ -137,7 +133,7 @@ func (p *Person) UpdatePerson(db *sql.DB) error {
 
 	items := "firstname=$1, lastname=$2, displayname=$3, username=$4, email=$5, phone=$6, hash=$7, status=$8"
 	sqlStatement := "UPDATE " + PersonTable + " SET " + items + " WHERE id=" + strconv.Itoa(p.ID)
-	_, err := db.Exec(sqlStatement, p.FirstName, p.LastName, p.DisplayName, p.UserName, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status)
+	_, err := db.Exec(sqlStatement, p.FirstName, p.LastName, p.DisplayName, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status)
 	if err != nil {
 		message := "Could not update person"
 		f.Errorf(message)
@@ -169,7 +165,7 @@ func (p *Person) LoadPerson(db *sql.DB) error {
 		count++
 
 		var np NullPerson
-		err := rows.Scan(&np.FirstName, &np.LastName, &np.DisplayName, &np.UserName, &np.Email, &np.Phone, &np.Hash, &np.Status)
+		err := rows.Scan(&np.FirstName, &np.LastName, &np.DisplayName, &np.Email, &np.Phone, &np.Hash, &np.Status)
 		if err != nil {
 			message := "Could not scan the person"
 			f.Errorf(message)
@@ -187,10 +183,6 @@ func (p *Person) LoadPerson(db *sql.DB) error {
 
 		if np.DisplayName.Valid {
 			p.DisplayName = np.DisplayName.String
-		}
-
-		if np.UserName.Valid {
-			p.UserName = np.UserName.String
 		}
 
 		if np.Email.Valid {
@@ -252,12 +244,12 @@ func (p *Person) DeletePersonBasic(db *sql.DB) error {
 	return nil
 }
 
-// FindPersonByUserName function
-func FindPersonByUserName(db *sql.DB, username string) (*Person, error) {
-	f := functionFindPersonByUserName
+// FindPersonByEmail function
+func FindPersonByEmail(db *sql.DB, email string) (*Person, error) {
+	f := functionFindPersonByEmail
 
 	q := make(Query)
-	q["username"] = Condition{Operation: "=", Value: username}
+	q["username"] = Condition{Operation: "=", Value: email}
 
 	arrayOfPeopleIDs, err := ListPeople(db, &q)
 	if err != nil {
@@ -265,12 +257,12 @@ func FindPersonByUserName(db *sql.DB, username string) (*Person, error) {
 	}
 
 	if len(arrayOfPeopleIDs) <= 0 {
-		err := codeerror.NewNotFound(fmt.Sprintf("Person not found: username:%s", username))
+		err := codeerror.NewNotFound(fmt.Sprintf("Person not found: email:%s", email))
 		return nil, err
 	}
 
 	if len(arrayOfPeopleIDs) > 1 {
-		message := fmt.Sprintf("Too many matches. username:%s, count:%d", username, len(arrayOfPeopleIDs))
+		message := fmt.Sprintf("Too many matches. email:%s, count:%d", email, len(arrayOfPeopleIDs))
 		err := codeerror.NewNotFound(message)
 		d := f.DumpError(err, message)
 		d.AddIntArray("peopleIDs.txt", arrayOfPeopleIDs)
@@ -475,7 +467,6 @@ func (p *Person) ToLimited() *LimitedPerson {
 		FirstName:   p.FirstName,
 		LastName:    p.LastName,
 		DisplayName: p.DisplayName,
-		UserName:    p.UserName,
 		Email:       p.Email,
 		Phone:       p.Phone,
 	}
@@ -497,10 +488,6 @@ func (np *NullPerson) ToLimitedPerson() *LimitedPerson {
 
 	if np.DisplayName.Valid {
 		lp.DisplayName = np.DisplayName.String
-	}
-
-	if np.UserName.Valid {
-		lp.UserName = np.UserName.String
 	}
 
 	if np.Email.Valid {

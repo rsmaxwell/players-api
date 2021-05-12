@@ -37,6 +37,7 @@ func TestListPeople(t *testing.T) {
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
+
 	tests := []struct {
 		testName       string
 		setLogonCookie bool
@@ -49,11 +50,7 @@ func TestListPeople(t *testing.T) {
 			testName:       "Good request",
 			setLogonCookie: true,
 			logonCookie:    logonCookie,
-			query: model.Query{
-				Conditions: map[string]model.Condition{
-					"status": model.Condition{Operation: "<>", Value: "suspended"},
-				},
-			},
+			query:          map[string]model.Condition{"status": {Operation: "<>", Value: "suspended"}},
 			expectedStatus: http.StatusOK,
 			expectedResult: allPeopleIDs,
 		},

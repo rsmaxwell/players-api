@@ -36,6 +36,7 @@ var (
 
 	functionMiddleware         = debug.NewFunction(pkg, "Middleware")
 	functionAuthenticate       = debug.NewFunction(pkg, "Authenticate")
+	functionWriteResponse      = debug.NewFunction(pkg, "writeResponse")
 	functionCheckAuthenticated = debug.NewFunction(pkg, "checkAuthenticated")
 )
 
@@ -119,7 +120,7 @@ func SetupHandlers(w *mux.Router) {
 
 	s := w.PathPrefix("/players-api").Subrouter()
 
-	s.HandleFunc("/users/register", Register).Methods(http.MethodPost)
+	s.HandleFunc("/users/register", Register).Methods(http.MethodOptions, http.MethodPost)
 	s.HandleFunc("/users/authenticate", Authenticate).Methods(http.MethodOptions, http.MethodPost)
 	s.HandleFunc("/users", ListPeople).Methods(http.MethodGet)
 	s.HandleFunc("/users/{id}", DeletePerson).Methods(http.MethodDelete)

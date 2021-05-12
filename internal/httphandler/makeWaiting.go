@@ -45,7 +45,7 @@ func MakeWaiting(w http.ResponseWriter, r *http.Request) {
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("Unexpected context type")
+		err = fmt.Errorf("unexpected context type")
 		writeResponseError(w, r, err)
 		return
 	}
@@ -53,7 +53,7 @@ func MakeWaiting(w http.ResponseWriter, r *http.Request) {
 	p := model.Person{ID: id}
 	exists, err := p.PersonExists(db)
 	if err != nil {
-		message := fmt.Sprintf("Unexpected error checking person [%d] exists", id)
+		message := fmt.Sprintf("unexpected error checking person [%d] exists", id)
 		f.DumpError(err, message)
 		writeResponseError(w, r, codeerror.NewInternalServerError(message))
 		return

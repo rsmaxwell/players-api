@@ -17,7 +17,7 @@ import (
 
 // RegisterRequest structure
 type RegisterRequest struct {
-	Registration model.Registration `json:"registration"`
+	Registration model.Registration `json:"register"`
 }
 
 var (
@@ -27,6 +27,12 @@ var (
 // Register method
 func Register(w http.ResponseWriter, r *http.Request) {
 	f := functionRegister
+
+	if r.Method == http.MethodOptions {
+		f.DebugVerbose("returning from 'Options' request")
+		writeResponseMessage(w, r, http.StatusOK, "", "ok")
+		return
+	}
 
 	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
@@ -47,7 +53,6 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	f.DebugVerbose("FirstName: %s", request.Registration.FirstName)
 	f.DebugVerbose("LastName:  %s", request.Registration.LastName)
 	f.DebugVerbose("DisplayName: %s", request.Registration.DisplayName)
-	f.DebugVerbose("UserName:  %s", request.Registration.UserName)
 	f.DebugVerbose("Email:     %s", request.Registration.Email)
 	f.DebugVerbose("Phone:     %s", request.Registration.Phone)
 	f.DebugVerbose("Password:  %s", request.Registration.Password)
@@ -61,7 +66,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("Unexpected context type")
+		err = fmt.Errorf("unexpected context type")
 		writeResponseError(w, r, err)
 		return
 	}

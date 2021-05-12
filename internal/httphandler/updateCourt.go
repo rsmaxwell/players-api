@@ -44,7 +44,7 @@ func UpdateCourt(w http.ResponseWriter, r *http.Request) {
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("Unexpected context type")
+		err = fmt.Errorf("unexpected context type")
 		writeResponseError(w, r, err)
 		return
 	}
@@ -96,7 +96,7 @@ func UpdateCourt(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Court["name"]; ok {
 		c.Name, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("Unexpected type for 'name'")
+			err = fmt.Errorf("unexpected type for 'name'")
 			writeResponseError(w, r, err)
 			return
 		}

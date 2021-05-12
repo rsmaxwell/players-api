@@ -37,7 +37,7 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err := fmt.Errorf("Unexpected context type")
+		err := fmt.Errorf("unexpected context type")
 		writeResponseError(w, r, err)
 		return
 	}
@@ -45,12 +45,12 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 	// *********************************************************************
 	// * Authenticate the user
 	// *********************************************************************
-	userName, password, _ := r.BasicAuth()
+	email, password, _ := r.BasicAuth()
 
-	f.DebugVerbose("userName: %s", userName)
+	f.DebugVerbose("email: %s", email)
 	f.DebugVerbose("password: %s", password)
 
-	p, err := model.FindPersonByUserName(db, userName)
+	p, err := model.FindPersonByEmail(db, email)
 	if err != nil {
 		writeResponseError(w, r, codeerror.NewUnauthorized("Not Authenticated"))
 		return

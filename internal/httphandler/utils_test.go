@@ -23,9 +23,7 @@ func TestGetLoginToken(t *testing.T) {
 // FindPersonByUsername function
 func FindPersonByUserName(t *testing.T, db *sql.DB, userName string) *model.Person {
 
-	q := model.Query{}
-	q.Conditions = make(map[string]model.Condition)
-	q.Conditions["username"] = model.Condition{"=", userName}
+	q := map[string]model.Condition{"username": {Operation: "=", Value: "userName"}}
 
 	arrayOfPeopleIDs, err := model.ListPeople(db, &q)
 	if err != nil {

@@ -26,7 +26,7 @@ func init() {
 
 func main() {
 	f := functionMain
-	f.Infof("Players Populate: Version: %s", basic.Version())
+	f.Infof("Players API: Version: %s", basic.Version())
 	f.Verbosef("    BuildDate: %s", basic.BuildDate())
 	f.Verbosef("    GitCommit: %s", basic.GitCommit())
 	f.Verbosef("    GitBranch: %s", basic.GitBranch())

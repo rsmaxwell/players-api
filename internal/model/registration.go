@@ -14,9 +14,8 @@ type Registration struct {
 	FirstName   string `json:"firstname" validate:"required,min=3,max=20"`
 	LastName    string `json:"lastname" validate:"required,min=3,max=20"`
 	DisplayName string `json:"displayname" validate:"required,min=2,max=20"`
-	UserName    string `json:"username" validate:"required,min=3,max=20"`
 	Email       string `json:"email" validate:"required,email"`
-	Phone       string `json:"phone" validate:"required,min=3,max=20"`
+	Phone       string `json:"phone" validate:"max=20"`
 	Password    string `json:"password" validate:"required,min=8,max=30"`
 }
 
@@ -34,7 +33,6 @@ func NewRegistration(firstname string, lastname string, displayName string, user
 	r.FirstName = firstname
 	r.LastName = lastname
 	r.DisplayName = displayName
-	r.UserName = userName
 	r.Email = email
 	r.Phone = phone
 	r.Password = password
@@ -47,7 +45,7 @@ func (r *Registration) ToPerson() (*Person, error) {
 
 	err := validate.Struct(r)
 	if err != nil {
-		message := fmt.Sprintf("validation failed for person[%s]: %v", r.UserName, err)
+		message := fmt.Sprintf("validation failed for person[%s]: %v", r.Email, err)
 		f.DebugVerbose(message)
 		return nil, err
 	}
@@ -59,7 +57,7 @@ func (r *Registration) ToPerson() (*Person, error) {
 		f.DumpError(err, message)
 		return nil, err
 	}
-	p := NewPerson(r.FirstName, r.LastName, r.DisplayName, r.UserName, r.Email, r.Phone, hash)
+	p := NewPerson(r.FirstName, r.LastName, r.DisplayName, r.Email, r.Phone, hash)
 
 	return p, nil
 }

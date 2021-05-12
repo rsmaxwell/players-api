@@ -2503,11 +2503,11 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.5814053"
-     inkscape:cx="617.17519"
-     inkscape:cy="528.76322"
+     inkscape:zoom="2.8266579"
+     inkscape:cx="714.0909"
+     inkscape:cy="615.819"
      inkscape:document-units="mm"
-     inkscape:current-layer="layer2"
+     inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
      showgrid="false"
      inkscape:window-width="1920"
@@ -2529,9 +2529,76 @@
   </metadata>
   <g
      inkscape:groupmode="layer"
+     id="layer1"
+     inkscape:label="base">
+    <rect
+       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       id="rect1125-8-6-67"
+       width="24.370895"
+       height="43.181442"
+       x="137.38878"
+       y="11.871081" />
+    <rect
+       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       id="rect1125"
+       width="24.370895"
+       height="43.181442"
+       x="59.685036"
+       y="80.802536" />
+    <rect
+       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       id="rect1125-8"
+       width="24.370895"
+       height="43.181442"
+       x="99.43898"
+       y="80.802383" />
+    <rect
+       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       id="rect1125-8-6"
+       width="24.370895"
+       height="43.181442"
+       x="137.22148"
+       y="80.88604" />
+    <rect
+       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       id="rect1125-8-6-6"
+       width="24.370895"
+       height="43.181442"
+       x="176.3718"
+       y="80.802383" />
+    <rect
+       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       id="rect1125-8-6-6-7-3-3-5"
+       width="24.370895"
+       height="43.181442"
+       x="59.590115"
+       y="143.71057" />
+    <rect
+       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       id="rect1125-8-6-6-7-3-3"
+       width="24.370895"
+       height="43.181442"
+       x="98.075111"
+       y="143.80013" />
+    <rect
+       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       id="rect1125-8-6-6-7"
+       width="24.370895"
+       height="43.181442"
+       x="176.27493"
+       y="143.56351" />
+    <rect
+       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       id="rect1125-8-6-6-7-3"
+       width="24.370895"
+       height="43.181442"
+       x="215.10382"
+       y="143.62691" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
      id="layer2"
-     inkscape:label="drawing"
-     sodipodi:insensitive="true">
+     inkscape:label="drawing">
     <text
        xml:space="preserve"
        id="text1135"
@@ -2549,13 +2616,6 @@
          x="22.359375"
          y="95.666883"><tspan
            dx="0 2.6975074 2.9021459 2.9600239 1.4469385">Login</tspan></tspan></text>
-    <rect
-       style="opacity:0.992;fill:none;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
-       id="rect1125"
-       width="24.370895"
-       height="43.181442"
-       x="59.685036"
-       y="80.802536" />
     <text
        xml:space="preserve"
        id="text1153"
@@ -2621,13 +2681,6 @@
        transform="translate(6.1944823,10.692045)"><tspan
          x="61.296875"
          y="87.13809"><tspan>Register</tspan></tspan></text>
-    <rect
-       style="opacity:0.992;fill:none;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
-       id="rect1125-8"
-       width="24.370895"
-       height="43.181442"
-       x="99.43898"
-       y="80.802383" />
     <text
        xml:space="preserve"
        id="text1153-1"
@@ -2735,13 +2788,6 @@
        height="1.1293356"
        x="100.86641"
        y="105.8045" />
-    <rect
-       style="opacity:0.992;fill:none;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
-       id="rect1125-8-6"
-       width="24.370895"
-       height="43.181442"
-       x="137.22148"
-       y="80.88604" />
     <text
        xml:space="preserve"
        id="text1153-1-2"
@@ -2993,13 +3039,6 @@
        transform="translate(82.69518,35.797532)"><tspan
          x="61.296875"
          y="87.13809"><tspan>People</tspan></tspan></text>
-    <rect
-       style="opacity:0.992;fill:none;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
-       id="rect1125-8-6-6"
-       width="24.370895"
-       height="43.181442"
-       x="176.3718"
-       y="80.802383" />
     <text
        xml:space="preserve"
        id="text1153-1-2-5"
@@ -3341,13 +3380,6 @@
        transform="translate(116.17368,25.55121)"><tspan
          x="61.296875"
          y="87.13809"><tspan>Olivia</tspan></tspan></text>
-    <rect
-       style="opacity:0.992;fill:none;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
-       id="rect1125-8-6-6-7"
-       width="24.370895"
-       height="43.181442"
-       x="176.27493"
-       y="143.56351" />
     <text
        xml:space="preserve"
        id="text1153-1-2-5-7"
@@ -3525,13 +3557,6 @@
          x="61.296875"
          y="87.13809"><tspan
            style="fill:#0000ff;fill-opacity:1">Edit</tspan></tspan></text>
-    <rect
-       style="opacity:0.992;fill:none;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
-       id="rect1125-8-6-6-7-3"
-       width="24.370895"
-       height="43.181442"
-       x="215.10382"
-       y="143.62691" />
     <text
        xml:space="preserve"
        id="text1153-1-2-5-7-5"
@@ -3723,13 +3748,6 @@
          x="61.296875"
          y="87.13809"><tspan
            style="fill:#ffffff;fill-opacity:1">Delete</tspan></tspan></text>
-    <rect
-       style="opacity:0.992;fill:none;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
-       id="rect1125-8-6-6-7-3-3"
-       width="24.370895"
-       height="43.181442"
-       x="98.075111"
-       y="143.80013" />
     <text
        xml:space="preserve"
        id="text1153-1-2-5-7-5-1"
@@ -3856,13 +3874,6 @@
        transform="translate(38.303597,62.543089)"><tspan
          x="61.296875"
          y="87.13809"><tspan>Cancel</tspan></tspan></text>
-    <rect
-       style="opacity:0.992;fill:none;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
-       id="rect1125-8-6-6-7-3-3-5"
-       width="24.370895"
-       height="43.181442"
-       x="59.590115"
-       y="143.71057" />
     <text
        xml:space="preserve"
        id="text1153-1-2-5-7-5-1-9"
@@ -3990,13 +4001,6 @@
          x="61.296875"
          y="87.13809"><tspan
            style="stroke-width:0.326346">Court 1</tspan></tspan></text>
-    <rect
-       style="opacity:0.992;fill:none;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
-       id="rect1125-8-6-67"
-       width="24.370895"
-       height="43.181442"
-       x="137.38878"
-       y="11.871081" />
     <text
        xml:space="preserve"
        id="text1153-1-2-2"

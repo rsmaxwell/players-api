@@ -2501,13 +2501,13 @@
      pagecolor="#ffffff"
      bordercolor="#666666"
      borderopacity="1.0"
-     inkscape:pageopacity="0.0"
+     inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.8266579"
+     inkscape:zoom="3.5726323"
      inkscape:cx="714.0909"
      inkscape:cy="615.819"
      inkscape:document-units="mm"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="layer2"
      inkscape:document-rotation="0"
      showgrid="false"
      inkscape:window-width="1920"
@@ -2523,72 +2523,73 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <g
      inkscape:groupmode="layer"
      id="layer1"
-     inkscape:label="base">
+     inkscape:label="base"
+     sodipodi:insensitive="true">
     <rect
-       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       style="opacity:0.992;fill:#f0f0f0;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
        id="rect1125-8-6-67"
        width="24.370895"
        height="43.181442"
        x="137.38878"
        y="11.871081" />
     <rect
-       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       style="opacity:0.992;fill:#f0f0f0;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
        id="rect1125"
        width="24.370895"
        height="43.181442"
        x="59.685036"
        y="80.802536" />
     <rect
-       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       style="opacity:0.992;fill:#f0f0f0;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
        id="rect1125-8"
        width="24.370895"
        height="43.181442"
        x="99.43898"
        y="80.802383" />
     <rect
-       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       style="opacity:0.992;fill:#f0f0f0;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
        id="rect1125-8-6"
        width="24.370895"
        height="43.181442"
        x="137.22148"
        y="80.88604" />
     <rect
-       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       style="opacity:0.992;fill:#f0f0f0;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
        id="rect1125-8-6-6"
        width="24.370895"
        height="43.181442"
        x="176.3718"
        y="80.802383" />
     <rect
-       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       style="opacity:0.992;fill:#f0f0f0;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
        id="rect1125-8-6-6-7-3-3-5"
        width="24.370895"
        height="43.181442"
        x="59.590115"
        y="143.71057" />
     <rect
-       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       style="opacity:0.992;fill:#f0f0f0;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
        id="rect1125-8-6-6-7-3-3"
        width="24.370895"
        height="43.181442"
        x="98.075111"
        y="143.80013" />
     <rect
-       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       style="opacity:0.992;fill:#f0f0f0;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
        id="rect1125-8-6-6-7"
        width="24.370895"
        height="43.181442"
        x="176.27493"
        y="143.56351" />
     <rect
-       style="opacity:0.992;fill:#f0f0f0;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke;fill-opacity:1"
+       style="opacity:0.992;fill:#f0f0f0;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;paint-order:fill markers stroke"
        id="rect1125-8-6-6-7-3"
        width="24.370895"
        height="43.181442"
@@ -2598,7 +2599,8 @@
   <g
      inkscape:groupmode="layer"
      id="layer2"
-     inkscape:label="drawing">
+     inkscape:label="drawing"
+     sodipodi:insensitive="true">
     <text
        xml:space="preserve"
        id="text1135"

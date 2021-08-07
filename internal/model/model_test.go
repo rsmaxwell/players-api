@@ -33,12 +33,12 @@ func TestPeople(t *testing.T) {
 		t.FailNow()
 	}
 	var c Court
-	c.ID = listOfCourts[0]
-	err = c.LoadCourt(db)
-	if err != nil {
-		t.Log("Could not load court")
-		t.FailNow()
-	}
+	// c.ID = listOfCourts[0]
+	// err = c.LoadCourt(db)
+	// if err != nil {
+	// 	t.Log("Could not load court")
+	// 	t.FailNow()
+	// }
 
 	listOfWaiters, err := ListWaiters(db)
 	if err != nil {
@@ -49,7 +49,7 @@ func TestPeople(t *testing.T) {
 		t.Log("Could not find any waiters")
 		t.FailNow()
 	}
-	var p Person
+	var p FullPerson
 	p.ID = listOfWaiters[0].Person
 	err = p.LoadPerson(db)
 	if err != nil {
@@ -57,19 +57,19 @@ func TestPeople(t *testing.T) {
 		t.FailNow()
 	}
 
-	err = MakePlaying(db, p.ID, c.ID)
+	err = RemoveWaiter(db, p.ID)
+	if err != nil {
+		t.Log("Could not remove waiter")
+		t.FailNow()
+	}
+
+	err = AddWaiter(db, p.ID)
 	if err != nil {
 		t.Log("Could not make a person into a player")
 		t.FailNow()
 	}
 
-	err = MakeWaiting(db, p.ID)
-	if err != nil {
-		t.Log("Could not make a person into a waiter")
-		t.FailNow()
-	}
-
-	err = MakeInactive(db, p.ID)
+	err = MakePersonInactive(db, p.ID)
 	if err != nil {
 		t.Log("Could not make a person inactive")
 		t.FailNow()
@@ -84,7 +84,7 @@ func TestPeople(t *testing.T) {
 		t.FailNow()
 	}
 
-	var p2 Person
+	var p2 FullPerson
 	p2.ID = p.ID
 	err = p2.LoadPerson(db)
 	if err != nil {
@@ -111,18 +111,18 @@ func TestPeople(t *testing.T) {
 		t.FailNow()
 	}
 
-	err = DeleteCourt(db, c.ID)
+	err = c.DeleteCourt(db)
 	if err != nil {
 		t.Log("Could not delete court")
 		t.FailNow()
 	}
 
-	err = DeletePerson(db, p.ID)
+	err = p.DeletePerson(db)
 	if err != nil {
 		t.Log("Could not delete person")
 		t.FailNow()
 	}
-	err = DeletePerson(db, p2.ID)
+	err = p2.DeletePerson(db)
 	if err != nil {
 		t.Log("Could not delete person")
 		t.FailNow()

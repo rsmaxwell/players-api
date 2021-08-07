@@ -1,9 +1,9 @@
 package httphandler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -32,7 +32,7 @@ func TestAuthenticate(t *testing.T) {
 	}{
 		{
 			testName:       "Good request",
-			email:          model.GoodUserName,
+			email:          model.GoodEmail,
 			password:       model.GoodPassword,
 			expectedStatus: http.StatusOK,
 		},
@@ -48,14 +48,20 @@ func TestAuthenticate(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 
 			// Create a request to pass to our handler.
-			command := fmt.Sprintf("/users/authenticate")
-			r, err := http.NewRequest("POST", contextPath+command, nil)
+			command := "/signin"
+
+			requestBody, err := json.Marshal(SigninRequest{
+				Signin: model.Signin{
+					Username: test.email,
+					Password: test.password,
+				},
+			})
+			require.Nil(t, err, "err should be nothing")
+
+			r, err := http.NewRequest("POST", contextPath+command, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			r.Header.Set("Authorization", BasicAuth(test.email, test.password))
-
-			router := mux.NewRouter()
-			SetupHandlers(router)
 			w := httptest.NewRecorder()
 
 			// ---------------------------------------
@@ -69,6 +75,8 @@ func TestAuthenticate(t *testing.T) {
 
 			// ---------------------------------------
 
+			router := mux.NewRouter()
+			SetupHandlers(router)
 			router.ServeHTTP(w, r3)
 
 			if w.Code == http.StatusOK {
@@ -77,7 +85,7 @@ func TestAuthenticate(t *testing.T) {
 					log.Fatalln(err)
 				}
 
-				var resp PostAuthenticateResponse
+				var resp PostSigninResponse
 				err = json.Unmarshal(bytes, &resp)
 				require.Nil(t, err, "err should be nothing")
 				require.Equal(t, resp.Person.Email, test.email)

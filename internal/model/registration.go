@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 
+	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/debug"
 
 	"golang.org/x/crypto/bcrypt"
@@ -11,12 +12,12 @@ import (
 
 // Registration type
 type Registration struct {
-	FirstName   string `json:"firstname" validate:"required,min=3,max=20"`
-	LastName    string `json:"lastname" validate:"required,min=3,max=20"`
-	DisplayName string `json:"displayname" validate:"required,min=2,max=20"`
-	Email       string `json:"email" validate:"required,email"`
-	Phone       string `json:"phone" validate:"max=20"`
-	Password    string `json:"password" validate:"required,min=8,max=30"`
+	FirstName string `json:"firstname" validate:"required,min=3,max=20"`
+	LastName  string `json:"lastname" validate:"required,min=3,max=20"`
+	Knownas   string `json:"displayname" validate:"required,min=2,max=20"`
+	Email     string `json:"email" validate:"required,email"`
+	Phone     string `json:"phone" validate:"max=20"`
+	Password  string `json:"password" validate:"required,min=8,max=30"`
 }
 
 var (
@@ -28,11 +29,11 @@ var (
 )
 
 // NewRegistration initialises a Registration object
-func NewRegistration(firstname string, lastname string, displayName string, userName string, email string, phone string, password string) *Registration {
+func NewRegistration(firstname string, lastname string, knownas string, email string, phone string, password string) *Registration {
 	r := new(Registration)
 	r.FirstName = firstname
 	r.LastName = lastname
-	r.DisplayName = displayName
+	r.Knownas = knownas
 	r.Email = email
 	r.Phone = phone
 	r.Password = password
@@ -40,14 +41,14 @@ func NewRegistration(firstname string, lastname string, displayName string, user
 }
 
 // ToPerson converts a Registration into a person
-func (r *Registration) ToPerson() (*Person, error) {
+func (r *Registration) ToPerson() (*FullPerson, error) {
 	f := functionToPerson
 
 	err := validate.Struct(r)
 	if err != nil {
-		message := fmt.Sprintf("validation failed for person[%s]: %v", r.Email, err)
+		message := fmt.Sprintf("validation failed for [%s]: %s", r.Email, err.Error())
 		f.DebugVerbose(message)
-		return nil, err
+		return nil, codeerror.NewBadRequest(err.Error())
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(r.Password), bcrypt.MinCost)
@@ -57,7 +58,7 @@ func (r *Registration) ToPerson() (*Person, error) {
 		f.DumpError(err, message)
 		return nil, err
 	}
-	p := NewPerson(r.FirstName, r.LastName, r.DisplayName, r.Email, r.Phone, hash)
+	p := NewPerson(r.FirstName, r.LastName, r.Knownas, r.Email, r.Phone, hash)
 
 	return p, nil
 }

@@ -25,35 +25,41 @@ func TestGetCourt(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
+	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
 	firstCourt := GetFirstCourt(t, db)
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		setLogonCookie bool
-		logonCookie    *http.Cookie
-		courtID        int
-		expectedStatus int
-		expectedResult string
+		testName               string
+		setLogonCookie         bool
+		logonCookie            *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		courtID                int
+		expectedStatus         int
+		expectedResult         string
 	}{
 		{
-			testName:       "Good request",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			courtID:        firstCourt.ID,
-			expectedStatus: http.StatusOK,
-			expectedResult: firstCourt.Name,
+			testName:               "Good request",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			courtID:                firstCourt.ID,
+			expectedStatus:         http.StatusOK,
+			expectedResult:         firstCourt.Name,
 		},
 		{
-			testName:       "bad courtID",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			courtID:        999999999,
-			expectedStatus: http.StatusNotFound,
-			expectedResult: "",
+			testName:               "bad courtID",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			courtID:                999999999,
+			expectedStatus:         http.StatusNotFound,
+			expectedResult:         "",
 		},
 	}
 
@@ -69,12 +75,16 @@ func TestGetCourt(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Create a request
-			command := fmt.Sprintf("/court/%d", test.courtID)
+			command := fmt.Sprintf("/courts/%d", test.courtID)
 			r, err := http.NewRequest("GET", contextPath+command, nil)
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------

@@ -1,9 +1,9 @@
 package model
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/rsmaxwell/players-api/internal/debug"
@@ -29,6 +29,8 @@ const (
 var (
 	functionListWaiters          = debug.NewFunction(pkg, "ListWaiters")
 	functionListWaitersForPerson = debug.NewFunction(pkg, "ListWaitersForPerson")
+	functionGetFirstWaiter       = debug.NewFunction(pkg, "GetFirstWaiter")
+	functionRemoveWaiter         = debug.NewFunction(pkg, "RemoveWaiter")
 )
 
 // ListWaiters returns the list of waiters
@@ -126,6 +128,99 @@ func ListWaitersForPerson(db *sql.DB, id int) ([]Waiter, error) {
 	return list, nil
 }
 
+// Get first GetFirstWaiter
+func GetFirstWaiterContext(db *sql.DB, ctx context.Context) (int, error) {
+	f := functionGetFirstWaiter
+
+	fields := "person"
+	sqlStatement := "SELECT " + fields + " FROM " + WaitingTable + " LIMIT 1"
+	rows, err := db.QueryContext(ctx, sqlStatement)
+	if err != nil {
+		message := "Could not get the first waiter"
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		return 0, err
+	}
+	defer rows.Close()
+
+	var id int
+	for rows.Next() {
+		err := rows.Scan(&id)
+		if err != nil {
+			message := "Could not scan the first player"
+			f.Errorf(message)
+			f.DumpError(err, message)
+			return 0, err
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		message := "Could not get the first players"
+		f.Errorf(message)
+		f.DumpError(err, message)
+		return 0, err
+	}
+
+	return id, nil
+}
+
+// AddWaiter
+func AddWaiter(db *sql.DB, personID int) error {
+	return AddWaiterContext(db, context.Background(), personID)
+}
+
+// AddWaiter
+func AddWaiterContext(db *sql.DB, ctx context.Context, personID int) error {
+	f := functionRemoveWaiter
+
+	start := time.Now()
+
+	fields := "person, start"
+	values := "$1, $2"
+	sqlStatement := "INSERT INTO " + WaitingTable + " (" + fields + ") VALUES (" + values + ")"
+
+	_, err := db.ExecContext(ctx, sqlStatement, personID, start)
+	if err != nil {
+		message := "Could not insert into " + WaitingTable
+		f.Errorf(message)
+		d := f.DumpSQLError(err, message, sqlStatement)
+		data := struct {
+			PersonID int
+			Start    time.Time
+		}{
+			PersonID: personID,
+			Start:    start,
+		}
+		bytes, _ := json.MarshalIndent(data, "", "    ")
+		d.AddByteArray("values.json", bytes)
+		return err
+	}
+
+	return nil
+}
+
+// RemoveWaiter
+func RemoveWaiter(db *sql.DB, personID int) error {
+	return RemoveWaiterContext(db, context.Background(), personID)
+}
+
+// RemoveWaiter
+func RemoveWaiterContext(db *sql.DB, ctx context.Context, personID int) error {
+	f := functionRemoveWaiter
+
+	sqlStatement := "DELETE FROM " + WaitingTable + " WHERE person=$1"
+	rows, err := db.QueryContext(ctx, sqlStatement, personID)
+	if err != nil {
+		message := "Could not delete the waiter"
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		return err
+	}
+	defer rows.Close()
+
+	return nil
+}
+
 // Dump writes the waiter to a dump file
 func (w *Waiter) Dump(d *debug.Dump) {
 
@@ -134,6 +229,6 @@ func (w *Waiter) Dump(d *debug.Dump) {
 		return
 	}
 
-	title := fmt.Sprintf("waiter.json")
+	title := "waiter.json"
 	d.AddByteArray(title, bytearray)
 }

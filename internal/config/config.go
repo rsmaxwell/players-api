@@ -100,3 +100,29 @@ func Setup() (*sql.DB, *Config, error) {
 
 	return db, c, nil
 }
+
+// Setup function
+func SetupBasic() (*sql.DB, *Config, error) {
+	f := functionSetup
+
+	// Read configuration
+	rootDir := debug.RootDir()
+	c, err := Open(rootDir)
+	if err != nil {
+		message := "Could not open configuration"
+		f.Errorf(message)
+		f.DumpError(err, message)
+		return nil, nil, err
+	}
+
+	// Connect to the database
+	db, err := sql.Open(c.DriverName(), c.ConnectionStringBasic())
+	if err != nil {
+		message := "Could not connect to the database"
+		f.Errorf(message)
+		f.DumpError(err, message)
+		return nil, nil, err
+	}
+
+	return db, c, nil
+}

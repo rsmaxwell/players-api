@@ -2,18 +2,11 @@ package httphandler
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
-
-// ListCourtsResponse structure
-type ListCourtsResponse struct {
-	Message string `json:"message"`
-	Courts  []int  `json:"courts"`
-}
 
 var (
 	functionListCourts = debug.NewFunction(pkg, "ListCourts")
@@ -22,7 +15,12 @@ var (
 // ListCourts method
 func ListCourts(w http.ResponseWriter, r *http.Request) {
 	f := functionListCourts
-	f.DebugVerbose("")
+	f.DebugAPI("")
+
+	if r.Method == http.MethodOptions {
+		writeResponseMessage(w, r, http.StatusOK, "ok")
+		return
+	}
 
 	_, err := checkAuthenticated(r)
 	if err != nil {
@@ -33,8 +31,9 @@ func ListCourts(w http.ResponseWriter, r *http.Request) {
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("unexpected context type")
-		writeResponseError(w, r, err)
+		message := "unexpected context type"
+		f.Dump(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		return
 	}
 
@@ -44,8 +43,5 @@ func ListCourts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeResponseObject(w, r, http.StatusOK, "", ListCourtsResponse{
-		Message: "ok",
-		Courts:  listOfCourts,
-	})
+	writeResponseObject(w, r, http.StatusOK, listOfCourts)
 }

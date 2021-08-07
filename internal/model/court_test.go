@@ -7,10 +7,6 @@ import (
 	_ "github.com/jackc/pgx/stdlib"
 )
 
-var (
-	db *sql.DB
-)
-
 func TestCourts(t *testing.T) {
 	teardown, db, _ := Setup(t)
 	defer teardown(t)
@@ -19,7 +15,7 @@ func TestCourts(t *testing.T) {
 	name2 := "Number 1"
 	name3 := "xxxxx"
 
-	c := NewCourt(name1)
+	c := Court{Name: name1}
 	err := c.SaveCourt(db)
 	if err != nil {
 		t.Log("Could not create new court")
@@ -35,8 +31,7 @@ func TestCourts(t *testing.T) {
 	}
 	c.Check(t, db, name2)
 
-	var c2 Court
-	c2.ID = c.ID
+	var c2 = Court{ID: c.ID}
 	err = c2.LoadCourt(db)
 	if err != nil {
 		t.Log("Could not load court")
@@ -52,12 +47,12 @@ func TestCourts(t *testing.T) {
 	}
 	c2.Check(t, db, name3)
 
-	err = c.DeleteCourtBasic(db)
+	err = c.DeleteCourt(db)
 	if err != nil {
 		t.Log("Could not delete court")
 		t.FailNow()
 	}
-	err = c2.DeleteCourtBasic(db)
+	err = c2.DeleteCourt(db)
 	if err != nil {
 		t.Log("Could not delete court")
 		t.FailNow()

@@ -2,53 +2,70 @@ package httphandler
 
 import (
 	"database/sql"
-	"fmt"
+	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"time"
 
+	"github.com/gorilla/sessions"
+	"github.com/rsmaxwell/players-api/internal/basic"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 
-	"github.com/gorilla/sessions"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
-// PostAuthenticateResponse structure
-type PostAuthenticateResponse struct {
-	Message string              `json:"message"`
-	Person  model.LimitedPerson `json:"person"`
+// SigninRequest structure
+type SigninRequest struct {
+	Signin model.Signin `json:"signin"`
 }
 
-// Create the JWT key used to create the signature
-var (
-	key   = []byte("<SESSION_SECRET_KEY>")
-	store = sessions.NewCookieStore(key)
-)
+// PostSigninResponse structure
+type PostSigninResponse struct {
+	Message     string       `json:"message"`
+	Person      model.Person `json:"person"`
+	AccessToken string       `json:"accessToken"`
+}
 
-// Authenticate method
-func Authenticate(w http.ResponseWriter, r *http.Request) {
-	f := functionAuthenticate
+// Signin method
+func Signin(w http.ResponseWriter, r *http.Request) {
+	f := functionSignin
+	f.DebugAPI("")
 
 	if r.Method == http.MethodOptions {
-		f.DebugVerbose("returning from 'Options' request")
-		writeResponseMessage(w, r, http.StatusOK, "", "ok")
+		writeResponseMessage(w, r, http.StatusOK, "ok")
 		return
 	}
 
-	object := r.Context().Value(ContextDatabaseKey)
-	db, ok := object.(*sql.DB)
-	if !ok {
-		err := fmt.Errorf("unexpected context type")
-		writeResponseError(w, r, err)
+	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
+	b, err := ioutil.ReadAll(limitedReader)
+	if err != nil {
+		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	f.DebugRequestBody(b)
+
+	var request SigninRequest
+	err = json.Unmarshal(b, &request)
+	if err != nil {
+		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// *********************************************************************
 	// * Authenticate the user
 	// *********************************************************************
-	email, password, _ := r.BasicAuth()
+	object := r.Context().Value(ContextDatabaseKey)
+	db, ok := object.(*sql.DB)
+	if !ok {
+		message := "unexpected context type"
+		f.Dump(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		return
+	}
 
-	f.DebugVerbose("email: %s", email)
-	f.DebugVerbose("password: %s", password)
+	email := request.Signin.Username
 
 	p, err := model.FindPersonByEmail(db, email)
 	if err != nil {
@@ -56,7 +73,22 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = p.Authenticate(db, password)
+	err = p.Authenticate(db, request.Signin.Password)
+	if err != nil {
+		writeResponseError(w, r, err)
+		return
+	}
+
+	// *********************************************************************
+	// * Create the token pair
+	// *********************************************************************
+	newAccessToken, err := basic.GenerateToken(p.ID, time.Minute*time.Duration(5))
+	if err != nil {
+		writeResponseError(w, r, err)
+		return
+	}
+
+	newRefreshToken, err := basic.GenerateToken(p.ID, time.Hour*time.Duration(1))
 	if err != nil {
 		writeResponseError(w, r, err)
 		return
@@ -73,13 +105,14 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 
 	sess.Options = &sessions.Options{
 		Path:     "players-api",
-		MaxAge:   3600 * 6,
+		MaxAge:   3600 * 1,
 		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
 	}
 
 	sess.Values["userID"] = p.ID
-	sess.Values["authenticated"] = true
-	sess.Values["expiresAt"] = time.Now().Add(time.Hour * 6).Unix()
+	sess.Values["refreshToken"] = newRefreshToken
+	sess.Values["expiresAt"] = time.Now().Add(time.Hour * 1).Unix()
 
 	err = sess.Save(r, w)
 	if err != nil {
@@ -87,8 +120,13 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeResponseObject(w, r, http.StatusOK, "", PostAuthenticateResponse{
-		Message: "ok",
-		Person:  *p.ToLimited(),
+	// *********************************************************************
+	// * Write the response
+	// *********************************************************************
+	limitedPerson := p.ToLimited()
+	writeResponseObject(w, r, http.StatusOK, PostSigninResponse{
+		Message:     "ok",
+		Person:      *limitedPerson,
+		AccessToken: newAccessToken,
 	})
 }

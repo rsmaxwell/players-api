@@ -3,7 +3,6 @@ package httphandler
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -30,6 +29,7 @@ var (
 // CreateCourt method
 func CreateCourt(w http.ResponseWriter, r *http.Request) {
 	f := functionCreateCourt
+	f.DebugAPI("")
 
 	_, err := checkAuthenticated(r)
 	if err != nil {
@@ -40,7 +40,7 @@ func CreateCourt(w http.ResponseWriter, r *http.Request) {
 	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -49,19 +49,20 @@ func CreateCourt(w http.ResponseWriter, r *http.Request) {
 	var request CreateCourtRequest
 	err = json.Unmarshal(b, &request)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("Unexpected context type")
-		writeResponseError(w, r, err)
+		message := "unexpected context type"
+		f.Dump(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		return
 	}
 
-	c := model.NewCourt(request.Court.Name)
+	c := model.Court{Name: request.Court.Name}
 	err = c.SaveCourt(db)
 	if err != nil {
 		writeResponseError(w, r, err)
@@ -70,6 +71,6 @@ func CreateCourt(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(CreateCourtResponse{
 		Message: "ok",
-		Court:   *c,
+		Court:   c,
 	})
 }

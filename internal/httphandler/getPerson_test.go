@@ -25,27 +25,31 @@ func TestGetPerson(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
-	goodPerson := FindPersonByUserName(t, db, model.GoodUserName)
+	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
+	goodPerson, _ := model.FindPersonByEmail(db, model.GoodEmail)
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName           string
-		setLogonCookie     bool
-		logonCookie        *http.Cookie
-		userID             int
-		expectedStatus     int
-		expectedResultName string
+		testName               string
+		setLogonCookie         bool
+		logonCookie            *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		userID                 int
+		expectedStatus         int
+		expectedResultName     string
 	}{
 		{
-			testName:           "Good request",
-			setLogonCookie:     true,
-			logonCookie:        logonCookie,
-			userID:             goodPerson.ID,
-			expectedStatus:     http.StatusOK,
-			expectedResultName: model.GoodFirstName,
+			testName:               "Good request",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			userID:                 goodPerson.ID,
+			expectedStatus:         http.StatusOK,
+			expectedResultName:     model.GoodFirstName,
 		},
 	}
 
@@ -62,12 +66,16 @@ func TestGetPerson(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Create a request
-			command := fmt.Sprintf("/users/%d", test.userID)
+			command := fmt.Sprintf("/people/%d", test.userID)
 			r, err := http.NewRequest("GET", contextPath+command, nil)
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------

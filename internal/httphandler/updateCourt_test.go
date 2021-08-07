@@ -25,35 +25,41 @@ func TestUpdateCourt(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
+	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
 	goodCourt := GetFirstCourt(t, db)
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		setLogonCookie bool
-		logonCookie    *http.Cookie
-		id             int
-		court          map[string]interface{}
-		expectedStatus int
+		testName               string
+		setLogonCookie         bool
+		logonCookie            *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		id                     int
+		court                  map[string]interface{}
+		expectedStatus         int
 	}{
 		{
-			testName:       "Good request",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			id:             goodCourt.ID,
+			testName:               "Good request",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			id:                     goodCourt.ID,
 			court: map[string]interface{}{
 				"name": "COURT 101",
 			},
 			expectedStatus: http.StatusOK,
 		},
 		{
-			testName:       "Bad userID",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			id:             999999999,
+			testName:               "Bad userID",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			id:                     999999999,
 			court: map[string]interface{}{
 				"name": "COURT 101",
 			},
@@ -78,12 +84,16 @@ func TestUpdateCourt(t *testing.T) {
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			command := fmt.Sprintf("/court/%d", test.id)
+			command := fmt.Sprintf("/courts/%d", test.id)
 			r, err := http.NewRequest("PUT", contextPath+command, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------

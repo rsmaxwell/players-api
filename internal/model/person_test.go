@@ -14,7 +14,7 @@ func TestPeopleBasic(t *testing.T) {
 	defer teardown(t)
 
 	r := Registration{
-		FirstName: "James2", LastName: "Bond2", DisplayName: "038", Email: "018@mi6.gov.uk", Phone: "+44 1234 222222", Password: "TopSecret",
+		FirstName: "James2", LastName: "Bond2", Knownas: "038", Email: "018@mi6.gov.uk", Phone: "+44 1234 222222", Password: "TopSecret",
 	}
 
 	p, err := r.ToPerson()
@@ -30,7 +30,7 @@ func TestPeopleBasic(t *testing.T) {
 		t.FailNow()
 	}
 
-	p.CheckPerson(t, db, r.FirstName, r.LastName, r.DisplayName, r.Email, r.Phone, r.Password, StatusSuspended)
+	p.CheckPerson(t, db, r.FirstName, r.LastName, r.Knownas, r.Email, r.Phone, r.Password, StatusSuspended)
 
 	FirstName2 := "Smersh11"
 	LastName2 := "Bomb11"
@@ -47,11 +47,11 @@ func TestPeopleBasic(t *testing.T) {
 
 	p.FirstName = FirstName2
 	p.LastName = LastName2
-	p.DisplayName = DisplayName2
+	p.Knownas = DisplayName2
 	p.Email = Email2
 	p.Phone = Phone2
 	p.Hash = hash
-	p.Status = StatusNormal
+	p.Status = StatusPlayer
 
 	err = p.UpdatePerson(db)
 	if err != nil {
@@ -59,9 +59,9 @@ func TestPeopleBasic(t *testing.T) {
 		t.FailNow()
 	}
 
-	p.CheckPerson(t, db, FirstName2, LastName2, DisplayName2, Email2, Phone2, Password2, StatusNormal)
+	p.CheckPerson(t, db, FirstName2, LastName2, DisplayName2, Email2, Phone2, Password2, StatusPlayer)
 
-	var p2 Person
+	var p2 FullPerson
 	p2.ID = p.ID
 	err = p2.LoadPerson(db)
 	if err != nil {
@@ -71,7 +71,7 @@ func TestPeopleBasic(t *testing.T) {
 
 	FirstName3 := "xxxxx"
 	LastName3 := "yyyyy"
-	DisplayName3 := "008"
+	Knownas3 := "008"
 	Email3 := "010@mi6.gov.uk"
 	Phone3 := "+44 1234 333333"
 	Password3 := "topcat"
@@ -84,11 +84,11 @@ func TestPeopleBasic(t *testing.T) {
 
 	p.FirstName = FirstName3
 	p.LastName = LastName3
-	p.DisplayName = DisplayName3
+	p.Knownas = Knownas3
 	p.Email = Email3
 	p.Phone = Phone3
 	p.Hash = hash
-	p.Status = StatusNormal
+	p.Status = StatusPlayer
 
 	err = p.SavePerson(db)
 	if err != nil {
@@ -96,21 +96,21 @@ func TestPeopleBasic(t *testing.T) {
 		t.FailNow()
 	}
 
-	p.CheckPerson(t, db, FirstName3, LastName3, DisplayName3, Email3, Phone3, Password3, StatusNormal)
+	p.CheckPerson(t, db, FirstName3, LastName3, Knownas3, Email3, Phone3, Password3, StatusPlayer)
 
-	err = p.DeletePersonBasic(db)
+	err = p.DeletePerson(db)
 	if err != nil {
 		t.Log("Could not delete person")
 		t.FailNow()
 	}
-	err = p2.DeletePersonBasic(db)
+	err = p2.DeletePerson(db)
 	if err != nil {
 		t.Log("Could not delete person")
 		t.FailNow()
 	}
 }
 
-func (p *Person) CheckPerson(t *testing.T, db *sql.DB, firstname string, lastname string, displayname string, email string, phone string, password string, status string) {
+func (p *FullPerson) CheckPerson(t *testing.T, db *sql.DB, firstname string, lastname string, displayname string, email string, phone string, password string, status string) {
 
 	err := p.LoadPerson(db)
 	if err != nil {
@@ -128,8 +128,8 @@ func (p *Person) CheckPerson(t *testing.T, db *sql.DB, firstname string, lastnam
 		t.FailNow()
 	}
 
-	if p.DisplayName != displayname {
-		t.Logf("Unexpected displayName. expected: '%s' actual: '%s'", displayname, p.DisplayName)
+	if p.Knownas != displayname {
+		t.Logf("Unexpected displayName. expected: '%s' actual: '%s'", displayname, p.Knownas)
 		t.FailNow()
 	}
 

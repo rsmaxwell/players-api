@@ -13,7 +13,7 @@ var (
 // NotFound method
 func NotFound(w http.ResponseWriter, r *http.Request) {
 	f := functionNotFound
-	f.DebugVerbose("")
+	f.DebugAPI("")
 
-	writeResponseMessage(w, r, http.StatusNotFound, "", "Not Found")
+	writeResponseMessage(w, r, http.StatusNotFound, "Not Found")
 }

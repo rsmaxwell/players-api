@@ -26,7 +26,7 @@ func main() {
 	f.Infof("Players CreateDB: Version: %s", basic.Version())
 
 	// Read configuration and connect to the database
-	db, c, err := config.Setup()
+	db, c, err := config.SetupBasic()
 	if err != nil {
 		f.Errorf("Error setting up")
 		os.Exit(1)

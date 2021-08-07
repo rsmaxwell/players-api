@@ -1,7 +1,9 @@
 package httphandler
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -15,7 +17,7 @@ import (
 	_ "github.com/jackc/pgx/stdlib"
 )
 
-func TestMakeInactive(t *testing.T) {
+func TestMakePlayerWait(t *testing.T) {
 
 	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
@@ -23,32 +25,38 @@ func TestMakeInactive(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
-	anotherPerson := FindPersonByUserName(t, db, model.AnotherUserName)
+	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
+	anotherPerson, _ := model.FindPersonByEmail(db, model.AnotherEmail)
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		setLogonCookie bool
-		logonCookie    *http.Cookie
-		id             int
-		expectedStatus int
+		testName               string
+		setLogonCookie         bool
+		logonCookie            *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		id                     int
+		expectedStatus         int
 	}{
 		{
-			testName:       "Good request",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			id:             anotherPerson.ID,
-			expectedStatus: http.StatusOK,
+			testName:               "Good request",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			id:                     anotherPerson.ID,
+			expectedStatus:         http.StatusOK,
 		},
 		{
-			testName:       "Bad userID",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			id:             999999999,
-			expectedStatus: http.StatusBadRequest,
+			testName:               "Bad userID",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			id:                     999999999,
+			expectedStatus:         http.StatusNotFound,
 		},
 	}
 
@@ -63,12 +71,22 @@ func TestMakeInactive(t *testing.T) {
 			SetupHandlers(router)
 			w := httptest.NewRecorder()
 
-			command := fmt.Sprintf("/users/toinactive/%d", test.id)
-			r, err := http.NewRequest("PUT", contextPath+command, nil)
+			// Create a request
+			requestBody, err := json.Marshal(MakeWaitingRequest{
+				ID: test.id,
+			})
+			require.Nil(t, err, "err should be nothing")
+
+			command := fmt.Sprintf("/people/towaiting/%d", test.id)
+			r, err := http.NewRequest("PUT", contextPath+command, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------
@@ -84,16 +102,7 @@ func TestMakeInactive(t *testing.T) {
 
 			// Serve the request
 			router.ServeHTTP(w, r3)
-
-			if w.Code == http.StatusOK {
-				listOfPlayers, err := model.ListPlayersForPerson(db, test.id)
-				require.Nil(t, err)
-				require.Zero(t, len(listOfPlayers))
-
-				listOfWaiters, err := model.ListWaitersForPerson(db, test.id)
-				require.Nil(t, err)
-				require.Zero(t, len(listOfWaiters))
-			}
+			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			if w.Code != test.expectedStatus {
 				require.FailNow(t, "Unexpected status: expected: %d, actual: %d", test.expectedStatus, w.Code)

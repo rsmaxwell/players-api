@@ -23,22 +23,26 @@ func TestNotFound(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
+	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		setLogonCookie bool
-		logonCookie    *http.Cookie
-		expectedStatus int
+		testName               string
+		setLogonCookie         bool
+		logonCookie            *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		expectedStatus         int
 	}{
 		{
-			testName:       "Good request",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			expectedStatus: http.StatusNotFound,
+			testName:               "Good request",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			expectedStatus:         http.StatusNotFound,
 		},
 	}
 
@@ -59,6 +63,10 @@ func TestNotFound(t *testing.T) {
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------

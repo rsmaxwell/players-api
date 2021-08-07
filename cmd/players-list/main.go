@@ -77,7 +77,7 @@ func listPeople(db *sql.DB) error {
 
 	// Query all the records in the people table
 
-	fields := "id, firstname, lastname, displayname, username, email, phone, hash, status"
+	fields := "id, firstname, lastname, knownas, email, phone, hash, status"
 	sqlStatement := "SELECT " + fields + " FROM " + model.PersonTable
 	f.DebugVerbose("%s", sqlStatement)
 
@@ -94,9 +94,9 @@ func listPeople(db *sql.DB) error {
 	f.Infof("---[ people ]------------------------")
 	var np model.NullPerson
 	for rows.Next() {
-		err := rows.Scan(&np.ID, &np.FirstName, &np.LastName, &np.DisplayName, &np.UserName, &np.Email, &np.Phone, &np.Hash, &np.Status)
+		err := rows.Scan(&np.ID, &np.FirstName, &np.LastName, &np.Knownas, &np.Email, &np.Phone, &np.Hash, &np.Status)
 		if err != nil {
-			message := fmt.Sprintf("Could not scan the person record")
+			message := "could not scan the person record"
 			f.Errorf(message)
 			f.DumpError(err, message)
 			return err
@@ -112,12 +112,8 @@ func listPeople(db *sql.DB) error {
 			f.Infof("lastName:%s", np.LastName.String)
 		}
 
-		if np.DisplayName.Valid {
-			f.Infof("displayName:%s", np.DisplayName.String)
-		}
-
-		if np.UserName.Valid {
-			f.Infof("userName:%s", np.UserName.String)
+		if np.Knownas.Valid {
+			f.Infof("knownas:%s", np.Knownas.String)
 		}
 
 		if np.Email.Valid {
@@ -140,7 +136,7 @@ func listPeople(db *sql.DB) error {
 	}
 	err = rows.Err()
 	if err != nil {
-		message := fmt.Sprintf("Error iterating through the query results")
+		message := "error iterating through the query results"
 		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
@@ -169,7 +165,7 @@ func listCourts(db *sql.DB) error {
 	for rows.Next() {
 		err := rows.Scan(&c.ID, &c.Name)
 		if err != nil {
-			message := fmt.Sprintf("Error scanning the results")
+			message := "error scanning the results"
 			f.Errorf(message)
 			f.DumpError(err, message)
 			return err
@@ -184,7 +180,7 @@ func listCourts(db *sql.DB) error {
 	}
 	err = rows.Err()
 	if err != nil {
-		message := fmt.Sprintf("Error iterating through the query results")
+		message := "error iterating through the query results"
 		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
@@ -213,7 +209,7 @@ func listPlaying(db *sql.DB) error {
 	for rows.Next() {
 		err := rows.Scan(&p.Person, &p.Court)
 		if err != nil {
-			message := fmt.Sprintf("Error scanning the results")
+			message := "error scanning the results"
 			f.Errorf(message)
 			f.DumpError(err, message)
 			return err
@@ -225,7 +221,7 @@ func listPlaying(db *sql.DB) error {
 	}
 	err = rows.Err()
 	if err != nil {
-		message := fmt.Sprintf("Error iterating through the query results")
+		message := "error iterating through the query results"
 		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
@@ -255,7 +251,7 @@ func listWaiting(db *sql.DB) error {
 	for rows.Next() {
 		err := rows.Scan(&p, &nt)
 		if err != nil {
-			message := fmt.Sprintf("Error scanning the results")
+			message := "error scanning the results"
 			f.Errorf(message)
 			f.DumpError(err, message)
 			return err
@@ -272,7 +268,7 @@ func listWaiting(db *sql.DB) error {
 	}
 	err = rows.Err()
 	if err != nil {
-		message := fmt.Sprintf("Error iterating through the query results")
+		message := "error iterating through the query results"
 		f.Errorf(message)
 		f.DumpError(err, message)
 		return err

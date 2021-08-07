@@ -1,8 +1,11 @@
 package main
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/rsmaxwell/players-api/internal/model"
 
@@ -14,8 +17,10 @@ import (
 )
 
 var (
-	pkg          = debug.NewPackage("main")
-	functionMain = debug.NewFunction(pkg, "main")
+	pkg                 = debug.NewPackage("main")
+	functionMain        = debug.NewFunction(pkg, "main")
+	functionDropTable   = debug.NewFunction(pkg, "dropTable")
+	functionTableExists = debug.NewFunction(pkg, "tableExists")
 )
 
 func init() {
@@ -39,15 +44,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	AdminDisplayName, ok := os.LookupEnv("PLAYERS_ADMIN_DISPLAY_NAME")
+	AdminKnownas, ok := os.LookupEnv("PLAYERS_ADMIN_KNOWNAS")
 	if !ok {
-		f.Errorf("PLAYERS_ADMIN_DISPLAY_NAME not set")
-		os.Exit(1)
-	}
-
-	AdminUserName, ok := os.LookupEnv("PLAYERS_ADMIN_USERNAME")
-	if !ok {
-		f.Errorf("PLAYERS_ADMIN_USERNAME not set")
+		f.Errorf("PLAYERS_ADMIN_KNOWNAS not set")
 		os.Exit(1)
 	}
 
@@ -76,50 +75,34 @@ func main() {
 	}
 	defer db.Close()
 
-	// Drop the playing table
-	sqlStatement := `DROP TABLE ` + model.PlayingTable
-	_, err = db.Exec(sqlStatement)
+	// Drop the tables
+	err = dropTable(db, model.PlayingTable)
 	if err != nil {
-		message := "Could not drop playing"
-		f.Errorf(message)
-		f.DumpSQLError(err, message, sqlStatement)
+		return
 	}
 
-	// Drop the waiting table
-	sqlStatement = `DROP TABLE ` + model.WaitingTable
-	_, err = db.Exec(sqlStatement)
+	err = dropTable(db, model.WaitingTable)
 	if err != nil {
-		message := "Could not drop waiting"
-		f.Errorf(message)
-		f.DumpSQLError(err, message, sqlStatement)
+		return
 	}
 
-	// Drop the person table
-	sqlStatement = "DROP TABLE " + model.PersonTable
-	_, err = db.Exec(sqlStatement)
+	err = dropTable(db, model.PersonTable)
 	if err != nil {
-		message := "Could not drop person"
-		f.Errorf(message)
-		f.DumpSQLError(err, message, sqlStatement)
+		return
 	}
 
-	// Drop the court table
-	sqlStatement = "DROP TABLE " + model.CourtTable
-	_, err = db.Exec(sqlStatement)
+	err = dropTable(db, model.CourtTable)
 	if err != nil {
-		message := "Could not drop court"
-		f.Errorf(message)
-		f.DumpSQLError(err, message, sqlStatement)
+		return
 	}
 
 	// Create the people table
-	sqlStatement = `
+	sqlStatement := `
 		CREATE TABLE ` + model.PersonTable + ` (
 			id SERIAL PRIMARY KEY,
-			username VARCHAR(64) NOT NULL UNIQUE,
 			firstname VARCHAR(255) NOT NULL,
 			lastname VARCHAR(255) NOT NULL,
-			displayname VARCHAR(32) NOT NULL,
+			knownas VARCHAR(32) NOT NULL,
 			email VARCHAR(255) NOT NULL UNIQUE,
 			phone VARCHAR(32) NOT NULL UNIQUE,
 			hash VARCHAR(255) NOT NULL,	
@@ -143,16 +126,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create the person_username index
-	sqlStatement = "CREATE INDEX person_username ON " + model.PersonTable + " ( username )"
-	_, err = db.Exec(sqlStatement)
-	if err != nil {
-		message := "Could not create person_username index"
-		f.Errorf(message)
-		f.DumpSQLError(err, message, sqlStatement)
-		os.Exit(1)
-	}
-
 	// Create the court table
 	sqlStatement = `
 		CREATE TABLE ` + model.CourtTable + ` (
@@ -170,8 +143,11 @@ func main() {
 	// Create the playing table
 	sqlStatement = `
 		CREATE TABLE ` + model.PlayingTable + ` (
-			person INT PRIMARY KEY,
-			court  INT,
+			court    INT NOT NULL,
+			person   INT NOT NULL,
+			position INT NOT NULL,		
+
+			PRIMARY KEY (court, person, position),
 
 			CONSTRAINT person FOREIGN KEY(person) REFERENCES person(id),
 			CONSTRAINT court FOREIGN KEY(court)  REFERENCES court(id)
@@ -184,12 +160,31 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create the playing_court index
+	sqlStatement = "CREATE INDEX playing_court ON " + model.PlayingTable + " ( court )"
+	_, err = db.Exec(sqlStatement)
+	if err != nil {
+		message := "Could not create playing_court index"
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		os.Exit(1)
+	}
+
+	// Create the playing_person index
+	sqlStatement = "CREATE INDEX playing_person ON " + model.PlayingTable + " ( person )"
+	_, err = db.Exec(sqlStatement)
+	if err != nil {
+		message := "Could not create playing_person index"
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		os.Exit(1)
+	}
+
 	// Create the waiting table
 	sqlStatement = `
 		CREATE TABLE ` + model.WaitingTable + ` (
 			person INT PRIMARY KEY,
 			start  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-
 			CONSTRAINT person FOREIGN KEY(person) REFERENCES person(id)
 		 )`
 	_, err = db.Exec(sqlStatement)
@@ -203,7 +198,7 @@ func main() {
 	fmt.Printf("Successfully created Tables in the database: %s\n", c.Database.DatabaseName)
 
 	peopleData := []model.Registration{
-		{FirstName: AdminFirstName, LastName: AdminLastName, DisplayName: AdminDisplayName, UserName: AdminUserName, Email: AdminEmail, Phone: AdminPhone, Password: AdminPassword},
+		{FirstName: AdminFirstName, LastName: AdminLastName, Knownas: AdminKnownas, Email: AdminEmail, Phone: AdminPhone, Password: AdminPassword},
 	}
 
 	peopleIDs := make(map[int]int)
@@ -221,12 +216,80 @@ func main() {
 
 		err = p.SavePerson(db)
 		if err != nil {
-			message := fmt.Sprintf("Could not save person: firstName: %s, lastname: %s, username: %s, email: %s", p.FirstName, p.LastName, p.UserName, p.Email)
+			message := fmt.Sprintf("Could not save person: firstName: %s, lastname: %s, email: %s", p.FirstName, p.LastName, p.Email)
 			f.Errorf(message)
 			f.DumpError(err, message)
 			os.Exit(1)
 		}
 
 		peopleIDs[i] = p.ID
+
+		fmt.Printf("Added person:\n")
+		fmt.Printf("    FirstName: %s\n", p.FirstName)
+		fmt.Printf("    LastName:  %s\n", p.LastName)
+		fmt.Printf("    Knownas:   %s\n", p.Knownas)
+		fmt.Printf("    Email:     %s\n", p.Email)
+		fmt.Printf("    Password:  %s\n", r.Password)
+		fmt.Printf("    Hash:      %s\n", p.Hash)
+		fmt.Printf("    Status:    %s\n", p.Status)
 	}
+}
+
+func tableExists(db *sql.DB, table string) (bool, error) {
+	f := functionTableExists
+
+	sqlStatement := fmt.Sprintf("SELECT EXISTS ( SELECT FROM %s WHERE schemaname = '%s' AND tablename = '%s' )", "pg_tables", "public", table)
+	row := db.QueryRow(sqlStatement)
+
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		message := fmt.Sprintf("Could not drop table: %s", table)
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		return false, err
+	}
+
+	return exists, nil
+}
+
+func dropTable(db *sql.DB, table string) error {
+	f := functionDropTable
+
+	exists, err := tableExists(db, table)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	sqlStatement := `DROP TABLE ` + table
+	_, err = db.Exec(sqlStatement)
+	if err != nil {
+		message := fmt.Sprintf("Could not drop table: %s", table)
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		return err
+	}
+
+	for i := 0; (i < 10) && exists; i++ {
+		exists, err = tableExists(db, table)
+		if err != nil {
+			return err
+		}
+
+		if exists {
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	if exists {
+		message := fmt.Sprintf("Could not drop table: %s", table)
+		f.Errorf(message)
+		err = errors.New(message)
+	}
+
+	return err
 }

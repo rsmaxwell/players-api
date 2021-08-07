@@ -31,36 +31,36 @@ func TestRegister(t *testing.T) {
 		{
 			testName: "Good request",
 			registration: model.Registration{
-				FirstName:   "James",
-				LastName:    "Bond",
-				DisplayName: "aaa",
-				Email:       "james@mi6.co.uk",
-				Phone:       "012345 123456",
-				Password:    "topsecret",
+				FirstName: "James",
+				LastName:  "Bond",
+				Knownas:   "aaa",
+				Email:     "007@mi6.co.uk",
+				Phone:     "012345 123456",
+				Password:  "topsecret",
 			},
 			expectedStatus: http.StatusOK,
 		},
 		{
-			testName: "Space in userID",
+			testName: "Space in email",
 			registration: model.Registration{
-				FirstName:   "James",
-				LastName:    "Bond",
-				DisplayName: "aaa",
-				Email:       "james@mi6.co.uk",
-				Phone:       "012345 123456",
-				Password:    "topsecret",
+				FirstName: "James",
+				LastName:  "Bond",
+				Knownas:   "aaa",
+				Email:     "007 @mi6.co.uk",
+				Phone:     "012345 123456",
+				Password:  "topsecret",
 			},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			testName: "Path in userID",
+			testName: "Bad email",
 			registration: model.Registration{
-				FirstName:   "James",
-				LastName:    "Bond",
-				DisplayName: "aaa",
-				Email:       "james@mi6.co.uk",
-				Phone:       "012345 123456",
-				Password:    "topsecret",
+				FirstName: "James",
+				LastName:  "Bond",
+				Knownas:   "aaa",
+				Email:     "007mi6.co.uk",
+				Phone:     "012345 123999",
+				Password:  "topsecret",
 			},
 			expectedStatus: http.StatusBadRequest,
 		},
@@ -69,7 +69,7 @@ func TestRegister(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			listOfPeople, err := model.ListPeople(db, nil)
+			listOfPeople, err := model.ListPeople(db, "")
 			require.Nil(t, err)
 			initialNumberOfPeople := len(listOfPeople)
 
@@ -79,14 +79,12 @@ func TestRegister(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Create a request
-			requestBody, err := json.Marshal(RegisterRequest{
-				Registration: test.registration,
-			})
+			requestBody, err := json.Marshal(test.registration)
 			if err != nil {
 				log.Fatalln(err)
 			}
 
-			r, err := http.NewRequest("POST", contextPath+"/users/register", bytes.NewBuffer(requestBody))
+			r, err := http.NewRequest("POST", contextPath+"/register", bytes.NewBuffer(requestBody))
 			require.Nil(t, err)
 
 			// ---------------------------------------
@@ -106,7 +104,7 @@ func TestRegister(t *testing.T) {
 			// Check the response
 			if w.Code == http.StatusOK {
 
-				listOfPeople, err = model.ListPeople(db, nil)
+				listOfPeople, err = model.ListPeople(db, "")
 				require.Nil(t, err)
 				finalNumberOfPeople := len(listOfPeople)
 

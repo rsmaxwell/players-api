@@ -24,40 +24,48 @@ func TestDeletePerson(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
-	goodPerson := FindPersonByUserName(t, db, model.GoodUserName)
-	anotherPerson := FindPersonByUserName(t, db, model.AnotherUserName)
+	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
+	goodPerson, _ := model.FindPersonByEmail(db, model.GoodEmail)
+	anotherPerson, _ := model.FindPersonByEmail(db, model.AnotherEmail)
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		setLogonCookie bool
-		logonCookie    *http.Cookie
-		userID         int
-		expectedStatus int
+		testName               string
+		setLogonCookie         bool
+		logonCookie            *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		userID                 int
+		expectedStatus         int
 	}{
 		{
-			testName:       "Good request",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			userID:         anotherPerson.ID,
-			expectedStatus: http.StatusOK,
+			testName:               "Good request",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			userID:                 anotherPerson.ID,
+			expectedStatus:         http.StatusOK,
 		},
 		{
-			testName:       "Bad userID",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			userID:         999999999,
-			expectedStatus: http.StatusOK,
+			testName:               "Bad userID",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			userID:                 999999999,
+			expectedStatus:         http.StatusOK,
 		},
 		{
-			testName:       "delete myself",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			userID:         goodPerson.ID,
-			expectedStatus: http.StatusUnauthorized,
+			testName:               "delete myself",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			userID:                 goodPerson.ID,
+			expectedStatus:         http.StatusUnauthorized,
 		},
 	}
 
@@ -73,12 +81,16 @@ func TestDeletePerson(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Create a request
-			command := fmt.Sprintf("/users/%d", test.userID)
+			command := fmt.Sprintf("/people/%d", test.userID)
 			r, err := http.NewRequest("DELETE", contextPath+command, nil)
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------
@@ -96,10 +108,9 @@ func TestDeletePerson(t *testing.T) {
 			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			if w.Code == http.StatusOK {
-				p := model.Person{ID: test.userID}
-				exists, err := p.PersonExists(db)
-				require.Nil(t, err)
-				require.False(t, exists, "Person was not deleted")
+				p := model.FullPerson{ID: test.userID}
+				err := p.LoadPerson(db)
+				require.NotNil(t, err, "Person was not deleted")
 			}
 		})
 	}

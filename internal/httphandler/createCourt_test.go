@@ -26,26 +26,30 @@ func TestCreateCourt(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
+	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		name           string
-		setLogonCookie bool
-		logonCookie    *http.Cookie
-		players        []string
-		expectedStatus int
+		testName               string
+		name                   string
+		setLogonCookie         bool
+		logonCookie            *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		players                []string
+		expectedStatus         int
 	}{
 		{
-			testName:       "Good request",
-			name:           "Court 1",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			players:        []string{},
-			expectedStatus: http.StatusOK,
+			testName:               "Good request",
+			name:                   "Court 1",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			players:                []string{},
+			expectedStatus:         http.StatusOK,
 		},
 	}
 
@@ -72,11 +76,15 @@ func TestCreateCourt(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Create a request
-			r, err := http.NewRequest("POST", contextPath+"/court", bytes.NewBuffer(requestBody))
+			r, err := http.NewRequest("POST", contextPath+"/courts", bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------

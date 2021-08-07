@@ -18,6 +18,7 @@ var (
 // DeleteCourt method
 func DeleteCourt(w http.ResponseWriter, r *http.Request) {
 	f := functionDeleteCourt
+	f.DebugAPI("")
 
 	_, err := checkAuthenticated(r)
 	if err != nil {
@@ -28,8 +29,7 @@ func DeleteCourt(w http.ResponseWriter, r *http.Request) {
 	str := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(str)
 	if err != nil {
-		f.DebugVerbose("Could not convert '" + str + "' into an int")
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
+		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
 
@@ -38,16 +38,18 @@ func DeleteCourt(w http.ResponseWriter, r *http.Request) {
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("unexpected context type")
-		writeResponseError(w, r, err)
+		message := "unexpected context type"
+		f.Dump(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		return
 	}
 
-	err = model.DeleteCourt(db, id)
+	c := model.Court{ID: id}
+	err = c.DeleteCourt(db)
 	if err != nil {
 		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(w, r, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "ok")
 }

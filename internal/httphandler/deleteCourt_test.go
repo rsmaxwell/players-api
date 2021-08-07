@@ -24,25 +24,29 @@ func TestDeleteCourt(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
+	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
 	firstCourt := GetFirstCourt(t, db)
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		setLogonCookie bool
-		logonCookie    *http.Cookie
-		courtID        int
-		expectedStatus int
+		testName               string
+		setLogonCookie         bool
+		logonCookie            *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		courtID                int
+		expectedStatus         int
 	}{
 		{
-			testName:       "Good request",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			courtID:        firstCourt.ID,
-			expectedStatus: http.StatusOK,
+			testName:               "Good request",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			courtID:                firstCourt.ID,
+			expectedStatus:         http.StatusOK,
 		},
 	}
 
@@ -58,12 +62,16 @@ func TestDeleteCourt(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Create a request
-			command := fmt.Sprintf("/court/%d", test.courtID)
+			command := fmt.Sprintf("/courts/%d", test.courtID)
 			r, err := http.NewRequest("DELETE", contextPath+command, nil)
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------
@@ -82,12 +90,10 @@ func TestDeleteCourt(t *testing.T) {
 			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the response
-
 			if w.Code == http.StatusOK {
 				c := model.Court{ID: test.courtID}
-				exists, err := c.CourtExists(db)
-				require.Nil(t, err)
-				require.False(t, exists, "Court was not deleted")
+				err := c.LoadCourt(db)
+				require.NotNil(t, err, "Court was not deleted")
 			}
 		})
 	}

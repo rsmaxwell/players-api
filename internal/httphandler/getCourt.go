@@ -24,6 +24,12 @@ var (
 // GetCourt method
 func GetCourt(w http.ResponseWriter, r *http.Request) {
 	f := functionGetCourt
+	f.DebugAPI("")
+
+	if r.Method == http.MethodOptions {
+		writeResponseMessage(w, r, http.StatusOK, "ok")
+		return
+	}
 
 	_, err := checkAuthenticated(r)
 	if err != nil {
@@ -34,16 +40,16 @@ func GetCourt(w http.ResponseWriter, r *http.Request) {
 	str := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(str)
 	if err != nil {
-		f.DebugVerbose("Could not convert '" + str + "' into an int")
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
+		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
 
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("unexpected context type")
-		writeResponseError(w, r, err)
+		message := "unexpected context type"
+		f.Dump(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		return
 	}
 
@@ -55,7 +61,7 @@ func GetCourt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeResponseObject(w, r, http.StatusOK, "", GetCourtResponse{
+	writeResponseObject(w, r, http.StatusOK, GetCourtResponse{
 		Message: "ok",
 		Court:   c,
 	})

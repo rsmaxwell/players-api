@@ -119,7 +119,7 @@ func getPeople(db *sql.DB, myBackup *backup.Backup) error {
 
 	for rows.Next() {
 		var p model.NullPerson
-		err := rows.Scan(&p.ID, &p.FirstName, &p.LastName, &p.DisplayName, &p.UserName, &p.Email, &p.Phone, &p.Hash, &p.Status)
+		err := rows.Scan(&p.ID, &p.FirstName, &p.LastName, &p.Knownas, &p.Email, &p.Phone, &p.Hash, &p.Status)
 		if err != nil {
 			f.Errorf("Error: %t %v\n", err, err)
 			return err
@@ -136,12 +136,8 @@ func getPeople(db *sql.DB, myBackup *backup.Backup) error {
 			fields["lastname"] = p.LastName.String
 		}
 
-		if p.DisplayName.Valid {
-			fields["displayname"] = p.DisplayName.String
-		}
-
-		if p.UserName.Valid {
-			fields["username"] = p.UserName.String
+		if p.Knownas.Valid {
+			fields["displayname"] = p.Knownas.String
 		}
 
 		if p.Email.Valid {

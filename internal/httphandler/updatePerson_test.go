@@ -26,25 +26,29 @@ func TestUpdatePerson(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
-	goodPerson := FindPersonByUserName(t, db, model.GoodUserName)
+	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
+	goodPerson, _ := model.FindPersonByEmail(db, model.GoodEmail)
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		setLogonCookie bool
-		logonCookie    *http.Cookie
-		id             int
-		person         map[string]interface{}
-		expectedStatus int
+		testName               string
+		setLogonCookie         bool
+		logonCookie            *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		id                     int
+		person                 map[string]interface{}
+		expectedStatus         int
 	}{
 		{
-			testName:       "Good request",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			id:             goodPerson.ID,
+			testName:               "Good request",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			id:                     goodPerson.ID,
 			person: map[string]interface{}{
 				"firstname": goodPerson.FirstName,
 				"lastname":  goodPerson.LastName,
@@ -54,11 +58,13 @@ func TestUpdatePerson(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			testName:       "Bad userID",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			id:             999999999,
-			expectedStatus: http.StatusNotFound,
+			testName:               "Bad userID",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			id:                     999999999,
+			expectedStatus:         http.StatusNotFound,
 		},
 	}
 
@@ -79,12 +85,16 @@ func TestUpdatePerson(t *testing.T) {
 			})
 			require.Nil(t, err, "err should be nothing")
 
-			command := fmt.Sprintf("/users/%d", test.id)
+			command := fmt.Sprintf("/people/%d", test.id)
 			r, err := http.NewRequest("PUT", contextPath+command, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------
@@ -103,7 +113,7 @@ func TestUpdatePerson(t *testing.T) {
 
 			// Check the person was actually updated
 			if w.Code == http.StatusOK {
-				var p model.Person
+				var p model.FullPerson
 				p.ID = test.id
 				err := p.LoadPerson(db)
 				require.Nil(t, err, "err should be nothing")

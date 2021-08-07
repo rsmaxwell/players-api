@@ -3,7 +3,6 @@ package httphandler
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,10 +14,10 @@ import (
 	"github.com/rsmaxwell/players-api/internal/debug"
 )
 
-// RegisterRequest structure
-type RegisterRequest struct {
-	Registration model.Registration `json:"register"`
-}
+// // RegisterRequest structure
+// type RegisterRequest struct {
+// 	Registration model.Registration `json:"register"`
+// }
 
 var (
 	functionRegister = debug.NewFunction(pkg, "Register")
@@ -27,37 +26,37 @@ var (
 // Register method
 func Register(w http.ResponseWriter, r *http.Request) {
 	f := functionRegister
+	f.DebugAPI("")
 
 	if r.Method == http.MethodOptions {
-		f.DebugVerbose("returning from 'Options' request")
-		writeResponseMessage(w, r, http.StatusOK, "", "ok")
+		writeResponseMessage(w, r, http.StatusOK, "ok")
 		return
 	}
 
 	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	f.DebugRequestBody(b)
 
-	var request RegisterRequest
+	var request model.Registration
 	err = json.Unmarshal(b, &request)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	f.DebugVerbose("FirstName: %s", request.Registration.FirstName)
-	f.DebugVerbose("LastName:  %s", request.Registration.LastName)
-	f.DebugVerbose("DisplayName: %s", request.Registration.DisplayName)
-	f.DebugVerbose("Email:     %s", request.Registration.Email)
-	f.DebugVerbose("Phone:     %s", request.Registration.Phone)
-	f.DebugVerbose("Password:  %s", request.Registration.Password)
+	// f.DebugVerbose("FirstName: %s", request.FirstName)
+	// f.DebugVerbose("LastName:  %s", request.LastName)
+	// f.DebugVerbose("Knownas:   %s", request.Knownas)
+	// f.DebugVerbose("Email:     %s", request.Email)
+	// f.DebugVerbose("Phone:     %s", request.Phone)
+	// f.DebugVerbose("Password:  %s", request.Password)
 
-	p, err := request.Registration.ToPerson()
+	p, err := request.ToPerson()
 	if err != nil {
 		writeResponseError(w, r, err)
 		return
@@ -66,8 +65,9 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("unexpected context type")
-		writeResponseError(w, r, err)
+		message := "unexpected context type"
+		f.Dump(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		return
 	}
 
@@ -84,5 +84,5 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeResponseMessage(w, r, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "ok")
 }

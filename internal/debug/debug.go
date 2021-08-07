@@ -270,12 +270,13 @@ func (f *Function) Level() int {
 func (f *Function) DebugRequest(req *http.Request) {
 
 	if f.Level() >= APILevel {
+		f.APIf("---------------------------------------------------------")
 		f.DebugAPI("%s %s %s %s", req.Method, req.Proto, req.Host, req.URL)
 
 		for name, headers := range req.Header {
 			name = strings.ToLower(name)
 			for _, h := range headers {
-				f.DebugAPI("%v: %v", name, h)
+				f.DebugVerbose("%v: %v", name, h)
 			}
 		}
 	}
@@ -355,7 +356,7 @@ func (f *Function) Dump(format string, a ...interface{}) *Dump {
 	dump := new(Dump)
 
 	t := time.Now()
-	now := fmt.Sprintf(t.Format("2006-01-02_15-04-05.999999999"))
+	now := t.Format("2006-01-02_15-04-05.999999999")
 	dump.Directory = filepath.Join(rootDumpDir, now)
 
 	f.DebugError("DUMP: writing dump:[%s]", dump.Directory)
@@ -391,7 +392,7 @@ func (f *Function) Dump(format string, a ...interface{}) *Dump {
 		info.Line = line
 	}
 
-	json, err := json.Marshal(info)
+	json, err := json.MarshalIndent(info, "", "    ")
 	if err != nil {
 		dump.Err = err
 		return dump
@@ -459,6 +460,12 @@ func (d *Dump) AddByteArray(filename string, data []byte) {
 	if err != nil {
 		return
 	}
+}
+
+// AddObject method
+func (d *Dump) AddObject(filename string, object interface{}) {
+	data, _ := json.MarshalIndent(object, "", "    ")
+	d.AddByteArray(filename, data)
 }
 
 // MarkDumps type
@@ -607,11 +614,11 @@ func (f *Function) DumpError(err error, message string) *Dump {
 	var err3 error
 
 	if err2, ok := err.(*pq.Error); ok {
-		data, err3 = json.Marshal(err2)
+		data, err3 = json.MarshalIndent(err2, "", "    ")
 	} else if err2, ok := err.(*pgconn.PgError); ok {
-		data, err3 = json.Marshal(err2)
+		data, err3 = json.MarshalIndent(err2, "", "    ")
 	} else {
-		data, err3 = json.Marshal(err)
+		data, err3 = json.MarshalIndent(err, "", "    ")
 	}
 
 	if err3 != nil {

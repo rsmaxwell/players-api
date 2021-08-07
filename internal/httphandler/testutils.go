@@ -1,9 +1,12 @@
 package httphandler
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,8 +14,21 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/internal/debug"
+	"github.com/rsmaxwell/players-api/internal/model"
 	"github.com/stretchr/testify/require"
 )
+
+// SigninRequest structure
+type SigninResponse struct {
+	Message     string       `json:"message"`
+	Person      model.Person `json:"person"`
+	AccessToken string       `json:"accessToken"`
+}
+
+type Credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
 
 var (
 	functionBasicAuth = debug.NewFunction(pkg, "BasicAuth")
@@ -27,12 +43,20 @@ func BasicAuth(username, password string) string {
 	return "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
-// GetLoginToken function
-func GetLoginToken(t *testing.T, db *sql.DB, userName string, password string) *http.Cookie {
+// GetSigninToken function
+func GetSigninToken(t *testing.T, db *sql.DB, userName string, password string) (*http.Cookie, string) {
 
-	command := "/users/authenticate"
+	command := "/signin"
 
-	r, err := http.NewRequest("POST", contextPath+command, nil)
+	requestBody, err := json.Marshal(SigninRequest{
+		Signin: model.Signin{
+			Username: userName,
+			Password: password,
+		},
+	})
+	require.Nil(t, err, "err should be nothing")
+
+	r, err := http.NewRequest("POST", contextPath+command, bytes.NewBuffer(requestBody))
 	require.Nil(t, err, "err should be nothing")
 
 	r.Header.Set("Authorization", BasicAuth(userName, password))
@@ -64,5 +88,15 @@ func GetLoginToken(t *testing.T, db *sql.DB, userName string, password string) *
 	cookie := cookies["players-api"]
 	require.NotNil(t, cookie, "cookie missing")
 
-	return cookie
+	bytes, err := ioutil.ReadAll(w.Body)
+	require.Nil(t, err, "err should be nothing")
+
+	responseBody := new(SigninResponse)
+	err = json.Unmarshal(bytes, &responseBody)
+	require.Nil(t, err, "err should be nothing")
+
+	token := responseBody.AccessToken
+	require.NotNil(t, token, "token missing")
+
+	return cookie, token
 }

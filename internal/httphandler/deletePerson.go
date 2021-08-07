@@ -18,8 +18,9 @@ var (
 // DeletePerson method
 func DeletePerson(w http.ResponseWriter, r *http.Request) {
 	f := functionDeletePerson
+	f.DebugAPI("")
 
-	sess, err := checkAuthenticated(r)
+	userID, err := checkAuthenticated(r)
 	if err != nil {
 		writeResponseError(w, r, err)
 		return
@@ -28,39 +29,34 @@ func DeletePerson(w http.ResponseWriter, r *http.Request) {
 	str := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(str)
 	if err != nil {
-		f.DebugVerbose("Count not convert '" + str + "' into an int")
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
+		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
 
 	f.DebugVerbose("ID: %d", id)
 
-	userID, ok := sess.Values["userID"].(int)
-	if !ok {
-		f.DebugVerbose("could not get 'userID' from the session")
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
-		return
-	}
-
 	if userID == id {
 		f.DebugVerbose("Attempt delete self: %d", id)
-		writeResponseMessage(w, r, http.StatusUnauthorized, "", "Not Authorized")
+		writeResponseMessage(w, r, http.StatusUnauthorized, "Not Authorized")
 		return
 	}
 
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("unexpected context type")
+		message := "unexpected context type"
+		f.Dump(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		writeResponseError(w, r, err)
 		return
 	}
 
-	err = model.DeletePerson(db, id)
+	p := model.FullPerson{ID: id}
+	err = p.DeletePerson(db)
 	if err != nil {
 		writeResponseError(w, r, err)
 		return
 	}
 
-	writeResponseMessage(w, r, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "ok")
 }

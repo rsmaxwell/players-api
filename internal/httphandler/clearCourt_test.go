@@ -16,7 +16,7 @@ import (
 	_ "github.com/jackc/pgx/stdlib"
 )
 
-func TestMakePlaying(t *testing.T) {
+func TestClearCourt(t *testing.T) {
 
 	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
@@ -24,44 +24,29 @@ func TestMakePlaying(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
-	anotherPerson := FindPersonByUserName(t, db, model.AnotherUserName)
+	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
 	goodCourt := GetFirstCourt(t, db)
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 	tests := []struct {
-		testName       string
-		setLogonCookie bool
-		logonCookie    *http.Cookie
-		personID       int
-		courtID        int
-		expectedStatus int
+		testName               string
+		setLogonCookie         bool
+		logonCookie            *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		courtID                int
+		expectedStatus         int
 	}{
 		{
-			testName:       "Good request",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			personID:       anotherPerson.ID,
-			courtID:        goodCourt.ID,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			testName:       "Bad personID",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			personID:       999999999,
-			courtID:        goodCourt.ID,
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			testName:       "Bad courtID",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			personID:       anotherPerson.ID,
-			courtID:        999999999,
-			expectedStatus: http.StatusBadRequest,
+			testName:               "Good request",
+			setLogonCookie:         true,
+			logonCookie:            logonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			courtID:                goodCourt.ID,
+			expectedStatus:         http.StatusOK,
 		},
 	}
 
@@ -76,12 +61,16 @@ func TestMakePlaying(t *testing.T) {
 			SetupHandlers(router)
 			w := httptest.NewRecorder()
 
-			command := fmt.Sprintf("/users/toplaying/%d/%d", test.personID, test.courtID)
+			command := fmt.Sprintf("/courts/clear/%d", test.courtID)
 			r, err := http.NewRequest("PUT", contextPath+command, nil)
 			require.Nil(t, err, "err should be nothing")
 
 			if test.setLogonCookie {
 				r.AddCookie(test.logonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------
@@ -98,21 +87,6 @@ func TestMakePlaying(t *testing.T) {
 			// Serve the request
 			router.ServeHTTP(w, r3)
 			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
-
-			if w.Code == http.StatusOK {
-				// Check the person is inactive
-				listOfPlayers, err := model.ListPlayersForPerson(db, test.personID)
-				require.Nil(t, err, "err should be nothing")
-				require.Equal(t, 1, len(listOfPlayers), "Unexpected number of players for person: %d", len(listOfPlayers))
-
-				listOfWaiters, err := model.ListWaitersForPerson(db, test.personID)
-				require.Nil(t, err, "err should be nothing")
-				require.Equal(t, 0, len(listOfWaiters), "person is still waiting")
-			}
-
-			if w.Code != test.expectedStatus {
-				require.FailNow(t, "Unexpected status: expected: %d, actual: %d", test.expectedStatus, w.Code)
-			}
 		})
 	}
 }

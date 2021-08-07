@@ -28,40 +28,36 @@ var (
 // UpdatePerson method
 func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	f := functionUpdatePerson
+	f.DebugAPI("")
 
-	sess, err := checkAuthenticated(r)
+	userID, err := checkAuthenticated(r)
 	if err != nil {
 		writeResponseError(w, r, err)
-		return
-	}
-
-	userID, ok := sess.Values["userID"].(int)
-	if !ok {
-		f.DebugVerbose("could not get 'userID' from the session")
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
 		return
 	}
 
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("unexpected context type")
-		writeResponseError(w, r, err)
+		message := "unexpected context type"
+		f.Dump(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		return
 	}
 
-	user := model.Person{ID: userID}
+	user := model.FullPerson{ID: userID}
 	err = user.LoadPerson(db)
 	if err != nil {
-		f.DebugVerbose("Could not load person")
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
+		message := fmt.Sprintf("Could not load person [%d]", userID)
+		f.DebugVerbose(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		return
 	}
 
 	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -70,15 +66,14 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	var request UpdatePersonRequest
 	err = json.Unmarshal(b, &request)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	str := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(str)
 	if err != nil {
-		f.DebugVerbose("Count not convert '" + str + "' into an int")
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
+		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
 
@@ -89,19 +84,19 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 		err = user.CanEditSelf()
 		if err != nil {
 			f.DebugVerbose("Not allowed to edit self")
-			writeResponseMessage(w, r, http.StatusForbidden, "", "Forbidden")
+			writeResponseMessage(w, r, http.StatusForbidden, "Forbidden")
 			return
 		}
 	} else {
 		err = user.CanEditOtherPeople()
 		if err != nil {
 			f.DebugVerbose("Not allowed to edit other people")
-			writeResponseMessage(w, r, http.StatusForbidden, "", "Forbidden")
+			writeResponseMessage(w, r, http.StatusForbidden, "Forbidden")
 			return
 		}
 	}
 
-	var p model.Person
+	var p model.FullPerson
 	p.ID = id
 	err = p.LoadPerson(db)
 	if err != nil {
@@ -112,8 +107,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["firstname"]; ok {
 		p.FirstName, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("unexpected type for 'firstName'")
-			writeResponseError(w, r, err)
+			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "firstName", val))
 			return
 		}
 	}
@@ -121,17 +115,15 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["lastname"]; ok {
 		p.LastName, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("unexpected type for 'lastName'")
-			writeResponseError(w, r, err)
+			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "lastName", val))
 			return
 		}
 	}
 
-	if val, ok := request.Person["displayname"]; ok {
-		p.DisplayName, ok = val.(string)
+	if val, ok := request.Person["knownas"]; ok {
+		p.Knownas, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("unexpected type for 'displayname'")
-			writeResponseError(w, r, err)
+			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "knownas", val))
 			return
 		}
 	}
@@ -139,8 +131,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["email"]; ok {
 		p.Email, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("unexpected type for 'email'")
-			writeResponseError(w, r, err)
+			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "email", val))
 			return
 		}
 	}
@@ -148,8 +139,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["phone"]; ok {
 		p.Phone, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("unexpected type for 'phone'")
-			writeResponseError(w, r, err)
+			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "phone", val))
 			return
 		}
 	}
@@ -157,8 +147,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["password"]; ok {
 		password, ok := val.(string)
 		if !ok {
-			err = fmt.Errorf("unexpected type for 'email'")
-			writeResponseError(w, r, err)
+			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "password", val))
 			return
 		}
 
@@ -172,8 +161,7 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 	if val, ok := request.Person["status"]; ok {
 		p.Status, ok = val.(string)
 		if !ok {
-			err = fmt.Errorf("unexpected type for 'status'")
-			writeResponseError(w, r, err)
+			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "status", val))
 			return
 		}
 	}
@@ -184,5 +172,5 @@ func UpdatePerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeResponseMessage(w, r, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "ok")
 }

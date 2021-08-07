@@ -1,10 +1,10 @@
 package model
 
 import (
+	"context"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -16,37 +16,38 @@ import (
 )
 
 // LimitedPerson type
-type LimitedPerson struct {
-	ID          int    `json:"id"`
-	FirstName   string `json:"firstName"`
-	LastName    string `json:"lastName"`
-	DisplayName string `json:"displayName"`
-	Email       string `json:"email"`
-	Phone       string `json:"phone"`
+type Person struct {
+	ID        int    `json:"id"`
+	FirstName string `json:"firstname"`
+	LastName  string `json:"lastname"`
+	Knownas   string `json:"knownas"`
+	Email     string `json:"email"`
+	Phone     string `json:"phone"`
+	Status    string `json:"status"`
 }
 
 // Person type
-type Person struct {
-	ID          int    `json:"id"`
-	FirstName   string `json:"firstName" validate:"required,min=3,max=20"`
-	LastName    string `json:"lastName" validate:"required,min=3,max=20"`
-	DisplayName string `json:"displayName" validate:"required,min=3,max=20"`
-	Email       string `json:"email" validate:"required,email"`
-	Phone       string `json:"phone" validate:"required,min=3,max=20"`
-	Hash        []byte `json:"hash"`
-	Status      string `json:"status"`
+type FullPerson struct {
+	ID        int    `json:"id"`
+	FirstName string `json:"firstname" validate:"required,min=3,max=20"`
+	LastName  string `json:"lastname" validate:"required,min=3,max=20"`
+	Knownas   string `json:"knownas" validate:"required,min=3,max=20"`
+	Email     string `json:"email" validate:"required,email"`
+	Phone     string `json:"phone" validate:"required,min=3,max=20"`
+	Hash      []byte `json:"hash"`
+	Status    string `json:"status"`
 }
 
 // NullPerson type
 type NullPerson struct {
-	ID          int            `db:"id"`
-	FirstName   sql.NullString `db:"firstname"`
-	LastName    sql.NullString `db:"lastname"`
-	DisplayName sql.NullString `db:"displayname"`
-	Email       sql.NullString `db:"email"`
-	Phone       sql.NullString `db:"phone"`
-	Hash        sql.NullString `db:"hash"`
-	Status      sql.NullString `db:"status"`
+	ID        int            `db:"id"`
+	FirstName sql.NullString `db:"firstname"`
+	LastName  sql.NullString `db:"lastname"`
+	Knownas   sql.NullString `db:"knownas"`
+	Email     sql.NullString `db:"email"`
+	Phone     sql.NullString `db:"phone"`
+	Hash      sql.NullString `db:"hash"`
+	Status    sql.NullString `db:"status"`
 }
 
 const (
@@ -55,23 +56,26 @@ const (
 )
 
 var (
-	functionUpdatePerson      = debug.NewFunction(pkg, "UpdatePerson")
-	functionSavePerson        = debug.NewFunction(pkg, "SavePerson")
-	functionFindPersonByEmail = debug.NewFunction(pkg, "FindPersonByEmail")
-	functionListPeople        = debug.NewFunction(pkg, "ListPeople")
-	functionPersonExists      = debug.NewFunction(pkg, "PersonExists")
-	functionLoadPerson        = debug.NewFunction(pkg, "LoadPerson")
-	functionDeletePersonBasic = debug.NewFunction(pkg, "DeletePersonBasic")
-	functionAuthenticate      = debug.NewFunction(pkg, "Authenticate")
-	functionCheckPassword     = debug.NewFunction(pkg, "CheckPassword")
+	functionUpdatePerson        = debug.NewFunction(pkg, "UpdatePerson")
+	functionSavePerson          = debug.NewFunction(pkg, "SavePerson")
+	functionFindPersonByEmail   = debug.NewFunction(pkg, "FindPersonByEmail")
+	functionListPeople          = debug.NewFunction(pkg, "ListPeople")
+	functionLoadPerson          = debug.NewFunction(pkg, "LoadPerson")
+	functionDeletePerson        = debug.NewFunction(pkg, "DeletePerson")
+	functionDeletePersonContext = debug.NewFunction(pkg, "DeletePersonContext")
+	functionAuthenticate        = debug.NewFunction(pkg, "Authenticate")
+	functionCheckPassword       = debug.NewFunction(pkg, "CheckPassword")
 )
 
 const (
 	// StatusAdmin constant
 	StatusAdmin = "admin"
 
-	// StatusNormal constant
-	StatusNormal = "normal"
+	// StatusPlayer constant
+	StatusPlayer = "player"
+
+	// StatusInactive constant
+	StatusInactive = "inactive"
 
 	// StatusSuspended constant
 	StatusSuspended = "suspended"
@@ -84,15 +88,15 @@ var (
 
 func init() {
 	// AllRoles lists all the roles
-	AllStates = []string{StatusAdmin, StatusNormal, StatusSuspended}
+	AllStates = []string{StatusAdmin, StatusPlayer, StatusInactive, StatusSuspended}
 }
 
 // NewPerson initialises a Person object
-func NewPerson(firstname string, lastname string, displayName string, email string, phone string, hash []byte) *Person {
-	p := new(Person)
+func NewPerson(firstname string, lastname string, knownas string, email string, phone string, hash []byte) *FullPerson {
+	p := new(FullPerson)
 	p.FirstName = firstname
 	p.LastName = lastname
-	p.DisplayName = displayName
+	p.Knownas = knownas
 	p.Email = email
 	p.Phone = phone
 	p.Hash = hash
@@ -101,14 +105,14 @@ func NewPerson(firstname string, lastname string, displayName string, email stri
 }
 
 // SavePerson writes a new Person to disk and returns the generated id
-func (p *Person) SavePerson(db *sql.DB) error {
+func (p *FullPerson) SavePerson(db *sql.DB) error {
 	f := functionSavePerson
 
-	fields := "firstname, lastname, displayname, username, email, phone, hash, status"
-	values := "$1, $2, $3, $4, $5, $6, $7, $8"
+	fields := "firstname, lastname, knownas, email, phone, hash, status"
+	values := "$1, $2, $3, $4, $5, $6, $7"
 	sqlStatement := "INSERT INTO " + PersonTable + " (" + fields + ") VALUES (" + values + ") RETURNING id"
 
-	err := db.QueryRow(sqlStatement, p.FirstName, p.LastName, p.DisplayName, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status).Scan(&p.ID)
+	err := db.QueryRow(sqlStatement, p.FirstName, p.LastName, p.Knownas, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status).Scan(&p.ID)
 	if err != nil {
 		pgerr, ok := err.(*pgconn.PgError)
 		if ok {
@@ -128,12 +132,16 @@ func (p *Person) SavePerson(db *sql.DB) error {
 }
 
 // UpdatePerson method
-func (p *Person) UpdatePerson(db *sql.DB) error {
+func (p *FullPerson) UpdatePerson(db *sql.DB) error {
+	return p.UpdatePersonContext(db, context.Background())
+}
+
+func (p *FullPerson) UpdatePersonContext(db *sql.DB, ctx context.Context) error {
 	f := functionUpdatePerson
 
-	items := "firstname=$1, lastname=$2, displayname=$3, username=$4, email=$5, phone=$6, hash=$7, status=$8"
-	sqlStatement := "UPDATE " + PersonTable + " SET " + items + " WHERE id=" + strconv.Itoa(p.ID)
-	_, err := db.Exec(sqlStatement, p.FirstName, p.LastName, p.DisplayName, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status)
+	fields := "firstname=$1, lastname=$2, knownas=$3, email=$4, phone=$5, hash=$6, status=$7"
+	sqlStatement := "UPDATE " + PersonTable + " SET " + fields + " WHERE id=" + strconv.Itoa(p.ID)
+	_, err := db.ExecContext(ctx, sqlStatement, p.FirstName, p.LastName, p.Knownas, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status)
 	if err != nil {
 		message := "Could not update person"
 		f.Errorf(message)
@@ -145,13 +153,17 @@ func (p *Person) UpdatePerson(db *sql.DB) error {
 }
 
 // LoadPerson returns the Person with the given ID
-func (p *Person) LoadPerson(db *sql.DB) error {
+func (p *FullPerson) LoadPerson(db *sql.DB) error {
+	return p.LoadPersonContext(db, context.Background())
+}
+
+func (p *FullPerson) LoadPersonContext(db *sql.DB, ctx context.Context) error {
 	f := functionLoadPerson
 
 	// Query the person
-	fields := "firstname, lastname, displayname, username, email, phone, hash, status"
-	sqlStatement := "SELECT " + fields + " FROM " + PersonTable + " WHERE ID=" + strconv.Itoa(p.ID)
-	rows, err := db.Query(sqlStatement)
+	fields := "firstname, lastname, knownas, email, phone, hash, status"
+	sqlStatement := "SELECT " + fields + " FROM " + PersonTable + " WHERE id=$1"
+	rows, err := db.QueryContext(ctx, sqlStatement, p.ID)
 	if err != nil {
 		message := "Could not select all people"
 		f.Errorf(message)
@@ -165,7 +177,7 @@ func (p *Person) LoadPerson(db *sql.DB) error {
 		count++
 
 		var np NullPerson
-		err := rows.Scan(&np.FirstName, &np.LastName, &np.DisplayName, &np.Email, &np.Phone, &np.Hash, &np.Status)
+		err := rows.Scan(&np.FirstName, &np.LastName, &np.Knownas, &np.Email, &np.Phone, &np.Hash, &np.Status)
 		if err != nil {
 			message := "Could not scan the person"
 			f.Errorf(message)
@@ -181,8 +193,8 @@ func (p *Person) LoadPerson(db *sql.DB) error {
 			p.LastName = np.LastName.String
 		}
 
-		if np.DisplayName.Valid {
-			p.DisplayName = np.DisplayName.String
+		if np.Knownas.Valid {
+			p.Knownas = np.Knownas.String
 		}
 
 		if np.Email.Valid {
@@ -209,13 +221,16 @@ func (p *Person) LoadPerson(db *sql.DB) error {
 	}
 	err = rows.Err()
 	if err != nil {
-		message := "Could not list the courts"
+		message := "Could not query the person"
 		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
 	}
 
 	if count == 0 {
+
+		f.Infof("sqlStatement: %s", sqlStatement)
+
 		return codeerror.NewNotFound(fmt.Sprintf("People id %d not found", p.ID))
 	} else if count > 1 {
 		message := fmt.Sprintf("Found %d people with id %d", count, p.ID)
@@ -228,12 +243,62 @@ func (p *Person) LoadPerson(db *sql.DB) error {
 	return nil
 }
 
-// DeletePersonBasic the person with the given ID
-func (p *Person) DeletePersonBasic(db *sql.DB) error {
-	f := functionDeletePersonBasic
+// DeletePerson removes a person and associated waiters and playings
+func (p *FullPerson) DeletePerson(db *sql.DB) error {
+	f := functionDeletePerson
 
-	sqlStatement := "DELETE FROM " + PersonTable + " WHERE id=" + strconv.Itoa(p.ID) + " AND status != '" + StatusAdmin + "'"
-	_, err := db.Exec(sqlStatement)
+	// Create a new context, and begin a transaction
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		message := "Could not begin a new transaction"
+		f.Errorf(message)
+		f.DumpError(err, message)
+		return err
+	}
+
+	err = DeletePersonContext(db, ctx, p.ID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		message := "Could not commit the transaction"
+		f.Errorf(message)
+		f.DumpError(err, message)
+	}
+
+	return nil
+}
+
+func DeletePersonContext(db *sql.DB, ctx context.Context, personID int) error {
+	f := functionDeletePersonContext
+
+	// Remove the associated waiters
+	sqlStatement := "DELETE FROM " + WaitingTable + " WHERE person=" + strconv.Itoa(personID)
+	_, err := db.ExecContext(ctx, sqlStatement)
+	if err != nil {
+		message := "Could not delete waiters"
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		return err
+	}
+
+	// Remove the associated playing
+	sqlStatement = "DELETE FROM " + PlayingTable + " WHERE person=" + strconv.Itoa(personID)
+	_, err = db.ExecContext(ctx, sqlStatement)
+	if err != nil {
+		message := "Could not delete playings"
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		return err
+	}
+
+	// Remove the Person
+	sqlStatement = "DELETE FROM " + PersonTable + " WHERE ID=" + strconv.Itoa(personID) + " AND status != '" + StatusAdmin + "'"
+	_, err = db.ExecContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not delete person"
 		f.Errorf(message)
@@ -245,127 +310,137 @@ func (p *Person) DeletePersonBasic(db *sql.DB) error {
 }
 
 // FindPersonByEmail function
-func FindPersonByEmail(db *sql.DB, email string) (*Person, error) {
+func FindPersonByEmail(db *sql.DB, email string) (*FullPerson, error) {
 	f := functionFindPersonByEmail
 
-	q := make(Query)
-	q["username"] = Condition{Operation: "=", Value: email}
-
-	arrayOfPeopleIDs, err := ListPeople(db, &q)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(arrayOfPeopleIDs) <= 0 {
-		err := codeerror.NewNotFound(fmt.Sprintf("Person not found: email:%s", email))
-		return nil, err
-	}
-
-	if len(arrayOfPeopleIDs) > 1 {
-		message := fmt.Sprintf("Too many matches. email:%s, count:%d", email, len(arrayOfPeopleIDs))
-		err := codeerror.NewNotFound(message)
-		d := f.DumpError(err, message)
-		d.AddIntArray("peopleIDs.txt", arrayOfPeopleIDs)
-		return nil, err
-	}
-
-	id := arrayOfPeopleIDs[0]
-	p := Person{ID: id}
-	err = p.LoadPerson(db)
-	if err != nil {
-		return nil, err
-	}
-
-	return &p, nil
-}
-
-// ListPeople returns a list of the people IDs
-func ListPeople(db *sql.DB, query *Query) ([]int, error) {
-	f := functionListPeople
-
 	// Query the people
-	allFields := []string{"id", "firstname", "lastname", "displayname", "username", "email", "phone", "status"}
-	returnedFields := []string{"id"}
-	sqlStatement, values, err := BuildQuery(PersonTable, allFields, returnedFields, query)
-	rows, err := db.Query(sqlStatement, values...)
+	fields := "id, firstname, lastname, knownas, email, phone, hash, status"
+	where := `email=$1`
+	sqlStatement := `SELECT ` + fields + ` FROM ` + PersonTable + ` WHERE ` + where
+
+	rows, err := db.Query(sqlStatement, email)
 	if err != nil {
 		message := "Could not select all from " + PersonTable
 		f.Errorf(message)
-		d := f.DumpSQLError(err, message, sqlStatement)
-		d.AddArray("values.txt", values)
+		f.DumpSQLError(err, message, sqlStatement)
 		return nil, err
 	}
 	defer rows.Close()
 
-	var list []int
+	var arrayOfPeople []FullPerson
 	for rows.Next() {
 
-		var id int
-		err := rows.Scan(&id)
+		var p FullPerson
+		var hexstring string
+		err := rows.Scan(&p.ID, &p.FirstName, &p.LastName, &p.Knownas, &p.Email, &p.Phone, &hexstring, &p.Status)
 		if err != nil {
 			message := "Could not scan the person"
 			f.Errorf(message)
 			f.DumpError(err, message)
 			return nil, err
 		}
-		list = append(list, id)
+
+		p.Hash, err = hex.DecodeString(hexstring)
+		if err != nil {
+			message := "Could not decode hextring: " + hexstring
+			f.DumpError(err, message)
+			return nil, err
+		}
+
+		// fmt.Printf("    FirstName: %s\n", p.FirstName)
+		// fmt.Printf("    LastName:  %s\n", p.LastName)
+		// fmt.Printf("    Knownas:  %s\n", p.Knownas)
+		// fmt.Printf("    email:     %s\n", p.Email)
+		// fmt.Printf("    hexstring: %s\n", hexstring)
+		// fmt.Printf("    hash:      %v\n", p.Hash)
+
+		arrayOfPeople = append(arrayOfPeople, p)
 	}
 	err = rows.Err()
 	if err != nil {
 		message := "Could not list all from " + PersonTable
 		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		return nil, err
+	}
+
+	if len(arrayOfPeople) <= 0 {
+		err := codeerror.NewNotFound(fmt.Sprintf("Person not found: email:%s", email))
+		return nil, err
+	}
+
+	if len(arrayOfPeople) > 1 {
+		message := fmt.Sprintf("Too many matches. email:%s, count:%d", email, len(arrayOfPeople))
+		err := codeerror.NewNotFound(message)
 		f.DumpError(err, message)
+		return nil, err
+	}
+
+	return &arrayOfPeople[0], nil
+}
+
+// ListPeople returns a list of the people IDs
+func ListPeople(db *sql.DB, whereClause string) ([]FullPerson, error) {
+	f := functionListPeople
+
+	// Query the people
+	fields := "id, firstname, lastname, knownas, email, phone, hash, status"
+	sqlStatement := `SELECT ` + fields + ` FROM ` + PersonTable + whereClause
+	rows, err := db.Query(sqlStatement)
+	if err != nil {
+		message := "Could not select all from " + PersonTable
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []FullPerson
+	for rows.Next() {
+
+		var p FullPerson
+		var hexstring string
+		err := rows.Scan(&p.ID, &p.FirstName, &p.LastName, &p.Knownas, &p.Email, &p.Phone, &hexstring, &p.Status)
+		if err != nil {
+			message := "Could not scan the person"
+			f.Errorf(message)
+			f.DumpError(err, message)
+			return nil, err
+		}
+
+		p.Hash, err = hex.DecodeString(hexstring)
+		if err != nil {
+			message := "Could not decode hextring: " + hexstring
+			f.DumpError(err, message)
+			return nil, err
+		}
+
+		// fmt.Printf("    FirstName: %s\n", p.FirstName)
+		// fmt.Printf("    LastName:  %s\n", p.LastName)
+		// fmt.Printf("    Knownas:  %s\n", p.Knownas)
+		// fmt.Printf("    email:     %s\n", p.Email)
+		// fmt.Printf("    hexstring: %s\n", hexstring)
+		// fmt.Printf("    hash:      %v\n", p.Hash)
+
+		list = append(list, p)
+	}
+	err = rows.Err()
+	if err != nil {
+		message := "Could not list all from " + PersonTable
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
 		return nil, err
 	}
 
 	return list, nil
 }
 
-// PersonExists returns 'true' if the person exists
-func (p *Person) PersonExists(db *sql.DB) (bool, error) {
-	f := functionPersonExists
-
-	// Query the person
-	sqlStatement := "SELECT * FROM " + PersonTable + " WHERE id=$1"
-	rows, err := db.Query(sqlStatement, p.ID)
-	if err != nil {
-		message := "Could not select people"
-		f.Errorf(message)
-		f.DumpSQLError(err, message, sqlStatement)
-		return false, err
-	}
-	defer rows.Close()
-
-	count := 0
-	for rows.Next() {
-		count++
-	}
-	err = rows.Err()
-	if err != nil {
-		message := "Could not list the people"
-		f.Errorf(message)
-		f.DumpError(err, message)
-		return false, err
-	}
-
-	if count == 0 {
-		return false, nil
-	} else if count > 1 {
-		message := "Found " + string(count) + " people with id " + string(p.ID)
-		f.Errorf(message)
-		f.DumpError(err, message)
-		return true, errors.New(message)
-	}
-
-	return true, nil
-}
-
 // Authenticate method
-func (p *Person) Authenticate(db *sql.DB, password string) error {
+func (p *FullPerson) Authenticate(db *sql.DB, password string) error {
 	f := functionAuthenticate
 	f.DebugVerbose("id: %d, password:%s", p.ID, "********")
 
-	err := p.CheckPassword(password)
+	err := p.checkPassword(password)
 	if err != nil {
 		f.DebugVerbose("password check failed for person [%d]", p.ID)
 		return codeerror.NewUnauthorized("Not Authorized")
@@ -381,12 +456,18 @@ func (p *Person) Authenticate(db *sql.DB, password string) error {
 }
 
 // CheckPassword checks the validity of the password
-func (p *Person) CheckPassword(password string) error {
+func (p *FullPerson) checkPassword(password string) error {
 	f := functionCheckPassword
+
+	// fmt.Printf("    FirstName: %s\n", p.FirstName)
+	// fmt.Printf("    LastName:  %s\n", p.LastName)
+	// fmt.Printf("    email:     %s\n", p.Email)
+	// fmt.Printf("    hash:      %v\n", p.Hash)
+	// fmt.Printf("    hash:      %s\n", hex.EncodeToString(p.Hash))
 
 	err := bcrypt.CompareHashAndPassword(p.Hash, []byte(password))
 	if err != nil {
-		message := "The password was invalid for this user"
+		message := fmt.Sprintf("The password %s was invalid for the user with email: %s", password, p.Email)
 		f.Errorf(message)
 		d := f.DumpError(err, message)
 		d.AddString("hash.txt", hex.EncodeToString(p.Hash))
@@ -396,113 +477,130 @@ func (p *Person) CheckPassword(password string) error {
 }
 
 // CanLogin checks the user is allowed to login
-func (p *Person) CanLogin() error {
+func (p *FullPerson) CanLogin() error {
 
 	if p.Status == StatusAdmin {
 		return nil
 	}
-	if p.Status == StatusNormal {
+	if p.Status == StatusPlayer {
+		return nil
+	}
+	if p.Status == StatusInactive {
 		return nil
 	}
 
-	return fmt.Errorf("Not Authorized")
+	return fmt.Errorf("not Authorized")
 }
 
 // CanEditCourt checks the user is allowed update a court
-func (p *Person) CanEditCourt() error {
+func (p *FullPerson) CanEditCourt() error {
 
 	if p.Status == StatusAdmin {
 		return nil
 	}
-	if p.Status == StatusNormal {
+	if p.Status == StatusPlayer {
 		return nil
 	}
 
-	return fmt.Errorf("Not Authorized")
+	return fmt.Errorf("not Authorized")
 }
 
 // CanGetMetrics checks the user is allowed get the metrics
-func (p *Person) CanGetMetrics() error {
+func (p *FullPerson) CanGetMetrics() error {
 
 	if p.Status == StatusAdmin {
 		return nil
 	}
-	if p.Status == StatusNormal {
+	if p.Status == StatusPlayer {
+		return nil
+	}
+	if p.Status == StatusInactive {
 		return nil
 	}
 
-	return fmt.Errorf("Not Authorized")
+	return fmt.Errorf("not Authorized")
 }
 
 // CanEditOtherPeople checks the user is allowed update a court
-func (p *Person) CanEditOtherPeople() error {
+func (p *FullPerson) CanEditOtherPeople() error {
 
 	if p.Status == StatusAdmin {
 		return nil
 	}
-	if p.Status == StatusNormal {
+	if p.Status == StatusPlayer {
+		return nil
+	}
+	if p.Status == StatusInactive {
 		return nil
 	}
 
-	return fmt.Errorf("Not Authorized")
+	return fmt.Errorf("not Authorized")
 }
 
 // CanEditSelf checks the user is allowed update a court
-func (p *Person) CanEditSelf() error {
+func (p *FullPerson) CanEditSelf() error {
 
 	if p.Status == StatusAdmin {
 		return nil
 	}
-	if p.Status == StatusNormal {
+	if p.Status == StatusPlayer {
+		return nil
+	}
+	if p.Status == StatusInactive {
 		return nil
 	}
 
-	return fmt.Errorf("Not Authorized")
+	return fmt.Errorf("not Authorized")
 }
 
 // ToLimited converts a person to a Limited person
-func (p *Person) ToLimited() *LimitedPerson {
-	lp := &LimitedPerson{
-		ID:          p.ID,
-		FirstName:   p.FirstName,
-		LastName:    p.LastName,
-		DisplayName: p.DisplayName,
-		Email:       p.Email,
-		Phone:       p.Phone,
+func (p *FullPerson) ToLimited() *Person {
+	lp := &Person{
+		ID:        p.ID,
+		FirstName: p.FirstName,
+		LastName:  p.LastName,
+		Knownas:   p.Knownas,
+		Email:     p.Email,
+		Phone:     p.Phone,
+		Status:    p.Status,
 	}
 	return lp
 }
 
 // ToLimitedPerson converts a NullPerson to a Limited person
-func (np *NullPerson) ToLimitedPerson() *LimitedPerson {
+// func (np *NullPerson) xToLimitedPerson() *Person {
 
-	lp := LimitedPerson{ID: np.ID}
+// 	lp := Person{}
 
-	if np.FirstName.Valid {
-		lp.FirstName = np.FirstName.String
-	}
+// 	if np.FirstName.Valid {
+// 		lp.FirstName = np.FirstName.String
+// 	}
 
-	if np.LastName.Valid {
-		lp.LastName = np.LastName.String
-	}
+// 	if np.LastName.Valid {
+// 		lp.LastName = np.LastName.String
+// 	}
 
-	if np.DisplayName.Valid {
-		lp.DisplayName = np.DisplayName.String
-	}
+// 	if np.Knownas.Valid {
+// 		lp.Knownas = np.Knownas.String
+// 	}
 
-	if np.Email.Valid {
-		lp.Email = np.Email.String
-	}
+// 	if np.Email.Valid {
+// 		lp.Email = np.Email.String
+// 	}
 
-	if np.Phone.Valid {
-		lp.Phone = np.Phone.String
-	}
+// 	if np.Phone.Valid {
+// 		lp.Phone = np.Phone.String
+// 	}
 
-	return &lp
-}
+// 	if np.Status.Valid {
+// 		lp.Status = np.Status.String
+// 	}
+
+// 	return &lp
+// }
 
 // Dump writes the person to a dump file
-func (p *Person) Dump(d *debug.Dump) {
+func (p *FullPerson) Dump(d *debug.Dump) {
 
 	bytearray, err := json.Marshal(p)
 	if err != nil {

@@ -100,10 +100,7 @@ func Contains(s []string, e string) bool {
 func CheckStringArraysAreEqual(x, y []string) bool {
 
 	if x == nil {
-		if y == nil {
-			return true
-		}
-		return false
+		return y == nil
 	} else if y == nil {
 		return false
 	}

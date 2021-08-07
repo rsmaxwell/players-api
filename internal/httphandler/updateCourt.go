@@ -27,45 +27,41 @@ var (
 // UpdateCourt method
 func UpdateCourt(w http.ResponseWriter, r *http.Request) {
 	f := functionUpdateCourt
+	f.DebugAPI("")
 
-	sess, err := checkAuthenticated(r)
+	userID, err := checkAuthenticated(r)
 	if err != nil {
 		writeResponseError(w, r, err)
-		return
-	}
-
-	userID, ok := sess.Values["userID"].(int)
-	if !ok {
-		f.DebugVerbose("could not get 'userID' from the session")
-		writeResponseMessage(w, r, http.StatusBadRequest, "", "Error")
 		return
 	}
 
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("unexpected context type")
-		writeResponseError(w, r, err)
+		message := "unexpected context type"
+		f.Dump(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		return
 	}
 
-	user := model.Person{ID: userID}
+	user := model.FullPerson{ID: userID}
 	err = user.LoadPerson(db)
 	if err != nil {
-		f.Dump("Could not load the logged on user[%d]: %v", userID, err)
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", err.Error())
+		message := fmt.Sprintf("Could not load person [%d]", userID)
+		f.DumpError(err, message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		return
 	}
 	err = user.CanEditCourt()
 	if err != nil {
-		f.DebugVerbose("Not allowed to edit court")
-		writeResponseMessage(w, r, http.StatusForbidden, "", "Forbidden")
+		f.DebugVerbose(fmt.Sprintf("Person [%d] is not allowed to edit court", userID))
+		writeResponseMessage(w, r, http.StatusForbidden, "Forbidden")
 	}
 
 	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -74,15 +70,14 @@ func UpdateCourt(w http.ResponseWriter, r *http.Request) {
 	var request UpdateCourtRequest
 	err = json.Unmarshal(b, &request)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, "", err.Error())
+		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	str := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(str)
 	if err != nil {
-		f.DebugVerbose("Count not convert '" + str + "' into an int")
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", "Error")
+		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
 
@@ -108,5 +103,5 @@ func UpdateCourt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeResponseMessage(w, r, http.StatusOK, "", "ok")
+	writeResponseMessage(w, r, http.StatusOK, "ok")
 }

@@ -26,33 +26,47 @@ func TestListPeople(t *testing.T) {
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
-	logonCookie := GetLoginToken(t, db, model.GoodUserName, model.GoodPassword)
+	signonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
 
 	// ***************************************************************
 	// * Get a list of all the people
 	// ***************************************************************
-	allPeopleIDs, err := model.ListPeople(db, nil)
-	require.Nil(t, err, "err should be nothing")
+	//allPeople, err := model.FindPeople(db, "all")
+	//require.Nil(t, err, "err should be nothing")
 
 	// ***************************************************************
 	// * Testcases
 	// ***************************************************************
 
 	tests := []struct {
-		testName       string
-		setLogonCookie bool
-		logonCookie    *http.Cookie
-		query          model.Query
-		expectedStatus int
-		expectedResult []int
+		testName               string
+		setSignonCookie        bool
+		signonCookie           *http.Cookie
+		setAuthorizationHeader bool
+		accessToken            string
+		filter                 string
+		expectedStatus         int
+		expectedResult         []model.Person
 	}{
+		// {
+		// 	testName:               "Good request",
+		// 	setSignonCookie:        true,
+		// 	signonCookie:           signonCookie,
+		// 	setAuthorizationHeader: true,
+		// 	accessToken:            accessToken,
+		// 	filter:                 "players",
+		// 	expectedStatus:         http.StatusOK,
+		// 	expectedResult:         allPeople,
+		// },
 		{
-			testName:       "Good request",
-			setLogonCookie: true,
-			logonCookie:    logonCookie,
-			query:          map[string]model.Condition{"status": {Operation: "<>", Value: "suspended"}},
-			expectedStatus: http.StatusOK,
-			expectedResult: allPeopleIDs,
+			testName:               "Bad request",
+			setSignonCookie:        true,
+			signonCookie:           signonCookie,
+			setAuthorizationHeader: true,
+			accessToken:            accessToken,
+			filter:                 "junk",
+			expectedStatus:         http.StatusBadRequest,
+			expectedResult:         nil,
 		},
 	}
 
@@ -68,18 +82,19 @@ func TestListPeople(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Create a request
-			requestBody, err := json.Marshal(ListPeopleRequest{Query: test.query})
+			requestBody, err := json.Marshal(ListPeopleRequest{Filter: test.filter})
 			require.Nil(t, err, "err should be nothing")
 
-			requestString := string(requestBody)
-			t.Errorf("requestString: %s", requestString)
-
-			command := fmt.Sprintf("/users")
-			r, err := http.NewRequest("GET", contextPath+command, bytes.NewBuffer(requestBody))
+			command := "/people"
+			r, err := http.NewRequest("POST", contextPath+command, bytes.NewBuffer(requestBody))
 			require.Nil(t, err, "err should be nothing")
 
-			if test.setLogonCookie {
-				r.AddCookie(test.logonCookie)
+			if test.setSignonCookie {
+				r.AddCookie(test.signonCookie)
+			}
+
+			if test.setAuthorizationHeader {
+				r.Header.Set("Authorization", "Bearer "+test.accessToken)
 			}
 
 			// ---------------------------------------
@@ -102,16 +117,24 @@ func TestListPeople(t *testing.T) {
 				bytes, err := ioutil.ReadAll(w.Body)
 				require.Nil(t, err, "err should be nothing")
 
-				var response ListPeopleResponse
+				var response []model.Person
 				err = json.Unmarshal(bytes, &response)
 				require.Nil(t, err, "err should be nothing")
 
 				// Check the response body is what we expect.
-				if !model.EqualIntArray(response.People, test.expectedResult) {
-					t.Logf("actual:   %v", response.People)
-					t.Logf("expected: %v", test.expectedResult)
-					t.Errorf("Unexpected list of people")
-				}
+				// if !model.EqualIntArray(response.People, test.expectedResult) {
+				// 	t.Logf("actual:   %v", response.People)
+				// 	t.Logf("expected: %v", test.expectedResult)
+				// 	t.Errorf("Unexpected list of people")
+				// }
+			} else if w.Code == http.StatusBadRequest {
+				bytes, err := ioutil.ReadAll(w.Body)
+				require.Nil(t, err, "err should be nothing")
+
+				var response MessageResponse
+				err = json.Unmarshal(bytes, &response)
+				require.Nil(t, err, "err should be nothing")
+				fmt.Printf(response.Message)
 			}
 		})
 	}

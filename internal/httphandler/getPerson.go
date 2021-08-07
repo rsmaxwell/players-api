@@ -7,15 +7,14 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
 // GetPersonResponse structure
 type GetPersonResponse struct {
-	Message string              `json:"message"`
-	Person  model.LimitedPerson `json:"person"`
+	Message string       `json:"message"`
+	Person  model.Person `json:"person"`
 }
 
 var (
@@ -25,6 +24,12 @@ var (
 // GetPerson method
 func GetPerson(w http.ResponseWriter, r *http.Request) {
 	f := functionGetPerson
+	f.DebugAPI("")
+
+	if r.Method == http.MethodOptions {
+		writeResponseMessage(w, r, http.StatusOK, "ok")
+		return
+	}
 
 	_, err := checkAuthenticated(r)
 	if err != nil {
@@ -35,10 +40,7 @@ func GetPerson(w http.ResponseWriter, r *http.Request) {
 	str := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(str)
 	if err != nil {
-		message := "Could not convert '" + str + "' into an int"
-		f.Errorf(message)
-		err = codeerror.NewBadRequest(message)
-		writeResponseError(w, r, err)
+		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
 
@@ -47,12 +49,13 @@ func GetPerson(w http.ResponseWriter, r *http.Request) {
 	object := r.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
-		err = fmt.Errorf("unexpected context type")
-		writeResponseError(w, r, err)
+		message := "unexpected context type"
+		f.Dump(message)
+		writeResponseMessage(w, r, http.StatusInternalServerError, message)
 		return
 	}
 
-	var p model.Person
+	var p model.FullPerson
 	p.ID = id
 	err = p.LoadPerson(db)
 	if err != nil {
@@ -60,7 +63,7 @@ func GetPerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeResponseObject(w, r, http.StatusOK, "", GetPersonResponse{
+	writeResponseObject(w, r, http.StatusOK, GetPersonResponse{
 		Message: "ok",
 		Person:  *p.ToLimited(),
 	})

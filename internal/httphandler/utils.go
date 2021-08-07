@@ -4,12 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 
+	"github.com/rsmaxwell/players-api/internal/basic"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
@@ -17,7 +20,7 @@ import (
 )
 
 // messageResponse structure
-type messageResponse struct {
+type MessageResponse struct {
 	Message string `json:"message"`
 }
 
@@ -32,30 +35,34 @@ const (
 )
 
 var (
+	key   = []byte("<SESSION_SECRET_KEY>")
+	store = sessions.NewCookieStore(key)
+)
+
+var (
 	pkg = debug.NewPackage("httphandler")
 
 	functionMiddleware         = debug.NewFunction(pkg, "Middleware")
-	functionAuthenticate       = debug.NewFunction(pkg, "Authenticate")
-	functionWriteResponse      = debug.NewFunction(pkg, "writeResponse")
+	functionSignin             = debug.NewFunction(pkg, "Signin")
 	functionCheckAuthenticated = debug.NewFunction(pkg, "checkAuthenticated")
 )
 
 // writeResponseMessage method
-func writeResponseMessage(w http.ResponseWriter, r *http.Request, statusCode int, qualifier string, message string) {
-	writeResponse(w, r, statusCode, qualifier)
-	json.NewEncoder(w).Encode(messageResponse{
+func writeResponseMessage(w http.ResponseWriter, r *http.Request, statusCode int, message string) {
+	writeResponse(w, r, statusCode)
+	json.NewEncoder(w).Encode(MessageResponse{
 		Message: message,
 	})
 }
 
 // writeResponseObject method
-func writeResponseObject(w http.ResponseWriter, r *http.Request, statusCode int, qualifier string, object interface{}) {
-	writeResponse(w, r, statusCode, qualifier)
+func writeResponseObject(w http.ResponseWriter, r *http.Request, statusCode int, object interface{}) {
+	writeResponse(w, r, statusCode)
 	json.NewEncoder(w).Encode(object)
 }
 
 // writeResponse method
-func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int, qualifier string) {
+func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int) {
 
 	model.MetricsData.StatusCodes[statusCode]++
 
@@ -72,7 +79,7 @@ func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int, quali
 	w.Header().Add("Access-Control-Allow-Credentials", "true")
 
 	if statusCode == http.StatusUnauthorized {
-		w.Header().Add("WWW-Authenticate", "Basic realm=\"players-api: "+qualifier+"\"")
+		w.Header().Add("WWW-Authenticate", "Basic realm=players-api")
 	}
 
 	w.WriteHeader(statusCode)
@@ -82,37 +89,38 @@ func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int, quali
 func writeResponseError(w http.ResponseWriter, r *http.Request, err error) {
 	if err != nil {
 		if serr, ok := err.(*codeerror.CodeError); ok {
-			writeResponseMessage(w, r, serr.Code(), serr.Qualifier(), serr.Error())
+			writeResponseMessage(w, r, serr.Code(), serr.Error())
 			return
 		}
 
-		writeResponseMessage(w, r, http.StatusInternalServerError, "", "error")
+		writeResponseMessage(w, r, http.StatusInternalServerError, "error")
 		return
 	}
 }
 
 // checkAuthenticated method
-func checkAuthenticated(r *http.Request) (*sessions.Session, error) {
+func checkAuthenticated(r *http.Request) (int, error) {
 	f := functionCheckAuthenticated
 
-	sess, err := store.Get(r, "players-api")
+	authorizationHeader := r.Header.Get("Authorization")
+	if authorizationHeader == "" {
+		f.DebugError("missing Authorization header")
+		return 0, fmt.Errorf("not authorized")
+	}
+
+	splitToken := strings.Split(authorizationHeader, "Bearer ")
+	if splitToken == nil {
+		return 0, fmt.Errorf("not authorized")
+	}
+
+	tokenString := splitToken[1]
+
+	claims, err := basic.ValidateToken(tokenString)
 	if err != nil {
-		f.Dump("could not get the 'players-api' cookie")
-		return nil, codeerror.NewInternalServerError(err.Error())
-	}
-	if sess.IsNew {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
+		return 0, err
 	}
 
-	auth, ok := sess.Values["authenticated"].(bool)
-	if !ok {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
-	}
-	if !auth {
-		return nil, codeerror.NewUnauthorized("Not Authorized")
-	}
-
-	return sess, nil
+	return claims.ID, nil
 }
 
 // SetupHandlers Handlers for REST API routes
@@ -120,22 +128,29 @@ func SetupHandlers(w *mux.Router) {
 
 	s := w.PathPrefix("/players-api").Subrouter()
 
-	s.HandleFunc("/users/register", Register).Methods(http.MethodOptions, http.MethodPost)
-	s.HandleFunc("/users/authenticate", Authenticate).Methods(http.MethodOptions, http.MethodPost)
-	s.HandleFunc("/users", ListPeople).Methods(http.MethodGet)
-	s.HandleFunc("/users/{id}", DeletePerson).Methods(http.MethodDelete)
-	s.HandleFunc("/users/logout", Logout).Methods(http.MethodGet)
-	s.HandleFunc("/users/{id}", GetPerson).Methods(http.MethodGet)
-	s.HandleFunc("/users/{id}", UpdatePerson).Methods(http.MethodPut)
-	s.HandleFunc("/users/toplaying/{id1}/{id2}", MakePlaying).Methods(http.MethodPut)
-	s.HandleFunc("/users/towaiting/{id}", MakeWaiting).Methods(http.MethodPut)
-	s.HandleFunc("/users/toinactive/{id}", MakeInactive).Methods(http.MethodPut)
+	s.HandleFunc("/register", Register).Methods(http.MethodOptions, http.MethodPost)
+	s.HandleFunc("/signin", Signin).Methods(http.MethodPost, http.MethodOptions)
+	s.HandleFunc("/signout", Signout).Methods(http.MethodGet)
+	s.HandleFunc("/refresh", RefreshTokens).Methods(http.MethodGet)
 
-	s.HandleFunc("/court", ListCourts).Methods(http.MethodGet)
-	s.HandleFunc("/court/{id}", GetCourt).Methods(http.MethodGet)
-	s.HandleFunc("/court", CreateCourt).Methods(http.MethodPost)
-	s.HandleFunc("/court/{id}", UpdateCourt).Methods(http.MethodPut)
-	s.HandleFunc("/court/{id}", DeleteCourt).Methods(http.MethodDelete)
+	s.HandleFunc("/people", ListPeople).Methods(http.MethodPost, http.MethodOptions)
+	s.HandleFunc("/people/{id}", DeletePerson).Methods(http.MethodDelete)
+	s.HandleFunc("/people/{id}", GetPerson).Methods(http.MethodGet, http.MethodOptions)
+	s.HandleFunc("/people/{id}", UpdatePerson).Methods(http.MethodPut)
+
+	s.HandleFunc("/people/toplayer/{id1}", MakePersonPlayer).Methods(http.MethodPut)
+	s.HandleFunc("/people/toinactive/{id}", MakePersonInactive).Methods(http.MethodPut)
+
+	s.HandleFunc("/people/toplaying/{id1}/{id2}/{id3}", MakePlayerPlay).Methods(http.MethodPut)
+	s.HandleFunc("/people/towaiting/{id}", MakePlayerWait).Methods(http.MethodPut)
+
+	s.HandleFunc("/courts", ListCourts).Methods(http.MethodGet, http.MethodOptions)
+	s.HandleFunc("/courts/{id}", GetCourt).Methods(http.MethodGet, http.MethodOptions)
+	s.HandleFunc("/courts", CreateCourt).Methods(http.MethodPost)
+	s.HandleFunc("/courts/{id}", UpdateCourt).Methods(http.MethodPut)
+	s.HandleFunc("/courts/{id}", DeleteCourt).Methods(http.MethodDelete)
+	s.HandleFunc("/courts/fill/{id}", FillCourt).Methods(http.MethodPut, http.MethodOptions)
+	s.HandleFunc("/courts/clear/{id}", ClearCourt).Methods(http.MethodPut, http.MethodOptions)
 
 	s.HandleFunc("/metrics", GetMetrics).Methods(http.MethodGet)
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -35,6 +36,8 @@ func init() {
 // http://go-database-sql.org/retrieving.html
 func main() {
 	f := functionMain
+	ctx := context.Background()
+
 	f.Infof("Players backup: Version: %s", basic.Version())
 
 	// Read configuration and connect to the database
@@ -47,7 +50,7 @@ func main() {
 
 	var myBackup backup.Backup
 
-	err = getPeople(db, &myBackup)
+	err = getPeople(ctx, db, &myBackup)
 	if err != nil {
 		message := "Could not get the people"
 		f.Errorf(message)
@@ -55,7 +58,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = getCourts(db, &myBackup)
+	err = getCourts(ctx, db, &myBackup)
 	if err != nil {
 		message := "Could not get the courts"
 		f.Errorf(message)
@@ -63,7 +66,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = getPlays(db, &myBackup)
+	err = getPlays(ctx, db, &myBackup)
 	if err != nil {
 		message := "Could not get the plays"
 		f.Errorf(message)
@@ -71,7 +74,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = getWaiters(db, &myBackup)
+	err = getWaiters(ctx, db, &myBackup)
 	if err != nil {
 		message := "Could not get the waiters"
 		f.Errorf(message)
@@ -100,7 +103,7 @@ func main() {
 	fmt.Printf("Successfully populated the database: %s\n", c.Database.DatabaseName)
 }
 
-func getPeople(db *sql.DB, myBackup *backup.Backup) error {
+func getPeople(ctx context.Context, db *sql.DB, myBackup *backup.Backup) error {
 	f := functionGetPeople
 
 	// Query all the people in the person table
@@ -169,7 +172,7 @@ func getPeople(db *sql.DB, myBackup *backup.Backup) error {
 	return nil
 }
 
-func getCourts(db *sql.DB, myBackup *backup.Backup) error {
+func getCourts(ctx context.Context, db *sql.DB, myBackup *backup.Backup) error {
 	f := functionGetCourts
 
 	// Query all the courts in the courts table
@@ -214,7 +217,7 @@ func getCourts(db *sql.DB, myBackup *backup.Backup) error {
 	return nil
 }
 
-func getPlays(db *sql.DB, myBackup *backup.Backup) error {
+func getPlays(ctx context.Context, db *sql.DB, myBackup *backup.Backup) error {
 	f := functionGetPlays
 
 	// Query all the plays in the playing table
@@ -261,7 +264,7 @@ func getPlays(db *sql.DB, myBackup *backup.Backup) error {
 	return nil
 }
 
-func getWaiters(db *sql.DB, myBackup *backup.Backup) error {
+func getWaiters(ctx context.Context, db *sql.DB, myBackup *backup.Backup) error {
 	f := functionGetWaiters
 
 	// Query all the waiters in the waiting table

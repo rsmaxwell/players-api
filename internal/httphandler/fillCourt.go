@@ -22,41 +22,43 @@ type FillCourtRequest struct {
 }
 
 // FillCourt method
-func FillCourt(w http.ResponseWriter, r *http.Request) {
+func FillCourt(writer http.ResponseWriter, request *http.Request) {
 	f := functionFillCourt
-	f.DebugAPI("")
+	ctx := request.Context()
 
-	if r.Method == http.MethodOptions {
-		writeResponseMessage(w, r, http.StatusOK, "ok")
-		return
-	}
-
-	_, err := checkAuthenticated(r)
+	_, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	str := mux.Vars(r)["id"]
+	str := mux.Vars(request)["id"]
 	courtID, err := strconv.Atoi(str)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
+		message := fmt.Sprintf("the key [%s] is not an int", str)
+		d := Dump(f, request, message)
+		d.AddString("id", str)
+		writeResponseMessage(writer, request, http.StatusBadRequest, message)
 		return
 	}
-	f.DebugVerbose("courtID: %d", courtID)
 
-	object := r.Context().Value(ContextDatabaseKey)
+	DebugVerbose(f, request, "courtID: %d", courtID)
+
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
-	positions, err := model.FillCourt(db, courtID)
+	positions, err := model.FillCourtTx(ctx, db, courtID)
 	if err != nil {
-		writeResponseError(w, r, err)
+		message := "problem filling court"
+		d := Dump(f, request, message)
+		d.AddString("courtID", fmt.Sprintf("%d", courtID))
+		writeResponseError(writer, request, err)
 		return
 	}
 
@@ -67,6 +69,5 @@ func FillCourt(w http.ResponseWriter, r *http.Request) {
 		Message:   "ok",
 		Positions: positions,
 	}
-	f.DebugInfo(fmt.Sprintf("Response: %v", response))
-	writeResponseObject(w, r, http.StatusOK, response)
+	writeResponseObject(writer, request, http.StatusOK, response)
 }

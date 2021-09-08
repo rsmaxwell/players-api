@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -22,38 +23,38 @@ type MakeInactiveRequest struct {
 }
 
 // MakePersonInactive method
-func MakePersonInactive(w http.ResponseWriter, r *http.Request) {
+func MakePersonInactive(writer http.ResponseWriter, request *http.Request) {
 	f := functionMakePersonInactive
-	f.DebugAPI("")
 
-	_, err := checkAuthenticated(r)
+	_, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	str := mux.Vars(r)["id"]
+	str := mux.Vars(request)["id"]
 	personID, err := strconv.Atoi(str)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
+		writeResponseMessage(writer, request, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
-	f.DebugVerbose("ID: %d", personID)
 
-	object := r.Context().Value(ContextDatabaseKey)
+	DebugVerbose(f, request, "ID: %d", personID)
+
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
-	err = model.MakePersonInactive(db, personID)
+	err = model.MakePersonInactive(context.Background(), db, personID)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	writeResponseMessage(w, r, http.StatusOK, "ok")
+	writeResponseMessage(writer, request, http.StatusOK, "ok")
 }

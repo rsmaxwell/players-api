@@ -21,11 +21,13 @@ func TestMakePersonPlayer(t *testing.T) {
 	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
+	ctx := context.Background()
+
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
 	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
-	anotherPerson, _ := model.FindPersonByEmail(db, model.AnotherEmail)
+	anotherPerson, _ := model.FindPersonByEmail(ctx, db, model.AnotherEmail)
 
 	// ***************************************************************
 	// * Testcases

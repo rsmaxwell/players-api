@@ -21,11 +21,13 @@ func TestMakePlayerPlay(t *testing.T) {
 	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
+	ctx := context.Background()
+
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
 	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
-	anotherPerson, _ := model.FindPersonByEmail(db, model.AnotherEmail)
+	anotherPerson, _ := model.FindPersonByEmail(ctx, db, model.AnotherEmail)
 	goodCourt := GetFirstCourt(t, db)
 
 	// ***************************************************************
@@ -117,11 +119,11 @@ func TestMakePlayerPlay(t *testing.T) {
 
 			if w.Code == http.StatusOK {
 				// Check the person is playing
-				listOfPlayers, err := model.ListPlayersForPerson(db, test.personID)
+				listOfPlayers, err := model.ListPlayersForPerson(ctx, db, test.personID)
 				require.Nil(t, err, "err should be nothing")
 				require.Equal(t, 1, len(listOfPlayers), "Unexpected number of players for person: %d", len(listOfPlayers))
 
-				listOfWaiters, err := model.ListWaitersForPerson(db, test.personID)
+				listOfWaiters, err := model.ListWaitersForPerson(ctx, db, test.personID)
 				require.Nil(t, err, "err should be nothing")
 				require.Equal(t, 0, len(listOfWaiters), "person is still waiting")
 			}

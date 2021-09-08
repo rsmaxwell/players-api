@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"testing"
 
 	_ "github.com/jackc/pgx/stdlib"
@@ -11,7 +12,9 @@ func TestPeople(t *testing.T) {
 	teardown, db, _ := Setup(t)
 	defer teardown(t)
 
-	err := DeleteAllRecords(db)
+	ctx := context.Background()
+
+	err := DeleteAllRecords(ctx, db)
 	if err != nil {
 		t.Log("Could not setup the model")
 		t.FailNow()
@@ -23,7 +26,7 @@ func TestPeople(t *testing.T) {
 		t.FailNow()
 	}
 
-	listOfCourts, err := ListCourts(db)
+	listOfCourts, err := ListCourtsTx(db)
 	if err != nil {
 		t.Log("Could not list the courts")
 		t.FailNow()
@@ -40,7 +43,7 @@ func TestPeople(t *testing.T) {
 	// 	t.FailNow()
 	// }
 
-	listOfWaiters, err := ListWaiters(db)
+	listOfWaiters, err := ListWaiters(ctx, db)
 	if err != nil {
 		t.Log("Could not get the first waiter")
 		t.FailNow()
@@ -51,25 +54,25 @@ func TestPeople(t *testing.T) {
 	}
 	var p FullPerson
 	p.ID = listOfWaiters[0].Person
-	err = p.LoadPerson(db)
+	err = p.LoadPerson(ctx, db)
 	if err != nil {
 		t.Log("Could not get the first waiter")
 		t.FailNow()
 	}
 
-	err = RemoveWaiter(db, p.ID)
+	err = RemoveWaiter(ctx, db, p.ID)
 	if err != nil {
 		t.Log("Could not remove waiter")
 		t.FailNow()
 	}
 
-	err = AddWaiter(db, p.ID)
+	err = AddWaiter(ctx, db, p.ID)
 	if err != nil {
 		t.Log("Could not make a person into a player")
 		t.FailNow()
 	}
 
-	err = MakePersonInactive(db, p.ID)
+	err = MakePersonInactive(ctx, db, p.ID)
 	if err != nil {
 		t.Log("Could not make a person inactive")
 		t.FailNow()
@@ -78,7 +81,7 @@ func TestPeople(t *testing.T) {
 	p.FirstName = "smersh"
 	p.LastName = "Bomb"
 
-	err = p.UpdatePerson(db)
+	err = p.UpdatePerson(ctx, db)
 	if err != nil {
 		t.Log("Could not update person")
 		t.FailNow()
@@ -86,7 +89,7 @@ func TestPeople(t *testing.T) {
 
 	var p2 FullPerson
 	p2.ID = p.ID
-	err = p2.LoadPerson(db)
+	err = p2.LoadPerson(ctx, db)
 	if err != nil {
 		t.Log("Could not load person")
 		t.FailNow()
@@ -95,7 +98,7 @@ func TestPeople(t *testing.T) {
 	p2.FirstName = "xxxxx"
 	p2.Email = "fabdelkader.browx@balaways.com"
 	p2.Phone = "+44 012 098765"
-	err = p2.SavePerson(db)
+	err = p2.SavePerson(ctx, db)
 	if err != nil {
 		message := "Could not save person"
 		t.Log(message)
@@ -105,24 +108,24 @@ func TestPeople(t *testing.T) {
 
 	c.Name = "AAAAA"
 
-	err = c.UpdateCourt(db)
+	err = c.UpdateCourt(ctx, db)
 	if err != nil {
 		t.Log("Could not update court")
 		t.FailNow()
 	}
 
-	err = c.DeleteCourt(db)
+	err = c.DeleteCourtTx(db)
 	if err != nil {
 		t.Log("Could not delete court")
 		t.FailNow()
 	}
 
-	err = p.DeletePerson(db)
+	err = p.DeletePersonTx(db)
 	if err != nil {
 		t.Log("Could not delete person")
 		t.FailNow()
 	}
-	err = p2.DeletePerson(db)
+	err = p2.DeletePersonTx(db)
 	if err != nil {
 		t.Log("Could not delete person")
 		t.FailNow()

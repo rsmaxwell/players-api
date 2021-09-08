@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/gorilla/mux"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
@@ -26,151 +24,90 @@ var (
 )
 
 // UpdatePerson method
-func UpdatePerson(w http.ResponseWriter, r *http.Request) {
+func UpdatePerson(writer http.ResponseWriter, request *http.Request) {
 	f := functionUpdatePerson
-	f.DebugAPI("")
+	ctx := request.Context()
 
-	userID, err := checkAuthenticated(r)
+	userID, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		message := "Not Authenticated"
+		Dump(f, request, message)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	object := r.Context().Value(ContextDatabaseKey)
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
+	}
+
+	limitedReader := &io.LimitedReader{R: request.Body, N: 20 * 1024}
+	b, err := ioutil.ReadAll(limitedReader)
+	if err != nil {
+		message := "Problem reading body"
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	DebugRequestBody(f, request, b)
+
+	var updatePersonRequest UpdatePersonRequest
+	err = json.Unmarshal(b, &updatePersonRequest)
+	if err != nil {
+		message := "Problem unmarshalling body"
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	str := mux.Vars(request)["id"]
+	personID, err := strconv.Atoi(str)
+	if err != nil {
+		message := fmt.Sprintf("the key [%s] is not an int", str)
+		DebugInfo(f, request, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusBadRequest, message)
 	}
 
 	user := model.FullPerson{ID: userID}
-	err = user.LoadPerson(db)
+	err = user.LoadPerson(ctx, db)
 	if err != nil {
 		message := fmt.Sprintf("Could not load person [%d]", userID)
-		f.DebugVerbose(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
-		return
+		DebugVerbose(f, request, message)
+		DumpError(f, request, err, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 	}
 
-	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
-	b, err := ioutil.ReadAll(limitedReader)
-	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	f.DebugRequestBody(b)
-
-	var request UpdatePersonRequest
-	err = json.Unmarshal(b, &request)
-	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	str := mux.Vars(r)["id"]
-	id, err := strconv.Atoi(str)
-	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
-		return
-	}
-
-	f.DebugVerbose("ID: %d", id)
-	f.DebugVerbose("Person: %v", request.Person)
-
-	if userID == id {
+	if userID == personID {
 		err = user.CanEditSelf()
 		if err != nil {
-			f.DebugVerbose("Not allowed to edit self")
-			writeResponseMessage(w, r, http.StatusForbidden, "Forbidden")
-			return
+			message := "Forbidden: Not allowed to edit self"
+			DebugVerbose(f, request, message)
+			DumpError(f, request, err, message)
+			writeResponseMessage(writer, request, http.StatusForbidden, "Forbidden")
 		}
 	} else {
 		err = user.CanEditOtherPeople()
 		if err != nil {
-			f.DebugVerbose("Not allowed to edit other people")
-			writeResponseMessage(w, r, http.StatusForbidden, "Forbidden")
-			return
+			message := "Forbidden: Not allowed to edit other people"
+			DebugVerbose(f, request, message)
+			DumpError(f, request, err, message)
+			writeResponseMessage(writer, request, http.StatusForbidden, "Forbidden")
 		}
 	}
 
-	var p model.FullPerson
-	p.ID = id
-	err = p.LoadPerson(db)
+	err = model.UpdatePersonFieldsTx(db, personID, updatePersonRequest.Person)
 	if err != nil {
-		writeResponseError(w, r, err)
-		return
+		message := fmt.Sprintf("problem updating person fields: userID: %d", userID)
+		d := DumpError(f, request, err, message)
+		d.AddObject("request.Person", updatePersonRequest.Person)
+		writeResponseError(writer, request, err)
 	}
 
-	if val, ok := request.Person["firstname"]; ok {
-		p.FirstName, ok = val.(string)
-		if !ok {
-			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "firstName", val))
-			return
-		}
-	}
-
-	if val, ok := request.Person["lastname"]; ok {
-		p.LastName, ok = val.(string)
-		if !ok {
-			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "lastName", val))
-			return
-		}
-	}
-
-	if val, ok := request.Person["knownas"]; ok {
-		p.Knownas, ok = val.(string)
-		if !ok {
-			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "knownas", val))
-			return
-		}
-	}
-
-	if val, ok := request.Person["email"]; ok {
-		p.Email, ok = val.(string)
-		if !ok {
-			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "email", val))
-			return
-		}
-	}
-
-	if val, ok := request.Person["phone"]; ok {
-		p.Phone, ok = val.(string)
-		if !ok {
-			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "phone", val))
-			return
-		}
-	}
-
-	if val, ok := request.Person["password"]; ok {
-		password, ok := val.(string)
-		if !ok {
-			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "password", val))
-			return
-		}
-
-		p.Hash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if err != nil {
-			writeResponseError(w, r, err)
-			return
-		}
-	}
-
-	if val, ok := request.Person["status"]; ok {
-		p.Status, ok = val.(string)
-		if !ok {
-			writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected type for [%s]: %v", "status", val))
-			return
-		}
-	}
-
-	err = p.UpdatePerson(db)
-	if err != nil {
-		writeResponseError(w, r, err)
-		return
-	}
-
-	writeResponseMessage(w, r, http.StatusOK, "ok")
+	writeResponseMessage(writer, request, http.StatusOK, "ok")
 }

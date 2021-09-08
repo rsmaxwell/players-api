@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -25,83 +26,66 @@ var (
 )
 
 // UpdateCourt method
-func UpdateCourt(w http.ResponseWriter, r *http.Request) {
+func UpdateCourt(writer http.ResponseWriter, request *http.Request) {
 	f := functionUpdateCourt
-	f.DebugAPI("")
 
-	userID, err := checkAuthenticated(r)
+	userID, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	object := r.Context().Value(ContextDatabaseKey)
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
 	user := model.FullPerson{ID: userID}
-	err = user.LoadPerson(db)
+	err = user.LoadPerson(context.Background(), db)
 	if err != nil {
 		message := fmt.Sprintf("Could not load person [%d]", userID)
-		f.DumpError(err, message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		DumpError(f, request, err, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 	err = user.CanEditCourt()
 	if err != nil {
-		f.DebugVerbose(fmt.Sprintf("Person [%d] is not allowed to edit court", userID))
-		writeResponseMessage(w, r, http.StatusForbidden, "Forbidden")
+		DebugVerbose(f, request, fmt.Sprintf("Person [%d] is not allowed to edit court", userID))
+		writeResponseMessage(writer, request, http.StatusForbidden, "Forbidden")
 	}
 
-	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: request.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
+		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	f.DebugRequestBody(b)
+	DebugRequestBody(f, request, b)
 
-	var request UpdateCourtRequest
-	err = json.Unmarshal(b, &request)
+	var updateCourtRequest UpdateCourtRequest
+	err = json.Unmarshal(b, &updateCourtRequest)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
+		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	str := mux.Vars(r)["id"]
-	id, err := strconv.Atoi(str)
+	str := mux.Vars(request)["id"]
+	courtID, err := strconv.Atoi(str)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
+		writeResponseMessage(writer, request, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
 
-	c := model.Court{ID: id}
-	err = c.LoadCourt(db)
+	err = model.UpdateCourtFieldsTx(db, courtID, updateCourtRequest.Court)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	if val, ok := request.Court["name"]; ok {
-		c.Name, ok = val.(string)
-		if !ok {
-			err = fmt.Errorf("unexpected type for 'name'")
-			writeResponseError(w, r, err)
-			return
-		}
-	}
-
-	err = c.UpdateCourt(db)
-	if err != nil {
-		writeResponseError(w, r, err)
-		return
-	}
-
-	writeResponseMessage(w, r, http.StatusOK, "ok")
+	writeResponseMessage(writer, request, http.StatusOK, "ok")
 }

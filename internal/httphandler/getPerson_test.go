@@ -22,11 +22,13 @@ func TestGetPerson(t *testing.T) {
 	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
+	ctx := context.Background()
+
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
 	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
-	goodPerson, _ := model.FindPersonByEmail(db, model.GoodEmail)
+	goodPerson, _ := model.FindPersonByEmail(ctx, db, model.GoodEmail)
 
 	// ***************************************************************
 	// * Testcases
@@ -61,7 +63,6 @@ func TestGetPerson(t *testing.T) {
 
 			// Set up the handlers on the router
 			router := mux.NewRouter()
-			router2 := Middleware(router, db)
 			SetupHandlers(router)
 			w := httptest.NewRecorder()
 
@@ -90,7 +91,7 @@ func TestGetPerson(t *testing.T) {
 			// ---------------------------------------
 
 			// Serve the request
-			router2.ServeHTTP(w, r3)
+			router.ServeHTTP(w, r3)
 			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the response

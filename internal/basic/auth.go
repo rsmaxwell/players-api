@@ -17,12 +17,12 @@ type MyJwtClaims struct {
 }
 
 // GenerateToken generates a jwt token
-func GenerateToken(id int, expiresAt time.Duration) (string, error) {
+func GenerateToken(id int, expiresAfter time.Duration) (string, error) {
 
 	claims := MyJwtClaims{
 		ID: id,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Local().Add(expiresAt).Unix(),
+			ExpiresAt: time.Now().Add(expiresAfter).Unix(),
 			Issuer:    "test",
 		},
 	}
@@ -47,6 +47,11 @@ func ValidateToken(signedToken string) (*MyJwtClaims, error) {
 	claims, ok := token.Claims.(*MyJwtClaims)
 	if !ok {
 		err = errors.New("couldn't parse jwt claims")
+		return nil, err
+	}
+
+	if claims.ExpiresAt < time.Now().UTC().Unix() {
+		err = errors.New("jwt is expired")
 		return nil, err
 	}
 

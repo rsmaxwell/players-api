@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 
@@ -17,20 +18,22 @@ func TestPeopleBasic(t *testing.T) {
 		FirstName: "James2", LastName: "Bond2", Knownas: "038", Email: "018@mi6.gov.uk", Phone: "+44 1234 222222", Password: "TopSecret",
 	}
 
+	ctx := context.Background()
+
 	p, err := r.ToPerson()
 	if err != nil {
 		t.Log(err.Error())
 		t.FailNow()
 	}
 
-	err = p.SavePerson(db)
+	err = p.SavePerson(ctx, db)
 	if err != nil {
 		t.Log("Could not create new person")
 		t.Logf("%T   %s", err, err.Error())
 		t.FailNow()
 	}
 
-	p.CheckPerson(t, db, r.FirstName, r.LastName, r.Knownas, r.Email, r.Phone, r.Password, StatusSuspended)
+	p.CheckPerson(ctx, t, db, r.FirstName, r.LastName, r.Knownas, r.Email, r.Phone, r.Password, StatusSuspended)
 
 	FirstName2 := "Smersh11"
 	LastName2 := "Bomb11"
@@ -53,17 +56,17 @@ func TestPeopleBasic(t *testing.T) {
 	p.Hash = hash
 	p.Status = StatusPlayer
 
-	err = p.UpdatePerson(db)
+	err = p.UpdatePerson(ctx, db)
 	if err != nil {
 		t.Log("Could not update person")
 		t.FailNow()
 	}
 
-	p.CheckPerson(t, db, FirstName2, LastName2, DisplayName2, Email2, Phone2, Password2, StatusPlayer)
+	p.CheckPerson(ctx, t, db, FirstName2, LastName2, DisplayName2, Email2, Phone2, Password2, StatusPlayer)
 
 	var p2 FullPerson
 	p2.ID = p.ID
-	err = p2.LoadPerson(db)
+	err = p2.LoadPerson(ctx, db)
 	if err != nil {
 		t.Log("Could not load person")
 		t.FailNow()
@@ -90,29 +93,29 @@ func TestPeopleBasic(t *testing.T) {
 	p.Hash = hash
 	p.Status = StatusPlayer
 
-	err = p.SavePerson(db)
+	err = p.SavePerson(ctx, db)
 	if err != nil {
 		t.Log("Could not save person")
 		t.FailNow()
 	}
 
-	p.CheckPerson(t, db, FirstName3, LastName3, Knownas3, Email3, Phone3, Password3, StatusPlayer)
+	p.CheckPerson(ctx, t, db, FirstName3, LastName3, Knownas3, Email3, Phone3, Password3, StatusPlayer)
 
-	err = p.DeletePerson(db)
+	err = p.DeletePersonTx(db)
 	if err != nil {
 		t.Log("Could not delete person")
 		t.FailNow()
 	}
-	err = p2.DeletePerson(db)
+	err = p2.DeletePersonTx(db)
 	if err != nil {
 		t.Log("Could not delete person")
 		t.FailNow()
 	}
 }
 
-func (p *FullPerson) CheckPerson(t *testing.T, db *sql.DB, firstname string, lastname string, displayname string, email string, phone string, password string, status string) {
+func (p *FullPerson) CheckPerson(ctx context.Context, t *testing.T, db *sql.DB, firstname string, lastname string, displayname string, email string, phone string, password string, status string) {
 
-	err := p.LoadPerson(db)
+	err := p.LoadPerson(ctx, db)
 	if err != nil {
 		t.Log(err.Error())
 		t.FailNow()

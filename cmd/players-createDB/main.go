@@ -23,10 +23,11 @@ func init() {
 // http://go-database-sql.org/retrieving.html
 func main() {
 	f := functionMain
+
 	f.Infof("Players CreateDB: Version: %s", basic.Version())
 
 	// Read configuration and connect to the database
-	db, c, err := config.SetupBasic()
+	db, c, err := config.Setup()
 	if err != nil {
 		f.Errorf("Error setting up")
 		os.Exit(1)

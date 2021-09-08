@@ -56,15 +56,15 @@ const (
 )
 
 var (
-	functionUpdatePerson        = debug.NewFunction(pkg, "UpdatePerson")
-	functionSavePerson          = debug.NewFunction(pkg, "SavePerson")
-	functionFindPersonByEmail   = debug.NewFunction(pkg, "FindPersonByEmail")
-	functionListPeople          = debug.NewFunction(pkg, "ListPeople")
-	functionLoadPerson          = debug.NewFunction(pkg, "LoadPerson")
-	functionDeletePerson        = debug.NewFunction(pkg, "DeletePerson")
-	functionDeletePersonContext = debug.NewFunction(pkg, "DeletePersonContext")
-	functionAuthenticate        = debug.NewFunction(pkg, "Authenticate")
-	functionCheckPassword       = debug.NewFunction(pkg, "CheckPassword")
+	functionUpdatePerson      = debug.NewFunction(pkg, "UpdatePerson")
+	functionSavePerson        = debug.NewFunction(pkg, "SavePerson")
+	functionFindPersonByEmail = debug.NewFunction(pkg, "FindPersonByEmail")
+	functionListPeople        = debug.NewFunction(pkg, "ListPeople")
+	functionLoadPerson        = debug.NewFunction(pkg, "LoadPerson")
+	functionDeletePersonTx    = debug.NewFunction(pkg, "DeletePersonTx")
+	functionDeletePerson      = debug.NewFunction(pkg, "DeletePerson")
+	functionAuthenticate      = debug.NewFunction(pkg, "Authenticate")
+	functionCheckPassword     = debug.NewFunction(pkg, "CheckPassword")
 )
 
 const (
@@ -105,7 +105,7 @@ func NewPerson(firstname string, lastname string, knownas string, email string, 
 }
 
 // SavePerson writes a new Person to disk and returns the generated id
-func (p *FullPerson) SavePerson(db *sql.DB) error {
+func (p *FullPerson) SavePerson(ctx context.Context, db *sql.DB) error {
 	f := functionSavePerson
 
 	fields := "firstname, lastname, knownas, email, phone, hash, status"
@@ -122,7 +122,6 @@ func (p *FullPerson) SavePerson(db *sql.DB) error {
 		}
 
 		message := "Could not insert into " + PersonTable
-		f.Errorf(message)
 		d := f.DumpSQLError(err, message, sqlStatement)
 		p.Dump(d)
 		return err
@@ -131,12 +130,7 @@ func (p *FullPerson) SavePerson(db *sql.DB) error {
 	return nil
 }
 
-// UpdatePerson method
-func (p *FullPerson) UpdatePerson(db *sql.DB) error {
-	return p.UpdatePersonContext(db, context.Background())
-}
-
-func (p *FullPerson) UpdatePersonContext(db *sql.DB, ctx context.Context) error {
+func (p *FullPerson) UpdatePerson(ctx context.Context, db *sql.DB) error {
 	f := functionUpdatePerson
 
 	fields := "firstname=$1, lastname=$2, knownas=$3, email=$4, phone=$5, hash=$6, status=$7"
@@ -144,7 +138,6 @@ func (p *FullPerson) UpdatePersonContext(db *sql.DB, ctx context.Context) error 
 	_, err := db.ExecContext(ctx, sqlStatement, p.FirstName, p.LastName, p.Knownas, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status)
 	if err != nil {
 		message := "Could not update person"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return err
 	}
@@ -153,11 +146,7 @@ func (p *FullPerson) UpdatePersonContext(db *sql.DB, ctx context.Context) error 
 }
 
 // LoadPerson returns the Person with the given ID
-func (p *FullPerson) LoadPerson(db *sql.DB) error {
-	return p.LoadPersonContext(db, context.Background())
-}
-
-func (p *FullPerson) LoadPersonContext(db *sql.DB, ctx context.Context) error {
+func (p *FullPerson) LoadPerson(ctx context.Context, db *sql.DB) error {
 	f := functionLoadPerson
 
 	// Query the person
@@ -166,7 +155,6 @@ func (p *FullPerson) LoadPersonContext(db *sql.DB, ctx context.Context) error {
 	rows, err := db.QueryContext(ctx, sqlStatement, p.ID)
 	if err != nil {
 		message := "Could not select all people"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return err
 	}
@@ -180,7 +168,6 @@ func (p *FullPerson) LoadPersonContext(db *sql.DB, ctx context.Context) error {
 		err := rows.Scan(&np.FirstName, &np.LastName, &np.Knownas, &np.Email, &np.Phone, &np.Hash, &np.Status)
 		if err != nil {
 			message := "Could not scan the person"
-			f.Errorf(message)
 			f.DumpError(err, message)
 			return err
 		}
@@ -209,7 +196,6 @@ func (p *FullPerson) LoadPersonContext(db *sql.DB, ctx context.Context) error {
 			p.Hash, err = hex.DecodeString(np.Hash.String)
 			if err != nil {
 				message := "Could not scan the Hash HexString"
-				f.Errorf(message)
 				f.DumpError(err, message)
 				return err
 			}
@@ -222,20 +208,16 @@ func (p *FullPerson) LoadPersonContext(db *sql.DB, ctx context.Context) error {
 	err = rows.Err()
 	if err != nil {
 		message := "Could not query the person"
-		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
 	}
 
 	if count == 0 {
-
 		f.Infof("sqlStatement: %s", sqlStatement)
-
-		return codeerror.NewNotFound(fmt.Sprintf("People id %d not found", p.ID))
+		return codeerror.NewNotFound(fmt.Sprintf("Person ID %d not found", p.ID))
 	} else if count > 1 {
 		message := fmt.Sprintf("Found %d people with id %d", count, p.ID)
 		err := codeerror.NewInternalServerError(message)
-		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
 	}
@@ -244,20 +226,19 @@ func (p *FullPerson) LoadPersonContext(db *sql.DB, ctx context.Context) error {
 }
 
 // DeletePerson removes a person and associated waiters and playings
-func (p *FullPerson) DeletePerson(db *sql.DB) error {
-	f := functionDeletePerson
+func (p *FullPerson) DeletePersonTx(db *sql.DB) error {
+	f := functionDeletePersonTx
+	ctx := context.Background()
 
 	// Create a new context, and begin a transaction
-	ctx := context.Background()
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		message := "Could not begin a new transaction"
-		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
 	}
 
-	err = DeletePersonContext(db, ctx, p.ID)
+	err = DeletePerson(ctx, db, p.ID)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -266,22 +247,20 @@ func (p *FullPerson) DeletePerson(db *sql.DB) error {
 	err = tx.Commit()
 	if err != nil {
 		message := "Could not commit the transaction"
-		f.Errorf(message)
 		f.DumpError(err, message)
 	}
 
 	return nil
 }
 
-func DeletePersonContext(db *sql.DB, ctx context.Context, personID int) error {
-	f := functionDeletePersonContext
+func DeletePerson(ctx context.Context, db *sql.DB, personID int) error {
+	f := functionDeletePerson
 
 	// Remove the associated waiters
 	sqlStatement := "DELETE FROM " + WaitingTable + " WHERE person=" + strconv.Itoa(personID)
 	_, err := db.ExecContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not delete waiters"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return err
 	}
@@ -291,7 +270,6 @@ func DeletePersonContext(db *sql.DB, ctx context.Context, personID int) error {
 	_, err = db.ExecContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not delete playings"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return err
 	}
@@ -301,7 +279,6 @@ func DeletePersonContext(db *sql.DB, ctx context.Context, personID int) error {
 	_, err = db.ExecContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not delete person"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return err
 	}
@@ -310,7 +287,7 @@ func DeletePersonContext(db *sql.DB, ctx context.Context, personID int) error {
 }
 
 // FindPersonByEmail function
-func FindPersonByEmail(db *sql.DB, email string) (*FullPerson, error) {
+func FindPersonByEmail(ctx context.Context, db *sql.DB, email string) (*FullPerson, error) {
 	f := functionFindPersonByEmail
 
 	// Query the people
@@ -318,10 +295,9 @@ func FindPersonByEmail(db *sql.DB, email string) (*FullPerson, error) {
 	where := `email=$1`
 	sqlStatement := `SELECT ` + fields + ` FROM ` + PersonTable + ` WHERE ` + where
 
-	rows, err := db.Query(sqlStatement, email)
+	rows, err := db.QueryContext(ctx, sqlStatement, email)
 	if err != nil {
 		message := "Could not select all from " + PersonTable
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return nil, err
 	}
@@ -335,7 +311,6 @@ func FindPersonByEmail(db *sql.DB, email string) (*FullPerson, error) {
 		err := rows.Scan(&p.ID, &p.FirstName, &p.LastName, &p.Knownas, &p.Email, &p.Phone, &hexstring, &p.Status)
 		if err != nil {
 			message := "Could not scan the person"
-			f.Errorf(message)
 			f.DumpError(err, message)
 			return nil, err
 		}
@@ -359,7 +334,6 @@ func FindPersonByEmail(db *sql.DB, email string) (*FullPerson, error) {
 	err = rows.Err()
 	if err != nil {
 		message := "Could not list all from " + PersonTable
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return nil, err
 	}
@@ -380,16 +354,15 @@ func FindPersonByEmail(db *sql.DB, email string) (*FullPerson, error) {
 }
 
 // ListPeople returns a list of the people IDs
-func ListPeople(db *sql.DB, whereClause string) ([]FullPerson, error) {
+func ListPeople(ctx context.Context, db *sql.DB, whereClause string) ([]FullPerson, error) {
 	f := functionListPeople
 
 	// Query the people
 	fields := "id, firstname, lastname, knownas, email, phone, hash, status"
-	sqlStatement := `SELECT ` + fields + ` FROM ` + PersonTable + whereClause
-	rows, err := db.Query(sqlStatement)
+	sqlStatement := `SELECT ` + fields + ` FROM ` + PersonTable + ` ` + whereClause
+	rows, err := db.QueryContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not select all from " + PersonTable
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return nil, err
 	}
@@ -403,7 +376,6 @@ func ListPeople(db *sql.DB, whereClause string) ([]FullPerson, error) {
 		err := rows.Scan(&p.ID, &p.FirstName, &p.LastName, &p.Knownas, &p.Email, &p.Phone, &hexstring, &p.Status)
 		if err != nil {
 			message := "Could not scan the person"
-			f.Errorf(message)
 			f.DumpError(err, message)
 			return nil, err
 		}
@@ -427,7 +399,6 @@ func ListPeople(db *sql.DB, whereClause string) ([]FullPerson, error) {
 	err = rows.Err()
 	if err != nil {
 		message := "Could not list all from " + PersonTable
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return nil, err
 	}
@@ -468,7 +439,6 @@ func (p *FullPerson) checkPassword(password string) error {
 	err := bcrypt.CompareHashAndPassword(p.Hash, []byte(password))
 	if err != nil {
 		message := fmt.Sprintf("The password %s was invalid for the user with email: %s", password, p.Email)
-		f.Errorf(message)
 		d := f.DumpError(err, message)
 		d.AddString("hash.txt", hex.EncodeToString(p.Hash))
 		return err

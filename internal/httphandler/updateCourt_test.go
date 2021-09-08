@@ -114,7 +114,7 @@ func TestUpdateCourt(t *testing.T) {
 			if w.Code == http.StatusOK {
 				var c model.Court
 				c.ID = test.id
-				err := c.LoadCourt(db)
+				err := c.LoadCourt(ctx, db)
 				require.Nil(t, err, "err should be nothing")
 
 				if value, ok := test.court["name"]; ok {

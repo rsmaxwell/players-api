@@ -13,6 +13,7 @@ var (
 
 func TestDump(t *testing.T) {
 	f := functionTestDump
+
 	f.DebugVerbose("name: %s", "hello")
 
 	foo()
@@ -20,6 +21,7 @@ func TestDump(t *testing.T) {
 
 func foo() {
 	f := functionFoo
+
 	f.DebugVerbose("name: %s", "one")
 
 	bar()
@@ -27,7 +29,7 @@ func foo() {
 
 func bar() {
 	f := functionBar
-	f.DebugVerbose("name: %s", "two")
 
+	f.DebugVerbose("name: %s", "two")
 	f.Dump("dump at %s", "world")
 }

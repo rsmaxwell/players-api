@@ -1,22 +1,17 @@
 package httphandler
 
 import (
-	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 
-	"github.com/rsmaxwell/players-api/internal/basic"
 	"github.com/rsmaxwell/players-api/internal/codeerror"
 	"github.com/rsmaxwell/players-api/internal/debug"
 	"github.com/rsmaxwell/players-api/internal/model"
-	"github.com/rsmaxwell/players-api/internal/response"
 )
 
 // messageResponse structure
@@ -30,8 +25,10 @@ type ContextKey string
 const (
 	contextPath = "/players-api"
 
-	// ContextDatabaseKey constant
-	ContextDatabaseKey ContextKey = "database"
+	// Context Keys
+	ContextDatabaseKey  ContextKey = "database"
+	ContextRequestIdKey ContextKey = "requestID"
+	ContextConfigKey    ContextKey = "config"
 )
 
 var (
@@ -42,9 +39,9 @@ var (
 var (
 	pkg = debug.NewPackage("httphandler")
 
-	functionMiddleware         = debug.NewFunction(pkg, "Middleware")
-	functionSignin             = debug.NewFunction(pkg, "Signin")
-	functionCheckAuthenticated = debug.NewFunction(pkg, "checkAuthenticated")
+	functionGetRequestID       = debug.NewFunction(pkg, "getRequestID")
+	functionHidePasswords      = debug.NewFunction(pkg, "hidePasswords")
+	functionWriteResponseError = debug.NewFunction(pkg, "writeResponseError")
 )
 
 // writeResponseMessage method
@@ -63,64 +60,21 @@ func writeResponseObject(w http.ResponseWriter, r *http.Request, statusCode int,
 
 // writeResponse method
 func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int) {
-
 	model.MetricsData.StatusCodes[statusCode]++
-
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		origin = "http://localhost:4200"
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-	w.Header().Add("Access-Control-Allow-Origin", origin)
-	w.Header().Add("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
-	w.Header().Add("Access-Control-Allow-Headers",
-		"Origin, XMLHttpRequest, Content-Type, X-Auth-Token, Accept, Content-Length, Accept-Encoding, X-CSRF-Token, Access-Control-Allow-Origin, Access-Control-Allow-Methods, Access-Control-Allow-Headers, Authorization")
-	w.Header().Add("Access-Control-Allow-Credentials", "true")
-
-	if statusCode == http.StatusUnauthorized {
-		w.Header().Add("WWW-Authenticate", "Basic realm=players-api")
-	}
-
 	w.WriteHeader(statusCode)
 }
 
 // writeResponseError function
-func writeResponseError(w http.ResponseWriter, r *http.Request, err error) {
-	if err != nil {
-		if serr, ok := err.(*codeerror.CodeError); ok {
-			writeResponseMessage(w, r, serr.Code(), serr.Error())
-			return
-		}
+func writeResponseError(writer http.ResponseWriter, request *http.Request, err error) {
+	f := functionWriteResponseError
+	DebugVerbose(f, request, err.Error())
 
-		writeResponseMessage(w, r, http.StatusInternalServerError, "error")
+	if serr, ok := err.(*codeerror.CodeError); ok {
+		writeResponseMessage(writer, request, serr.Code(), serr.Error())
 		return
 	}
-}
 
-// checkAuthenticated method
-func checkAuthenticated(r *http.Request) (int, error) {
-	f := functionCheckAuthenticated
-
-	authorizationHeader := r.Header.Get("Authorization")
-	if authorizationHeader == "" {
-		f.DebugError("missing Authorization header")
-		return 0, fmt.Errorf("not authorized")
-	}
-
-	splitToken := strings.Split(authorizationHeader, "Bearer ")
-	if splitToken == nil {
-		return 0, fmt.Errorf("not authorized")
-	}
-
-	tokenString := splitToken[1]
-
-	claims, err := basic.ValidateToken(tokenString)
-	if err != nil {
-		return 0, err
-	}
-
-	return claims.ID, nil
+	writeResponseMessage(writer, request, http.StatusInternalServerError, "error")
 }
 
 // SetupHandlers Handlers for REST API routes
@@ -128,50 +82,157 @@ func SetupHandlers(w *mux.Router) {
 
 	s := w.PathPrefix("/players-api").Subrouter()
 
-	s.HandleFunc("/register", Register).Methods(http.MethodOptions, http.MethodPost)
+	s.HandleFunc("/register", Register).Methods(http.MethodPost, http.MethodOptions)
 	s.HandleFunc("/signin", Signin).Methods(http.MethodPost, http.MethodOptions)
-	s.HandleFunc("/signout", Signout).Methods(http.MethodGet)
-	s.HandleFunc("/refresh", RefreshTokens).Methods(http.MethodGet)
+	s.HandleFunc("/signout", Signout).Methods(http.MethodGet, http.MethodOptions)
+	s.HandleFunc("/refresh", RefreshToken).Methods(http.MethodPost, http.MethodOptions)
+
+	s.HandleFunc("/waiters", ListWaiters).Methods(http.MethodGet, http.MethodOptions)
 
 	s.HandleFunc("/people", ListPeople).Methods(http.MethodPost, http.MethodOptions)
-	s.HandleFunc("/people/{id}", DeletePerson).Methods(http.MethodDelete)
+	s.HandleFunc("/people/{id}", DeletePerson).Methods(http.MethodDelete, http.MethodOptions)
 	s.HandleFunc("/people/{id}", GetPerson).Methods(http.MethodGet, http.MethodOptions)
-	s.HandleFunc("/people/{id}", UpdatePerson).Methods(http.MethodPut)
+	s.HandleFunc("/people/{id}", UpdatePerson).Methods(http.MethodPut, http.MethodOptions)
 
-	s.HandleFunc("/people/toplayer/{id1}", MakePersonPlayer).Methods(http.MethodPut)
-	s.HandleFunc("/people/toinactive/{id}", MakePersonInactive).Methods(http.MethodPut)
+	s.HandleFunc("/people/toplayer/{id1}", MakePersonPlayer).Methods(http.MethodPut, http.MethodOptions)
+	s.HandleFunc("/people/toinactive/{id}", MakePersonInactive).Methods(http.MethodPut, http.MethodOptions)
 
-	s.HandleFunc("/people/toplaying/{id1}/{id2}/{id3}", MakePlayerPlay).Methods(http.MethodPut)
-	s.HandleFunc("/people/towaiting/{id}", MakePlayerWait).Methods(http.MethodPut)
+	s.HandleFunc("/people/toplaying/{id1}/{id2}/{id3}", MakePlayerPlay).Methods(http.MethodPut, http.MethodOptions)
+	s.HandleFunc("/people/towaiting/{id}", MakePlayerWait).Methods(http.MethodPut, http.MethodOptions)
 
 	s.HandleFunc("/courts", ListCourts).Methods(http.MethodGet, http.MethodOptions)
 	s.HandleFunc("/courts/{id}", GetCourt).Methods(http.MethodGet, http.MethodOptions)
-	s.HandleFunc("/courts", CreateCourt).Methods(http.MethodPost)
-	s.HandleFunc("/courts/{id}", UpdateCourt).Methods(http.MethodPut)
-	s.HandleFunc("/courts/{id}", DeleteCourt).Methods(http.MethodDelete)
+	s.HandleFunc("/courts", CreateCourt).Methods(http.MethodPost, http.MethodOptions)
+	s.HandleFunc("/courts/{id}", UpdateCourt).Methods(http.MethodPut, http.MethodOptions)
+	s.HandleFunc("/courts/{id}", DeleteCourt).Methods(http.MethodDelete, http.MethodOptions)
 	s.HandleFunc("/courts/fill/{id}", FillCourt).Methods(http.MethodPut, http.MethodOptions)
 	s.HandleFunc("/courts/clear/{id}", ClearCourt).Methods(http.MethodPut, http.MethodOptions)
 
-	s.HandleFunc("/metrics", GetMetrics).Methods(http.MethodGet)
+	s.HandleFunc("/metrics", GetMetrics).Methods(http.MethodGet, http.MethodOptions)
 
 	w.NotFoundHandler = http.HandlerFunc(NotFound)
 }
 
-// Middleware method
-func Middleware(h http.Handler, db *sql.DB) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		f := functionMiddleware
+func DebugRequest(f *debug.Function, request *http.Request) error {
 
-		w2 := response.New(w)
+	if f.Level() >= debug.APILevel {
 
-		ctx, cancel := context.WithTimeout(r.Context(), time.Duration(60*time.Second))
-		defer cancel()
-		r2 := r.WithContext(ctx)
+		requestID := getRequestID(request)
+		f.DebugAPI("%s %s %s %s ------------------------------------------------------", requestID, request.Method, request.Host, request.URL)
 
-		ctx = context.WithValue(r2.Context(), ContextDatabaseKey, db)
-		r3 := r.WithContext(ctx)
+		for name, headers := range request.Header {
+			name = strings.ToLower(name)
+			for _, h := range headers {
+				f.DebugVerbose("          %v: %v", name, h)
+			}
+		}
+	}
 
-		f.DebugRequest(r3)
-		h.ServeHTTP(w2, r3)
-	})
+	return nil
+}
+
+func DebugResponse(f *debug.Function, request *http.Request, status int) {
+	if f.Level() >= debug.APILevel {
+		requestID := getRequestID(request)
+		f.DebugAPI("%s %s %s %s --> statusCode: %d", requestID, request.Method, request.Host, request.URL, status)
+	}
+}
+
+// DebugRequestBody traces the http request body
+func DebugRequestBody(f *debug.Function, req *http.Request, data []byte) {
+	if f.Level() >= debug.APILevel {
+		requestID := getRequestID(req)
+		data2, _ := hidePasswords(data)
+		f.DebugVerbose("%s %s", requestID, string(data2))
+	}
+}
+
+func DebugInfo(f *debug.Function, req *http.Request, format string, a ...interface{}) {
+	if f.Level() >= debug.VerboseLevel {
+		requestID := getRequestID(req)
+		message := fmt.Sprintf(format, a...)
+		f.DebugInfo("%s %s", requestID, message)
+	}
+}
+
+func DebugError(f *debug.Function, req *http.Request, format string, a ...interface{}) {
+	if f.Level() >= debug.VerboseLevel {
+		requestID := getRequestID(req)
+		message := fmt.Sprintf(format, a...)
+		f.DebugError("%s %s", requestID, message)
+	}
+}
+
+func DebugVerbose(f *debug.Function, req *http.Request, format string, a ...interface{}) {
+	if f.Level() >= debug.VerboseLevel {
+		requestID := getRequestID(req)
+		message := fmt.Sprintf(format, a...)
+		f.DebugVerbose("%s %s", requestID, message)
+	}
+}
+
+// DebugRequestBody traces the http request body
+func getRequestID(req *http.Request) string {
+	f := functionGetRequestID
+
+	ctx := req.Context()
+	object := ctx.Value(ContextRequestIdKey)
+	id, ok := object.(int)
+	if !ok {
+		message := fmt.Sprintf("unexpected context type: %#v", id)
+		f.Dump(message)
+		return ""
+	}
+
+	return fmt.Sprintf("[request:%d]", id)
+}
+
+func hidePasswords(data []byte) ([]byte, error) {
+	f := functionHidePasswords
+
+	var input map[string]interface{}
+	err := json.Unmarshal(data, &input)
+	if err != nil {
+		d := f.DumpError(err, "Could not parse data")
+		d.AddByteArray("data", data)
+		return nil, err
+	}
+
+	output := walk(input)
+
+	var array []byte
+	array, err = json.Marshal(output)
+	if err != nil {
+		d := f.DumpError(err, "Could not parse data")
+		d.AddByteArray("array", array)
+		return nil, err
+	}
+	return array, nil
+}
+
+func walk(input map[string]interface{}) map[string]interface{} {
+	output := make(map[string]interface{})
+	for k, v := range input {
+		z, ok := v.(map[string]interface{})
+		if ok {
+			output[k] = walk(z)
+		} else if k == "password" {
+			output[k] = "********"
+		} else {
+			output[k] = v
+		}
+	}
+	return output
+}
+
+func Dump(f *debug.Function, request *http.Request, format string, a ...interface{}) *debug.Dump {
+	d := f.Dump(format, a...)
+	d.AddString("RequestID", getRequestID(request))
+	return d
+}
+
+func DumpError(f *debug.Function, request *http.Request, err error, format string, a ...interface{}) *debug.Dump {
+	d := f.DumpError(err, format, a...)
+	d.AddString("RequestID", getRequestID(request))
+	return d
 }

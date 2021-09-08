@@ -24,6 +24,7 @@ type NullWaiter struct {
 const (
 	// WaitingTable is the name of the waiting table
 	WaitingTable = "waiting"
+	WaitingIndex = "first_waiting"
 )
 
 var (
@@ -34,15 +35,14 @@ var (
 )
 
 // ListWaiters returns the list of waiters
-func ListWaiters(db *sql.DB) ([]Waiter, error) {
+func ListWaiters(ctx context.Context, db *sql.DB) ([]Waiter, error) {
 	f := functionListWaiters
 
 	sqlStatement := "SELECT * FROM " + WaitingTable + " ORDER BY start ASC"
 
-	rows, err := db.Query(sqlStatement)
+	rows, err := db.QueryContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not get list the waiters"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return nil, err
 	}
@@ -55,7 +55,6 @@ func ListWaiters(db *sql.DB) ([]Waiter, error) {
 		err := rows.Scan(&nw.Person, &nw.Start)
 		if err != nil {
 			message := "Could not scan the waiter"
-			f.Errorf(message)
 			f.DumpError(err, message)
 			return nil, err
 		}
@@ -72,7 +71,6 @@ func ListWaiters(db *sql.DB) ([]Waiter, error) {
 	err = rows.Err()
 	if err != nil {
 		message := "Could not list the waiters"
-		f.Errorf(message)
 		f.DumpError(err, message)
 		return nil, err
 	}
@@ -81,7 +79,7 @@ func ListWaiters(db *sql.DB) ([]Waiter, error) {
 }
 
 // ListWaitersForPerson returns the list of waiters for a person
-func ListWaitersForPerson(db *sql.DB, id int) ([]Waiter, error) {
+func ListWaitersForPerson(ctx context.Context, db *sql.DB, id int) ([]Waiter, error) {
 	f := functionListWaitersForPerson
 
 	fields := "person, start"
@@ -90,7 +88,6 @@ func ListWaitersForPerson(db *sql.DB, id int) ([]Waiter, error) {
 	rows, err := db.Query(sqlStatement, id)
 	if err != nil {
 		message := "Could not get list the waiters"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return nil, err
 	}
@@ -103,7 +100,6 @@ func ListWaitersForPerson(db *sql.DB, id int) ([]Waiter, error) {
 		err := rows.Scan(&nw.Person, &nw.Start)
 		if err != nil {
 			message := "Could not scan the waiter"
-			f.Errorf(message)
 			f.DumpError(err, message)
 			return nil, err
 		}
@@ -120,7 +116,6 @@ func ListWaitersForPerson(db *sql.DB, id int) ([]Waiter, error) {
 	err = rows.Err()
 	if err != nil {
 		message := "Could not list the waiters"
-		f.Errorf(message)
 		f.DumpError(err, message)
 		return nil, err
 	}
@@ -129,34 +124,38 @@ func ListWaitersForPerson(db *sql.DB, id int) ([]Waiter, error) {
 }
 
 // Get first GetFirstWaiter
-func GetFirstWaiterContext(db *sql.DB, ctx context.Context) (int, error) {
+func GetFirstWaiter(ctx context.Context, db *sql.DB) (int, error) {
 	f := functionGetFirstWaiter
 
 	fields := "person"
-	sqlStatement := "SELECT " + fields + " FROM " + WaitingTable + " LIMIT 1"
+	sqlStatement := "SELECT " + fields + " FROM " + WaitingTable + " ORDER BY start LIMIT 1"
 	rows, err := db.QueryContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not get the first waiter"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return 0, err
 	}
 	defer rows.Close()
 
+	count := 0
 	var id int
 	for rows.Next() {
+		count++
 		err := rows.Scan(&id)
 		if err != nil {
 			message := "Could not scan the first player"
-			f.Errorf(message)
 			f.DumpError(err, message)
 			return 0, err
 		}
 	}
 	err = rows.Err()
 	if err != nil {
-		message := "Could not get the first players"
-		f.Errorf(message)
+		message := "Error get the first player"
+		f.DumpError(err, message)
+		return 0, err
+	}
+	if count < 1 {
+		message := "There were no waiters"
 		f.DumpError(err, message)
 		return 0, err
 	}
@@ -164,13 +163,7 @@ func GetFirstWaiterContext(db *sql.DB, ctx context.Context) (int, error) {
 	return id, nil
 }
 
-// AddWaiter
-func AddWaiter(db *sql.DB, personID int) error {
-	return AddWaiterContext(db, context.Background(), personID)
-}
-
-// AddWaiter
-func AddWaiterContext(db *sql.DB, ctx context.Context, personID int) error {
+func AddWaiter(ctx context.Context, db *sql.DB, personID int) error {
 	f := functionRemoveWaiter
 
 	start := time.Now()
@@ -182,7 +175,6 @@ func AddWaiterContext(db *sql.DB, ctx context.Context, personID int) error {
 	_, err := db.ExecContext(ctx, sqlStatement, personID, start)
 	if err != nil {
 		message := "Could not insert into " + WaitingTable
-		f.Errorf(message)
 		d := f.DumpSQLError(err, message, sqlStatement)
 		data := struct {
 			PersonID int
@@ -199,36 +191,17 @@ func AddWaiterContext(db *sql.DB, ctx context.Context, personID int) error {
 	return nil
 }
 
-// RemoveWaiter
-func RemoveWaiter(db *sql.DB, personID int) error {
-	return RemoveWaiterContext(db, context.Background(), personID)
-}
-
-// RemoveWaiter
-func RemoveWaiterContext(db *sql.DB, ctx context.Context, personID int) error {
+func RemoveWaiter(ctx context.Context, db *sql.DB, personID int) error {
 	f := functionRemoveWaiter
 
 	sqlStatement := "DELETE FROM " + WaitingTable + " WHERE person=$1"
 	rows, err := db.QueryContext(ctx, sqlStatement, personID)
 	if err != nil {
 		message := "Could not delete the waiter"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return err
 	}
 	defer rows.Close()
 
 	return nil
-}
-
-// Dump writes the waiter to a dump file
-func (w *Waiter) Dump(d *debug.Dump) {
-
-	bytearray, err := json.Marshal(w)
-	if err != nil {
-		return
-	}
-
-	title := "waiter.json"
-	d.AddByteArray(title, bytearray)
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -26,6 +27,8 @@ func init() {
 // http://go-database-sql.org/retrieving.html
 func main() {
 	f := functionMain
+	ctx := context.Background()
+
 	f.Infof("Players Populate: Version: %s", basic.Version())
 
 	// Read configuration and connect to the database
@@ -37,7 +40,7 @@ func main() {
 	defer db.Close()
 
 	// Delete all the records
-	err = model.DeleteAllRecords(db)
+	err = model.DeleteAllRecords(ctx, db)
 	if err != nil {
 		message := "Error delete all the records"
 		f.Errorf(message)

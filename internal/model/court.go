@@ -40,26 +40,26 @@ const (
 )
 
 var (
-	functionUpdateCourt        = debug.NewFunction(pkg, "UpdateCourt")
-	functionSaveCourt          = debug.NewFunction(pkg, "SaveCourt")
-	functionListCourts         = debug.NewFunction(pkg, "ListCourts")
-	functionLoadCourt          = debug.NewFunction(pkg, "LoadCourt")
-	functionDeleteCourt        = debug.NewFunction(pkg, "DeleteCourt")
-	functionDeleteCourtContext = debug.NewFunction(pkg, "DeleteCourtContext")
+	functionUpdateCourt   = debug.NewFunction(pkg, "UpdateCourt")
+	functionSaveCourt     = debug.NewFunction(pkg, "SaveCourt")
+	functionListCourts    = debug.NewFunction(pkg, "ListCourts")
+	functionListCourtsTx  = debug.NewFunction(pkg, "ListCourtsTx")
+	functionLoadCourt     = debug.NewFunction(pkg, "LoadCourt")
+	functionDeleteCourt   = debug.NewFunction(pkg, "DeleteCourt")
+	functionDeleteCourtTx = debug.NewFunction(pkg, "DeleteCourtTx")
 )
 
 // SaveCourt writes a new Court to disk and returns the generated id
-func (c *Court) SaveCourt(db *sql.DB) error {
+func (c *Court) SaveCourt(ctx context.Context, db *sql.DB) error {
 	f := functionSaveCourt
 
 	fields := "name"
 	values := basic.Quote(c.Name)
 
 	sqlStatement := "INSERT INTO " + CourtTable + " (" + fields + ") VALUES (" + values + ") RETURNING id"
-	err := db.QueryRow(sqlStatement).Scan(&c.ID)
+	err := db.QueryRowContext(ctx, sqlStatement).Scan(&c.ID)
 	if err != nil {
 		message := "Could not insert into " + CourtTable
-		f.Errorf(message)
 		d := f.DumpSQLError(err, message, sqlStatement)
 		c.Dump(d)
 		return err
@@ -69,16 +69,15 @@ func (c *Court) SaveCourt(db *sql.DB) error {
 }
 
 // UpdateCourt method
-func (c *Court) UpdateCourt(db *sql.DB) error {
+func (c *Court) UpdateCourt(ctx context.Context, db *sql.DB) error {
 	f := functionUpdateCourt
 
 	items := "name=" + basic.Quote(c.Name)
 	sqlStatement := "UPDATE " + CourtTable + " SET " + items + " WHERE id=" + strconv.Itoa(c.ID)
 
-	_, err := db.Exec(sqlStatement)
+	_, err := db.ExecContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not update court"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return err
 	}
@@ -87,20 +86,14 @@ func (c *Court) UpdateCourt(db *sql.DB) error {
 }
 
 // LoadCourt returns the Court with the given ID
-func (c *Court) LoadCourt(db *sql.DB) error {
-	return c.LoadCourtContext(db, context.Background())
-}
-
-// LoadCourt returns the Court with the given ID
-func (c *Court) LoadCourtContext(db *sql.DB, ctx context.Context) error {
+func (c *Court) LoadCourt(ctx context.Context, db *sql.DB) error {
 	f := functionLoadCourt
 
 	// Query the court
 	sqlStatement := "SELECT * FROM " + CourtTable + " WHERE ID=" + strconv.Itoa(c.ID)
-	rows, err := db.Query(sqlStatement)
+	rows, err := db.QueryContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not select all people"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return err
 	}
@@ -114,7 +107,6 @@ func (c *Court) LoadCourtContext(db *sql.DB, ctx context.Context) error {
 		err := rows.Scan(&nc.ID, &nc.Name)
 		if err != nil {
 			message := "Could not scan the court"
-			f.Errorf(message)
 			f.DumpError(err, message)
 		}
 
@@ -125,7 +117,6 @@ func (c *Court) LoadCourtContext(db *sql.DB, ctx context.Context) error {
 	err = rows.Err()
 	if err != nil {
 		message := "Could not list the courts"
-		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
 	}
@@ -135,7 +126,6 @@ func (c *Court) LoadCourtContext(db *sql.DB, ctx context.Context) error {
 	} else if count > 1 {
 		message := fmt.Sprintf("Found %d courts with id %d", count, c.ID)
 		err := codeerror.NewInternalServerError(message)
-		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
 	}
@@ -144,19 +134,18 @@ func (c *Court) LoadCourtContext(db *sql.DB, ctx context.Context) error {
 }
 
 // DeleteCourt removes a court and associated playings
-func (c *Court) DeleteCourt(db *sql.DB) error {
-	f := functionDeleteCourt
-
+func (c *Court) DeleteCourtTx(db *sql.DB) error {
+	f := functionDeleteCourtTx
 	ctx := context.Background()
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		message := "Could not begin a new transaction"
-		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
 	}
 
-	err = DeleteCourtContext(db, ctx, c.ID)
+	err = DeleteCourt(ctx, db, c.ID)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -165,29 +154,26 @@ func (c *Court) DeleteCourt(db *sql.DB) error {
 	err = tx.Commit()
 	if err != nil {
 		message := "Could not commit the transaction"
-		f.Errorf(message)
 		f.DumpError(err, message)
 	}
 
 	return nil
 }
 
-func DeleteCourtContext(db *sql.DB, ctx context.Context, courtID int) error {
-	f := functionDeleteCourtContext
+func DeleteCourt(ctx context.Context, db *sql.DB, courtID int) error {
+	f := functionDeleteCourt
 
-	players, err := ListPlayersForCourtContext(db, ctx, courtID)
+	players, err := ListPlayersForCourt(ctx, db, courtID)
 	if err != nil {
 		message := "Could not delete playings"
-		f.Errorf(message)
 		f.DumpError(err, message)
 		return err
 	}
 
 	for _, player := range players {
-		err = MakePlayerWaitContext(db, ctx, player.Person)
+		err = MakePlayerWait(ctx, db, player.Person)
 		if err != nil {
 			message := "Could not make player wait"
-			f.Errorf(message)
 			f.DumpError(err, message)
 			return err
 		}
@@ -198,7 +184,6 @@ func DeleteCourtContext(db *sql.DB, ctx context.Context, courtID int) error {
 	_, err = db.ExecContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not delete playings"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return err
 	}
@@ -208,7 +193,6 @@ func DeleteCourtContext(db *sql.DB, ctx context.Context, courtID int) error {
 	_, err = db.ExecContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not delete court"
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return err
 	}
@@ -217,16 +201,45 @@ func DeleteCourtContext(db *sql.DB, ctx context.Context, courtID int) error {
 }
 
 // ListCourts returns a list of the court IDs
-func ListCourts(db *sql.DB) ([]Court, error) {
+func ListCourtsTx(db *sql.DB) ([]Court, error) {
+	f := functionListCourtsTx
+	ctx := context.Background()
+
+	// and begin a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		message := "Could not begin a new transaction"
+		f.DumpError(err, message)
+		return nil, err
+	}
+
+	list, err := ListCourts(ctx, db)
+	if err != nil {
+		tx.Rollback()
+		message := "Could not begin a new transaction"
+		f.DumpError(err, message)
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		message := "Could not commit the transaction"
+		f.DumpError(err, message)
+	}
+
+	return list, nil
+}
+
+// ListCourts returns a list of the court IDs
+func ListCourts(ctx context.Context, db *sql.DB) ([]Court, error) {
 	f := functionListCourts
 
 	// Query the courts
 	returnedFields := []string{`id`, `name`}
 	sqlStatement := `SELECT ` + strings.Join(returnedFields, `, `) + ` FROM ` + CourtTable
-	rows, err := db.Query(sqlStatement)
+	rows, err := db.QueryContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not select all from " + CourtTable
-		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return nil, err
 	}
@@ -241,12 +254,11 @@ func ListCourts(db *sql.DB) ([]Court, error) {
 		err := rows.Scan(&court.ID, &court.Name)
 		if err != nil {
 			message := "Could not scan the court"
-			f.Errorf(message)
 			f.DumpError(err, message)
 			return nil, err
 		}
 
-		players, err := ListPlayersForCourt(db, court.ID)
+		players, err := ListPlayersForCourt(ctx, db, court.ID)
 		if err != nil {
 			message := "Could not list the players on this court"
 			f.Errorf(message)
@@ -261,10 +273,9 @@ func ListCourts(db *sql.DB) ([]Court, error) {
 		for _, player := range players {
 
 			person := FullPerson{ID: player.Person}
-			err := person.LoadPerson(db)
+			err := person.LoadPerson(ctx, db)
 			if err != nil {
 				message := fmt.Sprintf("Could not load the player [%d]", player.Person)
-				f.Errorf(message)
 				d := f.DumpError(err, message)
 				d.AddObject("court.json", court)
 				d.AddObject("player.json", player)
@@ -279,7 +290,6 @@ func ListCourts(db *sql.DB) ([]Court, error) {
 	err = rows.Err()
 	if err != nil {
 		message := "Could not list all from " + CourtTable
-		f.Errorf(message)
 		f.DumpError(err, message)
 		return nil, err
 	}

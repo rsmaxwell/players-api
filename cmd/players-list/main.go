@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -31,6 +32,8 @@ func init() {
 // http://go-database-sql.org/retrieving.html
 func main() {
 	f := functionMain
+	ctx := context.Background()
+
 	f.Infof("Players List: Version: %s", basic.Version())
 
 	// Read configuration and connect to the database
@@ -41,28 +44,28 @@ func main() {
 	}
 	defer db.Close()
 
-	err = listPeople(db)
+	err = listPeople(ctx, db)
 	if err != nil {
 		message := "Could not list the people"
 		f.Errorf(message)
 		os.Exit(1)
 	}
 
-	err = listCourts(db)
+	err = listCourts(ctx, db)
 	if err != nil {
 		message := "Could not list the courts"
 		f.Errorf(message)
 		os.Exit(1)
 	}
 
-	err = listPlaying(db)
+	err = listPlaying(ctx, db)
 	if err != nil {
 		message := "Could not list the playing"
 		f.Errorf(message)
 		os.Exit(1)
 	}
 
-	err = listWaiting(db)
+	err = listWaiting(ctx, db)
 	if err != nil {
 		message := "Could not list the waiting"
 		f.Errorf(message)
@@ -72,7 +75,7 @@ func main() {
 	fmt.Printf("Successfully listed database: %s\n", c.Database.DatabaseName)
 }
 
-func listPeople(db *sql.DB) error {
+func listPeople(ctx context.Context, db *sql.DB) error {
 	f := functionListPeople
 
 	// Query all the records in the people table
@@ -145,7 +148,7 @@ func listPeople(db *sql.DB) error {
 	return nil
 }
 
-func listCourts(db *sql.DB) error {
+func listCourts(ctx context.Context, db *sql.DB) error {
 	f := functionListCourts
 
 	// Query all the records in the courts table
@@ -189,7 +192,7 @@ func listCourts(db *sql.DB) error {
 	return nil
 }
 
-func listPlaying(db *sql.DB) error {
+func listPlaying(ctx context.Context, db *sql.DB) error {
 	f := functionListPlaying
 
 	// Query all the records in the playing table
@@ -230,7 +233,7 @@ func listPlaying(db *sql.DB) error {
 	return nil
 }
 
-func listWaiting(db *sql.DB) error {
+func listWaiting(ctx context.Context, db *sql.DB) error {
 	f := functionListWaiting
 
 	// Query all the records in the waiting table

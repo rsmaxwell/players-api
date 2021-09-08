@@ -92,7 +92,7 @@ func TestDeleteCourt(t *testing.T) {
 			// Check the response
 			if w.Code == http.StatusOK {
 				c := model.Court{ID: test.courtID}
-				err := c.LoadCourt(db)
+				err := c.LoadCourt(ctx, db)
 				require.NotNil(t, err, "Court was not deleted")
 			}
 		})

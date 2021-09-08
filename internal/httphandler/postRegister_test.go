@@ -23,6 +23,8 @@ func TestRegister(t *testing.T) {
 	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
+	ctx := context.Background()
+
 	tests := []struct {
 		testName       string
 		registration   model.Registration
@@ -69,7 +71,7 @@ func TestRegister(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			listOfPeople, err := model.ListPeople(db, "")
+			listOfPeople, err := model.ListPeople(ctx, db, "")
 			require.Nil(t, err)
 			initialNumberOfPeople := len(listOfPeople)
 
@@ -104,14 +106,14 @@ func TestRegister(t *testing.T) {
 			// Check the response
 			if w.Code == http.StatusOK {
 
-				listOfPeople, err = model.ListPeople(db, "")
+				listOfPeople, err = model.ListPeople(ctx, db, "")
 				require.Nil(t, err)
 				finalNumberOfPeople := len(listOfPeople)
 
 				require.Equal(t, initialNumberOfPeople+1, finalNumberOfPeople, "Person was not registered")
 
 				// Check the status of the new person
-				p, err := model.FindPersonByEmail(db, test.registration.Email)
+				p, err := model.FindPersonByEmail(ctx, db, test.registration.Email)
 				require.Nil(t, err)
 				if initialNumberOfPeople == 0 {
 					require.Equal(t, model.StatusAdmin, p.Status, "Unexpected role")

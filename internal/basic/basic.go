@@ -5,6 +5,7 @@ import (
 	"os/user"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -158,4 +159,20 @@ func CheckSubstrings(str string, subs ...string) bool {
 		}
 	}
 	return false
+}
+
+func GetEnvInteger(name string, def int) (int, error) {
+	value, ok := os.LookupEnv(name)
+	if !ok {
+		return def, nil
+	}
+	return strconv.Atoi(value)
+}
+
+func GetEnvString(name string, def string) (string, error) {
+	value, ok := os.LookupEnv(name)
+	if !ok {
+		return def, nil
+	}
+	return value, nil
 }

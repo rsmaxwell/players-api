@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -37,57 +38,56 @@ func init() {
 }
 
 // ListPeople method
-func ListPeople(w http.ResponseWriter, r *http.Request) {
+func ListPeople(writer http.ResponseWriter, request *http.Request) {
 	f := functionListPeople
-	f.DebugAPI("")
 
-	if r.Method == http.MethodOptions {
-		writeResponseMessage(w, r, http.StatusOK, "ok")
-		return
-	}
-
-	_, err := checkAuthenticated(r)
+	_, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: request.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
+		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	f.DebugRequestBody(b)
+	DebugRequestBody(f, request, b)
 
-	var request ListPeopleRequest
-	err = json.Unmarshal(b, &request)
+	var listPeopleRequest ListPeopleRequest
+	err = json.Unmarshal(b, &listPeopleRequest)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
+		message := "problem unmarshalling listPeople request"
+		d := DumpError(f, request, err, message)
+		d.AddByteArray("request: ", b)
+		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	var whereClause string
 	var ok bool
-	if whereClause, ok = filters[request.Filter]; !ok {
-		message := fmt.Sprintf("unexpected filter name: '%s'", request.Filter)
-		writeResponseMessage(w, r, http.StatusBadRequest, message)
+	if whereClause, ok = filters[listPeopleRequest.Filter]; !ok {
+		message := fmt.Sprintf("unexpected filter name: '%s'", listPeopleRequest.Filter)
+		writeResponseMessage(writer, request, http.StatusBadRequest, message)
 		return
 	}
 
-	object := r.Context().Value(ContextDatabaseKey)
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
-	list, err := model.ListPeople(db, whereClause)
+	list, err := model.ListPeople(context.Background(), db, whereClause)
 	if err != nil {
-		writeResponseError(w, r, err)
+		message := "problem listing people"
+		DumpError(f, request, err, message)
+		writeResponseError(writer, request, err)
 		return
 	}
 
@@ -96,5 +96,5 @@ func ListPeople(w http.ResponseWriter, r *http.Request) {
 		listOfPeople = append(listOfPeople, *person.ToLimited())
 	}
 
-	writeResponseObject(w, r, http.StatusOK, listOfPeople)
+	writeResponseObject(writer, request, http.StatusOK, listOfPeople)
 }

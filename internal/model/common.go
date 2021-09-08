@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -14,7 +13,9 @@ import (
 var (
 	functionSetup            = debug.NewFunction(pkg, "Setup")
 	functionDeleteAllRecords = debug.NewFunction(pkg, "DeleteAllRecords")
+	functionFillCourtTx      = debug.NewFunction(pkg, "FillCourtTx")
 	functionFillCourt        = debug.NewFunction(pkg, "FillCourt")
+	functionClearCourtTx     = debug.NewFunction(pkg, "ClearCourtTx")
 	functionClearCourt       = debug.NewFunction(pkg, "ClearCourt")
 )
 
@@ -36,6 +37,7 @@ func init() {
 // Setup function
 func Setup(t *testing.T) (func(t *testing.T), *sql.DB, *config.Config) {
 	f := functionSetup
+	ctx := context.Background()
 
 	// Read configuration
 	db, c, err := config.Setup()
@@ -45,7 +47,7 @@ func Setup(t *testing.T) (func(t *testing.T), *sql.DB, *config.Config) {
 	}
 
 	// Delete all the records
-	err = DeleteAllRecords(db)
+	err = DeleteAllRecords(ctx, db)
 	if err != nil {
 		f.Errorf("Error delete all the records")
 		t.FailNow()
@@ -64,7 +66,7 @@ func Setup(t *testing.T) (func(t *testing.T), *sql.DB, *config.Config) {
 }
 
 // DeleteAllRecords removes all the records in the database
-func DeleteAllRecords(db *sql.DB) error {
+func DeleteAllRecords(ctx context.Context, db *sql.DB) error {
 	f := functionDeleteAllRecords
 
 	sqlStatement := "DELETE FROM " + PlayingTable
@@ -107,34 +109,59 @@ func DeleteAllRecords(db *sql.DB) error {
 }
 
 // FillCourt
-func FillCourt(db *sql.DB, courtID int) ([]Position, error) {
-	f := functionFillCourt
+func FillCourtTx(ctx context.Context, db *sql.DB, courtID int) ([]Position, error) {
+	f := functionFillCourtTx
 
-	ctx := context.Background()
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		message := "Could not begin transaction"
-		f.Errorf(message)
+		message := "Could not begin a new transaction"
 		f.DumpError(err, message)
 		return nil, err
 	}
 
-	players, err := ListPlayersForCourtContext(db, ctx, courtID)
+	positions, err := FillCourt(ctx, db, courtID)
 	if err != nil {
 		tx.Rollback()
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		message := "Could not commit the transaction"
+		f.DumpError(err, message)
+	}
+
+	count, err := CheckConistencyTx(db, false)
+	if err != nil {
+		f.Errorf("Error checking consistency")
+		return nil, err
+	}
+	if count > 0 {
+		message := fmt.Sprintf("Inconsistant data: count: %d", count)
+		f.Errorf(message)
+		err = fmt.Errorf(message)
+		return nil, err
+	}
+
+	return positions, nil
+}
+
+// FillCourt
+func FillCourt(ctx context.Context, db *sql.DB, courtID int) ([]Position, error) {
+	f := functionFillCourt
+
+	players, err := ListPlayersForCourt(ctx, db, courtID)
+	if err != nil {
 		message := "Could not list players"
 		f.Errorf(message)
 		f.DumpError(err, message)
 		return nil, err
 	}
 
-	data, _ := json.MarshalIndent(players, "", "    ")
-	f.Infof("players: %s", string(data))
-
 	mapOfPlayers := make(map[int]*Player)
 	for _, player := range players {
-		p := player                        // take a copy of the object ...
-		mapOfPlayers[player.Position] = &p // ... so their addresses are actually different!
+		p := player                        // take a copy of each object ...
+		mapOfPlayers[player.Position] = &p // ... so their references are actually different!
 	}
 
 	changes := 0
@@ -148,29 +175,24 @@ func FillCourt(db *sql.DB, courtID int) ([]Position, error) {
 		if player, ok = mapOfPlayers[index]; !ok {
 			changes++
 
-			personID, err = GetFirstWaiterContext(db, ctx)
+			personID, err = GetFirstWaiter(ctx, db)
 			if err != nil {
-				tx.Rollback()
 				message := "Could not get the first waiter"
 				f.Errorf(message)
 				f.DumpError(err, message)
 				return nil, err
 			}
-			f.Infof(fmt.Sprintf("Got First Waiter: [%d]", personID))
 
-			err = RemoveWaiterContext(db, ctx, personID)
+			err = RemoveWaiter(ctx, db, personID)
 			if err != nil {
-				tx.Rollback()
 				message := "Could not remove the waiter"
 				f.Errorf(message)
 				f.DumpError(err, message)
 				return nil, err
 			}
-			f.Infof(fmt.Sprintf("Removed Waiter: [%d]", personID))
 
-			err = AddPlayerContext(db, ctx, personID, courtID, index)
+			err = AddPlayer(ctx, db, personID, courtID, index)
 			if err != nil {
-				tx.Rollback()
 				message := "Could not add player"
 				f.Errorf(message)
 				f.DumpError(err, message)
@@ -178,13 +200,11 @@ func FillCourt(db *sql.DB, courtID int) ([]Position, error) {
 			}
 			p := Player{Person: personID, Court: courtID, Position: index}
 			player = &p
-			f.Infof(fmt.Sprintf("Added Player: [person: %d, courtID:%d, position:%d]", personID, courtID, index))
 		}
 
 		person := FullPerson{ID: player.Person}
-		err = person.LoadPerson(db)
+		err = person.LoadPerson(ctx, db)
 		if err != nil {
-			tx.Rollback()
 			message := "Could not load player"
 			f.Errorf(message)
 			f.DumpError(err, message)
@@ -195,32 +215,14 @@ func FillCourt(db *sql.DB, courtID int) ([]Position, error) {
 		positions = append(positions, position)
 	}
 
-	if changes > 0 {
-		err = tx.Commit()
-		if err != nil {
-			message := "Could not commit transaction"
-			f.Errorf(message)
-			f.DumpError(err, message)
-			return nil, err
-		}
-	} else {
-		err = tx.Rollback()
-		if err != nil {
-			message := "Could not rollback transaction"
-			f.Errorf(message)
-			f.DumpError(err, message)
-			return nil, err
-		}
-	}
-
 	return positions, nil
 }
 
 // ClearCourt
-func ClearCourt(db *sql.DB, courtID int) error {
-	f := functionClearCourt
-
+func ClearCourtTx(db *sql.DB, courtID int) error {
+	f := functionClearCourtTx
 	ctx := context.Background()
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		message := "Could not begin transaction"
@@ -229,9 +231,44 @@ func ClearCourt(db *sql.DB, courtID int) error {
 		return err
 	}
 
-	players, err := ListPlayersForCourtContext(db, ctx, courtID)
+	err = ClearCourt(ctx, db, courtID)
 	if err != nil {
 		tx.Rollback()
+		message := "Problem clearing court"
+		f.Errorf(message)
+		f.DumpError(err, message)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		message := "Could not commit transaction"
+		f.Errorf(message)
+		f.DumpError(err, message)
+		return err
+	}
+
+	count, err := CheckConistencyTx(db, false)
+	if err != nil {
+		f.Errorf("Error checking consistency")
+		return err
+	}
+	if count > 0 {
+		message := fmt.Sprintf("Inconsistant data: count: %d", count)
+		f.Errorf(message)
+		err = fmt.Errorf(message)
+		return err
+	}
+
+	return nil
+}
+
+// ClearCourt
+func ClearCourt(ctx context.Context, db *sql.DB, courtID int) error {
+	f := functionClearCourt
+
+	players, err := ListPlayersForCourt(ctx, db, courtID)
+	if err != nil {
 		message := "Could not list players"
 		f.Errorf(message)
 		f.DumpError(err, message)
@@ -239,41 +276,31 @@ func ClearCourt(db *sql.DB, courtID int) error {
 	}
 
 	for _, player := range players {
-
-		err = RemovePlayerContext(db, ctx, player.Person)
+		err = RemovePlayer(ctx, db, player.Person)
 		if err != nil {
-			tx.Rollback()
 			message := "Could not remove player"
 			f.Errorf(message)
 			f.DumpError(err, message)
 			return err
 		}
 
-		err = AddWaiterContext(db, ctx, player.Person)
+		person := FullPerson{ID: player.Person}
+		err = person.LoadPerson(ctx, db)
 		if err != nil {
-			tx.Rollback()
-			message := "Could not add the waiter"
+			message := "Could not load player"
 			f.Errorf(message)
 			f.DumpError(err, message)
 			return err
 		}
-	}
 
-	if len(players) > 0 {
-		err = tx.Commit()
-		if err != nil {
-			message := "Could not commit transaction"
-			f.Errorf(message)
-			f.DumpError(err, message)
-			return err
-		}
-	} else {
-		err = tx.Rollback()
-		if err != nil {
-			message := "Could not rollback transaction"
-			f.Errorf(message)
-			f.DumpError(err, message)
-			return err
+		if person.Status == StatusPlayer {
+			err = AddWaiter(ctx, db, player.Person)
+			if err != nil {
+				message := "Could not add waiter"
+				f.Errorf(message)
+				f.DumpError(err, message)
+				return err
+			}
 		}
 	}
 

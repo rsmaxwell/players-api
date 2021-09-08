@@ -23,7 +23,7 @@ func TestGetLoginToken(t *testing.T) {
 
 func GetFirstCourt(t *testing.T, db *sql.DB) *model.Court {
 
-	listOfCourts, err := model.ListCourts(db)
+	listOfCourts, err := model.ListCourtsTx(db)
 	require.Nil(t, err, "err should be nothing")
 
 	numberOfCourts := len(listOfCourts)

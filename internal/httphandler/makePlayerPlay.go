@@ -22,64 +22,63 @@ type MakePlayerPlayRequest struct {
 }
 
 // MakePlayerPlay method
-func MakePlayerPlay(w http.ResponseWriter, r *http.Request) {
+func MakePlayerPlay(writer http.ResponseWriter, request *http.Request) {
 	f := functionMakePlayerPlay
-	f.DebugAPI("")
 
-	_, err := checkAuthenticated(r)
+	_, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	str := mux.Vars(r)["id1"]
+	str := mux.Vars(request)["id1"]
 	personID, err := strconv.Atoi(str)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
+		writeResponseMessage(writer, request, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
-	f.DebugVerbose("PersonID: %d", personID)
+	DebugVerbose(f, request, "PersonID: %d", personID)
 
-	str = mux.Vars(r)["id2"]
+	str = mux.Vars(request)["id2"]
 	courtID, err := strconv.Atoi(str)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
+		writeResponseMessage(writer, request, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
-	f.DebugVerbose("courtID: %d", courtID)
+	DebugVerbose(f, request, "courtID: %d", courtID)
 
-	str = mux.Vars(r)["id3"]
+	str = mux.Vars(request)["id3"]
 	position, err := strconv.Atoi(str)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
+		writeResponseMessage(writer, request, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
-	f.DebugVerbose("position:%d", position)
+	DebugVerbose(f, request, "position:%d", position)
 
-	object := r.Context().Value(ContextDatabaseKey)
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
 	if position < 0 {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected position: [%d]", position))
+		writeResponseMessage(writer, request, http.StatusBadRequest, fmt.Sprintf("unexpected position: [%d]", position))
 		return
 	}
 
 	if position >= model.NumberOfCourtPositions {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("unexpected position: [%d]", position))
+		writeResponseMessage(writer, request, http.StatusBadRequest, fmt.Sprintf("unexpected position: [%d]", position))
 		return
 	}
 
-	err = model.MakePlayerPlay(db, personID, courtID, position)
+	err = model.MakePlayerPlayTx(db, personID, courtID, position)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	writeResponseMessage(w, r, http.StatusOK, "ok")
+	writeResponseMessage(writer, request, http.StatusOK, "ok")
 }

@@ -59,7 +59,7 @@ func TestCreateCourt(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 
-			listOfCourts, err := model.ListCourts(db)
+			listOfCourts, err := model.ListCourtsTx(db)
 			require.Nil(t, err, "err should be nothing")
 			initialNumberOfCourts := len(listOfCourts)
 
@@ -103,7 +103,7 @@ func TestCreateCourt(t *testing.T) {
 			require.Equal(t, test.expectedStatus, w.Code, fmt.Sprintf("handler returned wrong status code: got %v want %v", w.Code, test.expectedStatus))
 
 			// Check the response
-			listOfCourts, err = model.ListCourts(db)
+			listOfCourts, err = model.ListCourtsTx(db)
 			require.Nil(t, err, "err should be nothing")
 			finalNumberOfCourts := len(listOfCourts)
 

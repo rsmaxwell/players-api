@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -30,6 +31,8 @@ func init() {
 // http://go-database-sql.org/retrieving.html
 func main() {
 	f := functionMain
+	ctx := context.Background()
+
 	f.Infof("Players CreateTables: Version: %s", basic.Version())
 
 	AdminFirstName, ok := os.LookupEnv("PLAYERS_ADMIN_FIRST_NAME")
@@ -76,22 +79,22 @@ func main() {
 	defer db.Close()
 
 	// Drop the tables
-	err = dropTable(db, model.PlayingTable)
+	err = dropTable(ctx, db, model.PlayingTable)
 	if err != nil {
 		return
 	}
 
-	err = dropTable(db, model.WaitingTable)
+	err = dropTable(ctx, db, model.WaitingTable)
 	if err != nil {
 		return
 	}
 
-	err = dropTable(db, model.PersonTable)
+	err = dropTable(ctx, db, model.PersonTable)
 	if err != nil {
 		return
 	}
 
-	err = dropTable(db, model.CourtTable)
+	err = dropTable(ctx, db, model.CourtTable)
 	if err != nil {
 		return
 	}
@@ -195,6 +198,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create the waiting index
+	sqlStatement = "CREATE INDEX " + model.WaitingIndex + " ON " + model.WaitingTable + " ( start )"
+	_, err = db.Exec(sqlStatement)
+	if err != nil {
+		message := "Could not create playing_court index"
+		f.Errorf(message)
+		f.DumpSQLError(err, message, sqlStatement)
+		os.Exit(1)
+	}
+
 	fmt.Printf("Successfully created Tables in the database: %s\n", c.Database.DatabaseName)
 
 	peopleData := []model.Registration{
@@ -214,7 +227,7 @@ func main() {
 
 		p.Status = model.StatusAdmin
 
-		err = p.SavePerson(db)
+		err = p.SavePerson(ctx, db)
 		if err != nil {
 			message := fmt.Sprintf("Could not save person: firstName: %s, lastname: %s, email: %s", p.FirstName, p.LastName, p.Email)
 			f.Errorf(message)
@@ -235,7 +248,7 @@ func main() {
 	}
 }
 
-func tableExists(db *sql.DB, table string) (bool, error) {
+func tableExists(ctx context.Context, db *sql.DB, table string) (bool, error) {
 	f := functionTableExists
 
 	sqlStatement := fmt.Sprintf("SELECT EXISTS ( SELECT FROM %s WHERE schemaname = '%s' AND tablename = '%s' )", "pg_tables", "public", table)
@@ -253,10 +266,10 @@ func tableExists(db *sql.DB, table string) (bool, error) {
 	return exists, nil
 }
 
-func dropTable(db *sql.DB, table string) error {
+func dropTable(ctx context.Context, db *sql.DB, table string) error {
 	f := functionDropTable
 
-	exists, err := tableExists(db, table)
+	exists, err := tableExists(ctx, db, table)
 	if err != nil {
 		return err
 	}
@@ -275,7 +288,7 @@ func dropTable(db *sql.DB, table string) error {
 	}
 
 	for i := 0; (i < 10) && exists; i++ {
-		exists, err = tableExists(db, table)
+		exists, err = tableExists(ctx, db, table)
 		if err != nil {
 			return err
 		}

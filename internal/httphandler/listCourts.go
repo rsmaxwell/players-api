@@ -13,35 +13,33 @@ var (
 )
 
 // ListCourts method
-func ListCourts(w http.ResponseWriter, r *http.Request) {
+func ListCourts(writer http.ResponseWriter, request *http.Request) {
 	f := functionListCourts
-	f.DebugAPI("")
 
-	if r.Method == http.MethodOptions {
-		writeResponseMessage(w, r, http.StatusOK, "ok")
-		return
-	}
-
-	_, err := checkAuthenticated(r)
+	_, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		message := "Authorisation problem"
+		Dump(f, request, message)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	object := r.Context().Value(ContextDatabaseKey)
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
-	listOfCourts, err := model.ListCourts(db)
+	listOfCourts, err := model.ListCourtsTx(db)
 	if err != nil {
-		writeResponseError(w, r, err)
+		message := "Problem listing courts"
+		Dump(f, request, message)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	writeResponseObject(w, r, http.StatusOK, listOfCourts)
+	writeResponseObject(writer, request, http.StatusOK, listOfCourts)
 }

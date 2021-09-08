@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -35,6 +36,8 @@ func init() {
 // http://go-database-sql.org/retrieving.html
 func main() {
 	f := functionMain
+	ctx := context.Background()
+
 	f.Infof("Players CreateDB: Version: %s", basic.Version())
 
 	// Read configuration and connect to the database
@@ -65,7 +68,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = model.DeleteAllRecords(db)
+	err = model.DeleteAllRecords(ctx, db)
 	if err != nil {
 		message := "could not delete record"
 		f.Errorf(message)
@@ -75,28 +78,28 @@ func main() {
 
 	indexes := backup.NewIndexes()
 
-	err = insertPeople(db, &myBackup, indexes)
+	err = insertPeople(ctx, db, &myBackup, indexes)
 	if err != nil {
 		message := "could not insert people"
 		f.Errorf(message)
 		os.Exit(1)
 	}
 
-	err = insertCourts(db, &myBackup, indexes)
+	err = insertCourts(ctx, db, &myBackup, indexes)
 	if err != nil {
 		message := "could not insert courts"
 		f.Errorf(message)
 		os.Exit(1)
 	}
 
-	err = insertPlays(db, &myBackup, indexes)
+	err = insertPlays(ctx, db, &myBackup, indexes)
 	if err != nil {
 		message := "could not insert plays"
 		f.Errorf(message)
 		os.Exit(1)
 	}
 
-	err = insertWaiters(db, &myBackup, indexes)
+	err = insertWaiters(ctx, db, &myBackup, indexes)
 	if err != nil {
 		message := "could not insert plays"
 		f.Errorf(message)
@@ -106,7 +109,7 @@ func main() {
 	fmt.Printf("Successfully restored the database: %s\n", c.Database.DatabaseName)
 }
 
-func insertPeople(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) error {
+func insertPeople(ctx context.Context, db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) error {
 	f := functionInsertPeople
 
 	// Insert people into the people table
@@ -198,7 +201,7 @@ func insertPeople(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) 
 		sqlStatement := "INSERT INTO " + model.PersonTable + " (" + fields + ") VALUES	(" + values + ") RETURNING id"
 
 		var id2 int
-		err := db.QueryRow(sqlStatement).Scan(&id2)
+		err := db.QueryRowContext(ctx, sqlStatement).Scan(&id2)
 		if err != nil {
 			message := "Could not insert into people"
 			f.Errorf(message)
@@ -213,7 +216,7 @@ func insertPeople(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) 
 	return nil
 }
 
-func insertCourts(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) error {
+func insertCourts(ctx context.Context, db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) error {
 	f := functionInsertCourts
 
 	// Insert courts into the courts table
@@ -241,7 +244,7 @@ func insertCourts(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) 
 		sqlStatement := "INSERT INTO courts (" + fields + ") VALUES	(" + values + ") RETURNING id"
 
 		var id2 int
-		err := db.QueryRow(sqlStatement).Scan(&id2)
+		err := db.QueryRowContext(ctx, sqlStatement).Scan(&id2)
 		if err != nil {
 			message := "Could not insert into courts"
 			f.Errorf(message)
@@ -256,7 +259,7 @@ func insertCourts(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) 
 	return nil
 }
 
-func insertPlays(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) error {
+func insertPlays(ctx context.Context, db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) error {
 	f := functionInsertPlays
 
 	// Insert plays into the playing table
@@ -278,7 +281,7 @@ func insertPlays(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) e
 
 		sqlStatement := "INSERT INTO playing (" + fields + ") VALUES	(" + values + ")"
 
-		_, err := db.Exec(sqlStatement)
+		_, err := db.ExecContext(ctx, sqlStatement)
 		if err != nil {
 			message := "Could not insert into plays"
 			f.Errorf(message)
@@ -290,7 +293,7 @@ func insertPlays(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) e
 	return nil
 }
 
-func insertWaiters(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) error {
+func insertWaiters(ctx context.Context, db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes) error {
 	f := functionInsertWaiters
 
 	// Insert plays into the waiting table
@@ -307,7 +310,7 @@ func insertWaiters(db *sql.DB, myBackup *backup.Backup, indexes *backup.Indexes)
 		sqlStatement := "INSERT INTO waiting (" + fields + ") VALUES ($1, $2)"
 
 		person := indexes.People[waiter.Person]
-		_, err := db.Exec(sqlStatement, person, waiter.Start)
+		_, err := db.ExecContext(ctx, sqlStatement, person, waiter.Start)
 		if err != nil {
 			message := "Could not insert into waiting"
 			f.Errorf(message)

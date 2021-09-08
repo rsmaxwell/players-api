@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -26,11 +27,10 @@ type CourtData struct {
 }
 
 var (
-	pkg                 = debug.NewPackage("main")
-	functionMain        = debug.NewFunction(pkg, "main")
-	functionMakePeople  = debug.NewFunction(pkg, "makePeople")
-	functionMakeCourts  = debug.NewFunction(pkg, "makeCourts")
-	functionMakeWaiters = debug.NewFunction(pkg, "makeWaiters")
+	pkg                = debug.NewPackage("main")
+	functionMain       = debug.NewFunction(pkg, "main")
+	functionMakePeople = debug.NewFunction(pkg, "makePeople")
+	functionMakeCourts = debug.NewFunction(pkg, "makeCourts")
 )
 
 func init() {
@@ -40,6 +40,8 @@ func init() {
 // http://go-database-sql.org/retrieving.html
 func main() {
 	f := functionMain
+	ctx := context.Background()
+
 	f.Infof("Players Populate: Version: %s", basic.Version())
 
 	db, _, err := config.Setup()
@@ -49,28 +51,31 @@ func main() {
 	}
 	defer db.Close()
 
-	peopleIDs, err := makePeople(db)
+	_, err = makePeople(db)
 	if err != nil {
 		f.Errorf("Error making people")
 		os.Exit(1)
 	}
 
 	/* courtIDs */
-	_, err = makeCourts(db)
+	_, err = makeCourts(ctx, db)
 	if err != nil {
 		f.Errorf("Error making courts")
 		os.Exit(1)
 	}
 
-	err = makeWaiters(db, peopleIDs)
+	count, err := model.CheckConistencyTx(db, true)
 	if err != nil {
-		f.Errorf("Error making waiters")
+		f.Errorf("Error checking consistency")
 		os.Exit(1)
 	}
+
+	fmt.Printf("Made %d database updates", count)
 }
 
 func makePeople(db *sql.DB) (map[int]int, error) {
 	f := functionMakePeople
+	ctx := context.Background()
 
 	peopleData := []PersonData{
 		{Data: model.Registration{FirstName: "James", LastName: "Bond", Knownas: "007", Email: "007@mi6.gov.uk", Phone: "01632 960573", Password: "TopSecret123"}, Status: model.StatusPlayer},
@@ -109,7 +114,7 @@ func makePeople(db *sql.DB) (map[int]int, error) {
 
 		p.Status = r.Status
 
-		err = p.SavePerson(db)
+		err = p.SavePerson(ctx, db)
 		if err != nil {
 			message := fmt.Sprintf("Could not save person: firstName: %s, lastname: %s, email: %s", p.FirstName, p.LastName, p.Email)
 			f.Errorf(message)
@@ -133,7 +138,7 @@ func makePeople(db *sql.DB) (map[int]int, error) {
 	return peopleIDs, nil
 }
 
-func makeCourts(db *sql.DB) (map[int]int, error) {
+func makeCourts(ctx context.Context, db *sql.DB) (map[int]int, error) {
 	f := functionMakeCourts
 
 	courtsData := []CourtData{
@@ -146,7 +151,7 @@ func makeCourts(db *sql.DB) (map[int]int, error) {
 
 		court := model.Court{Name: c.Name}
 
-		err := court.SaveCourt(db)
+		err := court.SaveCourt(ctx, db)
 		if err != nil {
 			message := fmt.Sprintf("Could not save court: Name: %s", court.Name)
 			f.Errorf(message)
@@ -162,24 +167,4 @@ func makeCourts(db *sql.DB) (map[int]int, error) {
 	}
 
 	return courtIDs, nil
-}
-
-func makeWaiters(db *sql.DB, peopleIDs map[int]int) error {
-	f := functionMakeWaiters
-
-	for _, personID := range peopleIDs {
-
-		err := model.AddWaiter(db, personID)
-		if err != nil {
-			message := fmt.Sprintf("Could not add waiter: id: %d", personID)
-			f.Errorf(message)
-			f.DumpError(err, message)
-			os.Exit(1)
-		}
-
-		fmt.Printf("Added waiter:\n")
-		fmt.Printf("    Person:    %d\n", personID)
-	}
-
-	return nil
 }

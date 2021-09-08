@@ -23,11 +23,13 @@ func TestUpdatePerson(t *testing.T) {
 	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
+	ctx := context.Background()
+
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
 	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
-	goodPerson, _ := model.FindPersonByEmail(db, model.GoodEmail)
+	goodPerson, _ := model.FindPersonByEmail(ctx, db, model.GoodEmail)
 
 	// ***************************************************************
 	// * Testcases
@@ -115,7 +117,7 @@ func TestUpdatePerson(t *testing.T) {
 			if w.Code == http.StatusOK {
 				var p model.FullPerson
 				p.ID = test.id
-				err := p.LoadPerson(db)
+				err := p.LoadPerson(ctx, db)
 				require.Nil(t, err, "err should be nothing")
 
 				if value, ok := test.person["firstname"]; ok {

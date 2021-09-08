@@ -1,10 +1,10 @@
 package debug
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -38,11 +38,11 @@ const (
 	// WarningLevel trace level
 	WarningLevel = 20
 
-	// InfoLevel trace level
-	InfoLevel = 30
-
 	// APILevel trace level
-	APILevel = 40
+	APILevel = 30
+
+	// InfoLevel trace level
+	InfoLevel = 40
 
 	// VerboseLevel trace level
 	VerboseLevel = 50
@@ -70,9 +70,9 @@ var (
 )
 
 func init() {
-	level, _ = getEnvInteger("DEBUG_LEVEL", InfoLevel)
-	defaultPackageLevel, _ = getEnvInteger("DEBUG_DEFAULT_PACKAGE_LEVEL", InfoLevel)
-	defaultFunctionLevel, _ = getEnvInteger("DEBUG_DEFAULT_FUNCTION_LEVEL", InfoLevel)
+	level, _ = basic.GetEnvInteger("DEBUG_LEVEL", InfoLevel)
+	defaultPackageLevel, _ = basic.GetEnvInteger("DEBUG_DEFAULT_PACKAGE_LEVEL", InfoLevel)
+	defaultFunctionLevel, _ = basic.GetEnvInteger("DEBUG_DEFAULT_FUNCTION_LEVEL", InfoLevel)
 
 	path, ok := os.LookupEnv("DEBUG_DUMP_DIR")
 	if !ok {
@@ -93,22 +93,6 @@ func init() {
 // RootDir returns the application root dir
 func RootDir() string {
 	return rootDir
-}
-
-func getEnvInteger(name string, def int) (int, error) {
-	value, ok := os.LookupEnv(name)
-	if !ok {
-		return def, nil
-	}
-	return strconv.Atoi(value)
-}
-
-func getEnvString(name string, def string) (string, error) {
-	value, ok := os.LookupEnv(name)
-	if !ok {
-		return def, nil
-	}
-	return value, nil
 }
 
 // NewPackage function
@@ -166,7 +150,7 @@ func (f *Function) DebugInfo(format string, a ...interface{}) {
 	f.Debug(InfoLevel, format, a...)
 }
 
-// DebugAPI prints an 'error' message
+// DebugVerbose prints an 'error' message
 func (f *Function) DebugAPI(format string, a ...interface{}) {
 	f.Debug(APILevel, format, a...)
 }
@@ -206,9 +190,13 @@ func (f *Function) Verbosef(format string, a ...interface{}) {
 // --------------------------------------------------------
 
 // Fatalf prints a 'fatal' message
-func (f *Function) Fatalf(format string, a ...interface{}) {
+func (f *Function) Fatalf(ctx context.Context, format string, a ...interface{}) {
 	f.Debug(ErrorLevel, format, a...)
 	os.Exit(1)
+}
+
+func timestamp() string {
+	return time.Now().Format("20060102 150405.0000000")
 }
 
 // Debug prints the function name
@@ -217,7 +205,7 @@ func (f *Function) Debug(l int, format string, a ...interface{}) {
 		if l <= f.pkg.level {
 			if l <= f.level {
 				line1 := fmt.Sprintf(format, a...)
-				line2 := fmt.Sprintf("%s.%s %s", f.pkg.name, f.name, line1)
+				line2 := fmt.Sprintf("%s %s.%s %s", timestamp(), f.pkg.name, f.name, line1)
 				fmt.Fprintln(os.Stderr, line2)
 			}
 		}
@@ -266,63 +254,6 @@ func (f *Function) Level() int {
 	return effectiveLevel
 }
 
-// DebugRequest traces the http request
-func (f *Function) DebugRequest(req *http.Request) {
-
-	if f.Level() >= APILevel {
-		f.APIf("---------------------------------------------------------")
-		f.DebugAPI("%s %s %s %s", req.Method, req.Proto, req.Host, req.URL)
-
-		for name, headers := range req.Header {
-			name = strings.ToLower(name)
-			for _, h := range headers {
-				f.DebugVerbose("%v: %v", name, h)
-			}
-		}
-	}
-}
-
-// DebugRequestBody traces the http request body
-func (f *Function) DebugRequestBody(data []byte) {
-
-	if f.Level() >= APILevel {
-		data2, _ := hidePasswords(data)
-		f.DebugAPI("request body: %s", string(data2))
-	}
-}
-
-func hidePasswords(data []byte) ([]byte, error) {
-	var input map[string]interface{}
-	err := json.Unmarshal(data, &input)
-	if err != nil {
-		return nil, err
-	}
-
-	output := walk(input)
-
-	var array []byte
-	array, err = json.Marshal(output)
-	if err != nil {
-		return nil, err
-	}
-	return array, nil
-}
-
-func walk(input map[string]interface{}) map[string]interface{} {
-	output := make(map[string]interface{})
-	for k, v := range input {
-		z, ok := v.(map[string]interface{})
-		if ok {
-			output[k] = walk(z)
-		} else if k == "password" {
-			output[k] = "********"
-		} else {
-			output[k] = v
-		}
-	}
-	return output
-}
-
 // Dump type
 type Dump struct {
 	Directory string
@@ -353,13 +284,16 @@ type DumpInfo struct {
 // Dump function
 func (f *Function) Dump(format string, a ...interface{}) *Dump {
 
+	message := fmt.Sprintf(format, a...)
+	f.DebugError(message)
+
 	dump := new(Dump)
 
 	t := time.Now()
 	now := t.Format("2006-01-02_15-04-05.999999999")
 	dump.Directory = filepath.Join(rootDumpDir, now)
 
-	f.DebugError("DUMP: writing dump:[%s]", dump.Directory)
+	f.DebugError("Writing dump:[%s]", dump.Directory)
 	err := os.MkdirAll(dump.Directory, 0755)
 	if err != nil {
 		dump.Err = err
@@ -381,7 +315,7 @@ func (f *Function) Dump(format string, a ...interface{}) *Dump {
 	info.GitCommit = basic.GitCommit()
 	info.GitBranch = basic.GitBranch()
 	info.GitURL = basic.GitURL()
-	info.Message = fmt.Sprintf(format, a...)
+	info.Message = message
 	info.Package = f.pkg.name
 	info.Function = f.name
 
@@ -604,9 +538,9 @@ func (f *Function) DumpSQLError(err error, message string, sql string) *Dump {
 }
 
 // DumpError dumps a database error
-func (f *Function) DumpError(err error, message string) *Dump {
+func (f *Function) DumpError(err error, format string, a ...interface{}) *Dump {
 
-	d := f.Dump(message)
+	d := f.Dump(format, a...)
 
 	d.AddString("error.txt", fmt.Sprintf("%T\n\n%s", err, err.Error()))
 

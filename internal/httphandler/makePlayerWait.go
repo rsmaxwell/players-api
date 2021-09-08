@@ -22,39 +22,38 @@ type MakeWaitingRequest struct {
 }
 
 // MakeWaiting method
-func MakePlayerWait(w http.ResponseWriter, r *http.Request) {
+func MakePlayerWait(writer http.ResponseWriter, request *http.Request) {
 	f := functionMakePlayerWait
-	f.DebugAPI("")
 
-	_, err := checkAuthenticated(r)
+	_, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	str := mux.Vars(r)["id"]
+	str := mux.Vars(request)["id"]
 	id, err := strconv.Atoi(str)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
+		writeResponseMessage(writer, request, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
 
-	f.DebugVerbose("ID: %d", id)
+	DebugVerbose(f, request, "ID: %d", id)
 
-	object := r.Context().Value(ContextDatabaseKey)
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
-	err = model.MakePlayerWait(db, id)
+	err = model.MakePlayerWaitTx(db, id)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	writeResponseMessage(w, r, http.StatusOK, "ok")
+	writeResponseMessage(writer, request, http.StatusOK, "ok")
 }

@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -24,54 +25,48 @@ var (
 )
 
 // Register method
-func Register(w http.ResponseWriter, r *http.Request) {
+func Register(writer http.ResponseWriter, request *http.Request) {
 	f := functionRegister
-	f.DebugAPI("")
 
-	if r.Method == http.MethodOptions {
-		writeResponseMessage(w, r, http.StatusOK, "ok")
-		return
-	}
-
-	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: request.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
+		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	f.DebugRequestBody(b)
+	DebugRequestBody(f, request, b)
 
-	var request model.Registration
-	err = json.Unmarshal(b, &request)
+	var registrationRequest model.Registration
+	err = json.Unmarshal(b, &registrationRequest)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
+		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// f.DebugVerbose("FirstName: %s", request.FirstName)
-	// f.DebugVerbose("LastName:  %s", request.LastName)
-	// f.DebugVerbose("Knownas:   %s", request.Knownas)
-	// f.DebugVerbose("Email:     %s", request.Email)
-	// f.DebugVerbose("Phone:     %s", request.Phone)
-	// f.DebugVerbose("Password:  %s", request.Password)
+	// f.DebugVerbose("FirstName: %s", registrationRequest.FirstName)
+	// f.DebugVerbose("LastName:  %s", registrationRequest.LastName)
+	// f.DebugVerbose("Knownas:   %s", registrationRequest.Knownas)
+	// f.DebugVerbose("Email:     %s", registrationRequest.Email)
+	// f.DebugVerbose("Phone:     %s", registrationRequest.Phone)
+	// f.DebugVerbose("Password:  %s", registrationRequest.Password)
 
-	p, err := request.ToPerson()
+	p, err := registrationRequest.ToPerson()
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	object := r.Context().Value(ContextDatabaseKey)
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
-	err = p.SavePerson(db)
+	err = p.SavePerson(context.Background(), db)
 	if err != nil {
 		pgerr, ok := err.(*pgconn.PgError)
 		if ok {
@@ -80,9 +75,9 @@ func Register(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	writeResponseMessage(w, r, http.StatusOK, "ok")
+	writeResponseMessage(writer, request, http.StatusOK, "ok")
 }

@@ -29,12 +29,7 @@ var (
 )
 
 // AddPlayer
-func AddPlayer(db *sql.DB, personID int, courtID int, position int) error {
-	return AddPlayerContext(db, context.Background(), personID, courtID, position)
-}
-
-// AddPlayer
-func AddPlayerContext(db *sql.DB, ctx context.Context, personID int, courtID int, position int) error {
+func AddPlayer(ctx context.Context, db *sql.DB, personID int, courtID int, position int) error {
 	f := functionAddPlayer
 
 	fields := "person, court, position"
@@ -45,7 +40,16 @@ func AddPlayerContext(db *sql.DB, ctx context.Context, personID int, courtID int
 	if err != nil {
 		message := "Could not insert into " + PlayingTable
 		f.Errorf(message)
-		f.DumpSQLError(err, message, sqlStatement)
+		d := f.DumpSQLError(err, message, sqlStatement)
+		d.AddObject("player", struct {
+			personID int
+			courtID  int
+			position int
+		}{
+			personID: personID,
+			courtID:  courtID,
+			position: position,
+		})
 		return err
 	}
 
@@ -53,12 +57,7 @@ func AddPlayerContext(db *sql.DB, ctx context.Context, personID int, courtID int
 }
 
 // RemovePlayer
-func RemovePlayer(db *sql.DB, personID int) error {
-	return RemovePlayerContext(db, context.Background(), personID)
-}
-
-// RemovePlayer
-func RemovePlayerContext(db *sql.DB, ctx context.Context, personID int) error {
+func RemovePlayer(ctx context.Context, db *sql.DB, personID int) error {
 	f := functionRemovePlayer
 
 	sqlStatement := "DELETE FROM " + PlayingTable + " WHERE person=$1"
@@ -75,12 +74,7 @@ func RemovePlayerContext(db *sql.DB, ctx context.Context, personID int) error {
 }
 
 // ListPlayers
-func ListPlayers(db *sql.DB) ([]Player, error) {
-	return ListPlayersContext(db, context.Background())
-}
-
-// ListPlayers returns the list of players
-func ListPlayersContext(db *sql.DB, ctx context.Context) ([]Player, error) {
+func ListPlayers(ctx context.Context, db *sql.DB) ([]Player, error) {
 	f := functionListPlayers
 
 	fields := "court, person, position"
@@ -88,7 +82,7 @@ func ListPlayersContext(db *sql.DB, ctx context.Context) ([]Player, error) {
 
 	rows, err := db.Query(sqlStatement)
 	if err != nil {
-		message := "Could not get list the players"
+		message := "Could not list the players"
 		f.Errorf(message)
 		f.DumpSQLError(err, message, sqlStatement)
 		return nil, err
@@ -121,12 +115,7 @@ func ListPlayersContext(db *sql.DB, ctx context.Context) ([]Player, error) {
 }
 
 // ListPlayersForPerson
-func ListPlayersForPerson(db *sql.DB, personID int) ([]Player, error) {
-	return ListPlayersForPersonContext(db, context.Background(), personID)
-}
-
-// ListPlayersForPerson returns the list of players for a person
-func ListPlayersForPersonContext(db *sql.DB, ctx context.Context, personID int) ([]Player, error) {
+func ListPlayersForPerson(ctx context.Context, db *sql.DB, personID int) ([]Player, error) {
 	f := functionListPlayersForPerson
 
 	fields := "court, person, position"
@@ -167,12 +156,7 @@ func ListPlayersForPersonContext(db *sql.DB, ctx context.Context, personID int) 
 }
 
 // ListPlayersForCourt
-func ListPlayersForCourt(db *sql.DB, courtID int) ([]Player, error) {
-	return ListPlayersForCourtContext(db, context.Background(), courtID)
-}
-
-// ListPlayersForCourt
-func ListPlayersForCourtContext(db *sql.DB, ctx context.Context, courtID int) ([]Player, error) {
+func ListPlayersForCourt(ctx context.Context, db *sql.DB, courtID int) ([]Player, error) {
 	f := functionListPlayersForCourt
 
 	fields := "person, court, position"

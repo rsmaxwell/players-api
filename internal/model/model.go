@@ -63,16 +63,18 @@ type Logon struct {
 var (
 	pkg = debug.NewPackage("model")
 
-	functionMakePlayerPlay     = debug.NewFunction(pkg, "MakePlayerPlay")
-	functionMakePlayerWait     = debug.NewFunction(pkg, "MakePlayerWait")
-	functionMakePersonInactive = debug.NewFunction(pkg, "MakePersonInactive")
-	functionMakePersonPlayer   = debug.NewFunction(pkg, "MakePersonPlayer")
-	functionPopulate           = debug.NewFunction(pkg, "Populate")
+	functionMakePlayerPlayTx     = debug.NewFunction(pkg, "MakePlayerPlayTx")
+	functionMakePlayerWaitTx     = debug.NewFunction(pkg, "MakePlayerWaitTx")
+	functionMakePersonInactiveTx = debug.NewFunction(pkg, "MakePersonInactiveTx")
+	functionMakePersonPlayerTx   = debug.NewFunction(pkg, "MakePersonPlayerTx")
+	functionMakePersonPlayer     = debug.NewFunction(pkg, "MakePersonPlayer")
+	functionPopulate             = debug.NewFunction(pkg, "Populate")
 )
 
 // Populate adds a new set of standard records
 func Populate(db *sql.DB) error {
 	f := functionPopulate
+	ctx := context.Background()
 
 	peopleData := []Registration{
 		{FirstName: GoodFirstName, LastName: GoodLastName, Knownas: GoodDisplayName, Email: GoodEmail, Phone: GoodPhone, Password: GoodPassword},
@@ -100,13 +102,13 @@ func Populate(db *sql.DB) error {
 
 		p.Status = StatusPlayer
 
-		err = p.SavePerson(db)
+		err = p.SavePerson(ctx, db)
 		if err != nil {
 			f.Errorf("Could not save person: firstName: %s, lastname: %s, email: %s", p.FirstName, p.LastName, p.Email)
 			return err
 		}
 
-		err = AddWaiter(db, p.ID)
+		err = AddWaiter(ctx, db, p.ID)
 		if err != nil {
 			f.Errorf("Could not add waiting")
 			return err
@@ -125,7 +127,7 @@ func Populate(db *sql.DB) error {
 	courtIDs := make(map[int]int)
 	for i, x := range courtData {
 		c := Court{Name: x.name}
-		err := c.SaveCourt(db)
+		err := c.SaveCourt(ctx, db)
 		if err != nil {
 			message := "Could not save court"
 			f.Errorf(message)
@@ -138,10 +140,10 @@ func Populate(db *sql.DB) error {
 }
 
 // MakePlayerWait moves a person from playing to waiting
-func MakePlayerWait(db *sql.DB, personID int) error {
-	f := functionMakePlayerWait
-
+func MakePlayerWaitTx(db *sql.DB, personID int) error {
+	f := functionMakePlayerWaitTx
 	ctx := context.Background()
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		message := "Could not begin a new transaction"
@@ -150,7 +152,7 @@ func MakePlayerWait(db *sql.DB, personID int) error {
 		return err
 	}
 
-	err = MakePlayerWaitContext(db, ctx, personID)
+	err = MakePlayerWait(ctx, db, personID)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -167,10 +169,10 @@ func MakePlayerWait(db *sql.DB, personID int) error {
 	return nil
 }
 
-func MakePlayerWaitContext(db *sql.DB, ctx context.Context, personID int) error {
+func MakePlayerWait(ctx context.Context, db *sql.DB, personID int) error {
 
 	person := FullPerson{ID: personID}
-	err := person.LoadPersonContext(db, ctx)
+	err := person.LoadPerson(ctx, db)
 	if err != nil {
 		return codeerror.NewNotFound(fmt.Sprintf("Person [%d] not found", personID))
 	}
@@ -178,17 +180,17 @@ func MakePlayerWaitContext(db *sql.DB, ctx context.Context, personID int) error 
 		return codeerror.NewBadRequest(fmt.Sprintf("Person [%d] is not a player: state: %s", personID, person.Status))
 	}
 
-	err = RemovePlayerContext(db, ctx, personID)
+	err = RemovePlayer(ctx, db, personID)
 	if err != nil {
 		return err
 	}
 
-	err = RemoveWaiterContext(db, ctx, personID)
+	err = RemoveWaiter(ctx, db, personID)
 	if err != nil {
 		return err
 	}
 
-	err = AddWaiterContext(db, ctx, personID)
+	err = AddWaiter(ctx, db, personID)
 	if err != nil {
 		return err
 	}
@@ -197,10 +199,10 @@ func MakePlayerWaitContext(db *sql.DB, ctx context.Context, personID int) error 
 }
 
 // MakePlayerPlaying moves a person from playing to waiting
-func MakePlayerPlay(db *sql.DB, personID int, courtID int, position int) error {
-	f := functionMakePlayerPlay
-
+func MakePlayerPlayTx(db *sql.DB, personID int, courtID int, position int) error {
+	f := functionMakePlayerPlayTx
 	ctx := context.Background()
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		message := "Could not begin a new transaction"
@@ -209,7 +211,7 @@ func MakePlayerPlay(db *sql.DB, personID int, courtID int, position int) error {
 		return err
 	}
 
-	err = MakePlayerPlayContext(db, ctx, personID, courtID, position)
+	err = MakePlayerPlay(ctx, db, personID, courtID, position)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -226,10 +228,10 @@ func MakePlayerPlay(db *sql.DB, personID int, courtID int, position int) error {
 	return nil
 }
 
-func MakePlayerPlayContext(db *sql.DB, ctx context.Context, personID int, courtID int, position int) error {
+func MakePlayerPlay(ctx context.Context, db *sql.DB, personID int, courtID int, position int) error {
 
 	person := FullPerson{ID: personID}
-	err := person.LoadPersonContext(db, ctx)
+	err := person.LoadPerson(ctx, db)
 	if err != nil {
 		return codeerror.NewNotFound(fmt.Sprintf("person [%d] not found", personID))
 	}
@@ -238,7 +240,7 @@ func MakePlayerPlayContext(db *sql.DB, ctx context.Context, personID int, courtI
 	}
 
 	court := Court{ID: courtID}
-	err = court.LoadCourtContext(db, ctx)
+	err = court.LoadCourt(ctx, db)
 	if err != nil {
 		return codeerror.NewNotFound(fmt.Sprintf("court [%d] not found", courtID))
 	}
@@ -249,17 +251,17 @@ func MakePlayerPlayContext(db *sql.DB, ctx context.Context, personID int, courtI
 		return codeerror.NewBadRequest(fmt.Sprintf("Unexpected position: %d", position))
 	}
 
-	err = RemovePlayerContext(db, ctx, personID)
+	err = RemovePlayer(ctx, db, personID)
 	if err != nil {
 		return err
 	}
 
-	err = RemoveWaiterContext(db, ctx, personID)
+	err = RemoveWaiter(ctx, db, personID)
 	if err != nil {
 		return err
 	}
 
-	err = AddPlayerContext(db, ctx, personID, courtID, position)
+	err = AddPlayer(ctx, db, personID, courtID, position)
 	if err != nil {
 		return err
 	}
@@ -268,10 +270,10 @@ func MakePlayerPlayContext(db *sql.DB, ctx context.Context, personID int, courtI
 }
 
 // MakePersonInactive sets the status of a person to 'inactive'
-func MakePersonInactive(db *sql.DB, personID int) error {
-	f := functionMakePersonInactive
-
+func MakePersonInactiveTx(db *sql.DB, personID int) error {
+	f := functionMakePersonInactiveTx
 	ctx := context.Background()
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		message := "Could not begin a new transaction"
@@ -280,7 +282,7 @@ func MakePersonInactive(db *sql.DB, personID int) error {
 		return err
 	}
 
-	err = MakePersonInactiveContext(db, ctx, personID)
+	err = MakePersonInactive(ctx, db, personID)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -297,27 +299,27 @@ func MakePersonInactive(db *sql.DB, personID int) error {
 	return nil
 }
 
-func MakePersonInactiveContext(db *sql.DB, ctx context.Context, personID int) error {
+func MakePersonInactive(ctx context.Context, db *sql.DB, personID int) error {
 
 	person := FullPerson{ID: personID}
-	err := person.LoadPersonContext(db, ctx)
+	err := person.LoadPerson(ctx, db)
 	if err != nil {
 		return codeerror.NewNotFound(fmt.Sprintf("person [%d] not found", personID))
 	}
 
-	err = RemovePlayerContext(db, ctx, personID)
+	err = RemovePlayer(ctx, db, personID)
 	if err != nil {
 		return err
 	}
 
-	err = RemoveWaiterContext(db, ctx, personID)
+	err = RemoveWaiter(ctx, db, personID)
 	if err != nil {
 		return err
 	}
 
 	person.Status = StatusInactive
 
-	err = person.UpdatePersonContext(db, ctx)
+	err = person.UpdatePerson(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -326,10 +328,10 @@ func MakePersonInactiveContext(db *sql.DB, ctx context.Context, personID int) er
 }
 
 // MakePersonPlayer sets the status of a person to 'player'
-func MakePersonPlayer(db *sql.DB, personID int) error {
-	f := functionMakePersonPlayer
-
+func MakePersonPlayerTx(db *sql.DB, personID int) error {
+	f := functionMakePersonPlayerTx
 	ctx := context.Background()
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		message := "Could not begin a new transaction"
@@ -338,7 +340,7 @@ func MakePersonPlayer(db *sql.DB, personID int) error {
 		return err
 	}
 
-	err = MakePersonPlayerContext(db, ctx, personID)
+	err = MakePersonPlayer(ctx, db, personID)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -355,15 +357,15 @@ func MakePersonPlayer(db *sql.DB, personID int) error {
 	return nil
 }
 
-func MakePersonPlayerContext(db *sql.DB, ctx context.Context, personID int) error {
+func MakePersonPlayer(ctx context.Context, db *sql.DB, personID int) error {
 	f := functionMakePersonPlayer
 
-	players, err := ListPlayersForPerson(db, personID)
+	players, err := ListPlayersForPerson(ctx, db, personID)
 	if err != nil {
 		return err
 	}
 
-	waiters, err := ListWaitersForPerson(db, personID)
+	waiters, err := ListWaitersForPerson(ctx, db, personID)
 	if err != nil {
 		return err
 	}
@@ -385,7 +387,7 @@ func MakePersonPlayerContext(db *sql.DB, ctx context.Context, personID int) erro
 	}
 
 	person := FullPerson{ID: personID}
-	err = person.LoadPersonContext(db, ctx)
+	err = person.LoadPerson(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -401,21 +403,21 @@ func MakePersonPlayerContext(db *sql.DB, ctx context.Context, personID int) erro
 
 	if person.Status != StatusPlayer {
 		person.Status = StatusPlayer
-		err = person.UpdatePersonContext(db, ctx)
+		err = person.UpdatePerson(ctx, db)
 		if err != nil {
 			return err
 		}
 	}
 
 	if len(players) > 0 {
-		err = RemovePlayerContext(db, ctx, personID)
+		err = RemovePlayer(ctx, db, personID)
 		if err != nil {
 			return err
 		}
 	}
 
 	if len(waiters) == 0 {
-		err = AddWaiterContext(db, ctx, personID)
+		err = AddWaiter(ctx, db, personID)
 		if err != nil {
 			return err
 		}

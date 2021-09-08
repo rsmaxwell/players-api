@@ -17,41 +17,35 @@ var (
 )
 
 // ClearCourt method
-func ClearCourt(w http.ResponseWriter, r *http.Request) {
+func ClearCourt(writer http.ResponseWriter, request *http.Request) {
 	f := functionClearCourt
-	f.DebugAPI("")
 
-	if r.Method == http.MethodOptions {
-		writeResponseMessage(w, r, http.StatusOK, "ok")
-		return
-	}
-
-	_, err := checkAuthenticated(r)
+	_, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	str := mux.Vars(r)["id"]
+	str := mux.Vars(request)["id"]
 	courtID, err := strconv.Atoi(str)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
+		writeResponseMessage(writer, request, http.StatusBadRequest, fmt.Sprintf("the key [%s] is not an int", str))
 		return
 	}
-	f.DebugVerbose("courtID: %d", courtID)
+	DebugVerbose(f, request, "courtID: %d", courtID)
 
-	object := r.Context().Value(ContextDatabaseKey)
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
-	err = model.ClearCourt(db, courtID)
+	err = model.ClearCourtTx(db, courtID)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
@@ -60,5 +54,5 @@ func ClearCourt(w http.ResponseWriter, r *http.Request) {
 	}{
 		Message: "ok",
 	}
-	writeResponseObject(w, r, http.StatusOK, response)
+	writeResponseObject(writer, request, http.StatusOK, response)
 }

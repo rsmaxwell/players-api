@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 
@@ -15,52 +16,54 @@ func TestCourts(t *testing.T) {
 	name2 := "Number 1"
 	name3 := "xxxxx"
 
+	ctx := context.Background()
+
 	c := Court{Name: name1}
-	err := c.SaveCourt(db)
+	err := c.SaveCourt(ctx, db)
 	if err != nil {
 		t.Log("Could not create new court")
 		t.FailNow()
 	}
-	c.Check(t, db, name1)
+	c.Check(ctx, t, db, name1)
 
 	c.Name = name2
-	err = c.UpdateCourt(db)
+	err = c.UpdateCourt(ctx, db)
 	if err != nil {
 		t.Log("Could not update court")
 		t.FailNow()
 	}
-	c.Check(t, db, name2)
+	c.Check(ctx, t, db, name2)
 
 	var c2 = Court{ID: c.ID}
-	err = c2.LoadCourt(db)
+	err = c2.LoadCourt(ctx, db)
 	if err != nil {
 		t.Log("Could not load court")
 		t.FailNow()
 	}
-	c2.Check(t, db, name2)
+	c2.Check(ctx, t, db, name2)
 
 	c2.Name = name3
-	err = c2.SaveCourt(db)
+	err = c2.SaveCourt(ctx, db)
 	if err != nil {
 		t.Log("Could not save court")
 		t.FailNow()
 	}
-	c2.Check(t, db, name3)
+	c2.Check(ctx, t, db, name3)
 
-	err = c.DeleteCourt(db)
+	err = c.DeleteCourtTx(db)
 	if err != nil {
 		t.Log("Could not delete court")
 		t.FailNow()
 	}
-	err = c2.DeleteCourt(db)
+	err = c2.DeleteCourtTx(db)
 	if err != nil {
 		t.Log("Could not delete court")
 		t.FailNow()
 	}
 }
 
-func (c *Court) Check(t *testing.T, db *sql.DB, name string) error {
-	err := c.LoadCourt(db)
+func (c *Court) Check(ctx context.Context, t *testing.T, db *sql.DB, name string) error {
+	err := c.LoadCourt(ctx, db)
 	if err != nil {
 		t.Log(err.Error())
 		t.FailNow()

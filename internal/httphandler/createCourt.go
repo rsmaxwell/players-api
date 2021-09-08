@@ -1,6 +1,7 @@
 package httphandler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -27,49 +28,48 @@ var (
 )
 
 // CreateCourt method
-func CreateCourt(w http.ResponseWriter, r *http.Request) {
+func CreateCourt(writer http.ResponseWriter, request *http.Request) {
 	f := functionCreateCourt
-	f.DebugAPI("")
 
-	_, err := checkAuthenticated(r)
+	_, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	limitedReader := &io.LimitedReader{R: r.Body, N: 20 * 1024}
+	limitedReader := &io.LimitedReader{R: request.Body, N: 20 * 1024}
 	b, err := ioutil.ReadAll(limitedReader)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
+		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	f.DebugRequestBody(b)
+	DebugRequestBody(f, request, b)
 
-	var request CreateCourtRequest
-	err = json.Unmarshal(b, &request)
+	var createCourtRequest CreateCourtRequest
+	err = json.Unmarshal(b, &createCourtRequest)
 	if err != nil {
-		writeResponseMessage(w, r, http.StatusBadRequest, err.Error())
+		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	object := r.Context().Value(ContextDatabaseKey)
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
-	c := model.Court{Name: request.Court.Name}
-	err = c.SaveCourt(db)
+	c := model.Court{Name: createCourtRequest.Court.Name}
+	err = c.SaveCourt(context.Background(), db)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	json.NewEncoder(w).Encode(CreateCourtResponse{
+	json.NewEncoder(writer).Encode(CreateCourtResponse{
 		Message: "ok",
 		Court:   c,
 	})

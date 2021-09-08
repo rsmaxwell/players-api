@@ -19,41 +19,41 @@ var (
 )
 
 // GetMetrics method
-func GetMetrics(w http.ResponseWriter, r *http.Request) {
+func GetMetrics(writer http.ResponseWriter, request *http.Request) {
 	f := functionGetMetrics
-	f.DebugAPI("")
+	ctx := request.Context()
 
-	userID, err := checkAuthenticated(r)
+	userID, err := checkAuthenticated(request)
 	if err != nil {
-		writeResponseError(w, r, err)
+		writeResponseError(writer, request, err)
 		return
 	}
 
-	object := r.Context().Value(ContextDatabaseKey)
+	object := request.Context().Value(ContextDatabaseKey)
 	db, ok := object.(*sql.DB)
 	if !ok {
 		message := "unexpected context type"
-		f.Dump(message)
-		writeResponseMessage(w, r, http.StatusInternalServerError, message)
+		Dump(f, request, message)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, message)
 		return
 	}
 
 	p := model.FullPerson{ID: userID}
-	err = p.LoadPerson(db)
+	err = p.LoadPerson(ctx, db)
 	if err != nil {
-		f.Dump("Could not load the logged on user: %d", userID)
-		writeResponseMessage(w, r, http.StatusInternalServerError, "Not Authorized")
+		Dump(f, request, "Could not load the logged on user: %d", userID)
+		writeResponseMessage(writer, request, http.StatusInternalServerError, "Not Authorized")
 		return
 	}
 
 	err = p.CanGetMetrics()
 	if err != nil {
-		f.DebugVerbose("unauthorized person[%d] attempted to get metrics", userID)
-		writeResponseMessage(w, r, http.StatusForbidden, "Forbidden")
+		DebugVerbose(f, request, "unauthorized person[%d] attempted to get metrics", userID)
+		writeResponseMessage(writer, request, http.StatusForbidden, "Forbidden")
 		return
 	}
 
-	writeResponseObject(w, r, http.StatusOK, GetMetricsResponse{
+	writeResponseObject(writer, request, http.StatusOK, GetMetricsResponse{
 		Message: "ok",
 		Data:    model.MetricsData,
 	})

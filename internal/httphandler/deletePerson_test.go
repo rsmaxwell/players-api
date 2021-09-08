@@ -21,12 +21,14 @@ func TestDeletePerson(t *testing.T) {
 	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
+	ctx := context.Background()
+
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
 	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
-	goodPerson, _ := model.FindPersonByEmail(db, model.GoodEmail)
-	anotherPerson, _ := model.FindPersonByEmail(db, model.AnotherEmail)
+	goodPerson, _ := model.FindPersonByEmail(ctx, db, model.GoodEmail)
+	anotherPerson, _ := model.FindPersonByEmail(ctx, db, model.AnotherEmail)
 
 	// ***************************************************************
 	// * Testcases
@@ -109,7 +111,7 @@ func TestDeletePerson(t *testing.T) {
 
 			if w.Code == http.StatusOK {
 				p := model.FullPerson{ID: test.userID}
-				err := p.LoadPerson(db)
+				err := p.LoadPerson(ctx, db)
 				require.NotNil(t, err, "Person was not deleted")
 			}
 		})

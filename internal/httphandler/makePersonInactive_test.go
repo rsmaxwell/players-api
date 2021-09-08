@@ -20,11 +20,13 @@ func TestMakeInactive(t *testing.T) {
 	teardown, db, _ := model.Setup(t)
 	defer teardown(t)
 
+	ctx := context.Background()
+
 	// ***************************************************************
 	// * Login
 	// ***************************************************************
 	logonCookie, accessToken := GetSigninToken(t, db, model.GoodEmail, model.GoodPassword)
-	anotherPerson, _ := model.FindPersonByEmail(db, model.AnotherEmail)
+	anotherPerson, _ := model.FindPersonByEmail(ctx, db, model.AnotherEmail)
 
 	// ***************************************************************
 	// * Testcases
@@ -96,11 +98,11 @@ func TestMakeInactive(t *testing.T) {
 			router.ServeHTTP(w, r3)
 
 			if w.Code == http.StatusOK {
-				listOfPlayers, err := model.ListPlayersForPerson(db, test.id)
+				listOfPlayers, err := model.ListPlayersForPerson(ctx, db, test.id)
 				require.Nil(t, err)
 				require.Zero(t, len(listOfPlayers))
 
-				listOfWaiters, err := model.ListWaitersForPerson(db, test.id)
+				listOfWaiters, err := model.ListWaitersForPerson(ctx, db, test.id)
 				require.Nil(t, err)
 				require.Zero(t, len(listOfWaiters))
 			}

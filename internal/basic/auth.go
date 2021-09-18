@@ -12,15 +12,17 @@ var (
 )
 
 type MyJwtClaims struct {
-	ID int `json:"id"`
+	ID      int `json:"id"`
+	Request int `json:"request"`
 	jwt.StandardClaims
 }
 
 // GenerateToken generates a jwt token
-func GenerateToken(id int, expiresAfter time.Duration) (string, error) {
+func GenerateToken(id int, request int, expiresAfter time.Duration) (string, error) {
 
 	claims := MyJwtClaims{
-		ID: id,
+		ID:      id,
+		Request: request,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(expiresAfter).Unix(),
 			Issuer:    "test",

@@ -8,13 +8,17 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 	validator "gopkg.in/go-playground/validator.v9"
+
+	"github.com/go-playground/locales/en"
+	ut "github.com/go-playground/universal-translator"
+	en_translations "gopkg.in/go-playground/validator.v9/translations/en"
 )
 
 // Registration type
 type Registration struct {
 	FirstName string `json:"firstname" validate:"required,min=3,max=20"`
 	LastName  string `json:"lastname" validate:"required,min=3,max=20"`
-	Knownas   string `json:"displayname" validate:"required,min=2,max=20"`
+	Knownas   string `json:"knownas" validate:"required,min=2,max=20"`
 	Email     string `json:"email" validate:"required,email"`
 	Phone     string `json:"phone" validate:"max=20"`
 	Password  string `json:"password" validate:"required,min=8,max=30"`
@@ -26,7 +30,15 @@ var (
 
 var (
 	validate = validator.New()
+	trans    ut.Translator
 )
+
+func init() {
+	english := en.New()
+	uni := ut.New(english, english)
+	trans, _ = uni.GetTranslator("en")
+	en_translations.RegisterDefaultTranslations(validate, trans)
+}
 
 // NewRegistration initialises a Registration object
 func NewRegistration(firstname string, lastname string, knownas string, email string, phone string, password string) *Registration {
@@ -46,9 +58,14 @@ func (r *Registration) ToPerson() (*FullPerson, error) {
 
 	err := validate.Struct(r)
 	if err != nil {
-		message := fmt.Sprintf("validation failed for [%s]: %s", r.Email, err.Error())
+		rawMessage := fmt.Sprintf("validation failed for [%s]: %s", r.Email, err.Error())
+		f.DebugVerbose(rawMessage)
+
+		errs := translateError(err, trans)
+		message := errs[0].Error()
 		f.DebugVerbose(message)
-		return nil, codeerror.NewBadRequest(err.Error())
+
+		return nil, codeerror.NewBadRequest(message)
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(r.Password), bcrypt.MinCost)
@@ -61,4 +78,16 @@ func (r *Registration) ToPerson() (*FullPerson, error) {
 	p := NewPerson(r.FirstName, r.LastName, r.Knownas, r.Email, r.Phone, hash)
 
 	return p, nil
+}
+
+func translateError(err error, trans ut.Translator) (errs []error) {
+	if err == nil {
+		return nil
+	}
+	validatorErrs := err.(validator.ValidationErrors)
+	for _, e := range validatorErrs {
+		translatedErr := fmt.Errorf(e.Translate(trans))
+		errs = append(errs, translatedErr)
+	}
+	return errs
 }

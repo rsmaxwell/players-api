@@ -62,12 +62,5 @@ func FillCourt(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	response := struct {
-		Message   string           `json:"message"`
-		Positions []model.Position `json:"positions"`
-	}{
-		Message:   "ok",
-		Positions: positions,
-	}
-	writeResponseObject(writer, request, http.StatusOK, response)
+	writeResponseObject(writer, request, http.StatusOK, positions)
 }

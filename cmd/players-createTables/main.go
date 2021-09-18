@@ -227,7 +227,7 @@ func main() {
 
 		p.Status = model.StatusAdmin
 
-		err = p.SavePerson(ctx, db)
+		err = p.SavePersonTx(db)
 		if err != nil {
 			message := fmt.Sprintf("Could not save person: firstName: %s, lastname: %s, email: %s", p.FirstName, p.LastName, p.Email)
 			f.Errorf(message)

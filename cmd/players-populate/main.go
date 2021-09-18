@@ -75,7 +75,6 @@ func main() {
 
 func makePeople(db *sql.DB) (map[int]int, error) {
 	f := functionMakePeople
-	ctx := context.Background()
 
 	peopleData := []PersonData{
 		{Data: model.Registration{FirstName: "James", LastName: "Bond", Knownas: "007", Email: "007@mi6.gov.uk", Phone: "01632 960573", Password: "TopSecret123"}, Status: model.StatusPlayer},
@@ -114,7 +113,7 @@ func makePeople(db *sql.DB) (map[int]int, error) {
 
 		p.Status = r.Status
 
-		err = p.SavePerson(ctx, db)
+		err = p.SavePersonTx(db)
 		if err != nil {
 			message := fmt.Sprintf("Could not save person: firstName: %s, lastname: %s, email: %s", p.FirstName, p.LastName, p.Email)
 			f.Errorf(message)

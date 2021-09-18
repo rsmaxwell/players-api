@@ -105,11 +105,11 @@ func TestGetCourt(t *testing.T) {
 			bytes, err := ioutil.ReadAll(w.Body)
 			require.Nil(t, err, "err should be nothing")
 
-			var response GetCourtResponse
-			err = json.Unmarshal(bytes, &response)
+			var court model.Court
+			err = json.Unmarshal(bytes, &court)
 			require.Nil(t, err, "err should be nothing")
 
-			actual := response.Court.Name
+			actual := court.Name
 			if actual != test.expectedResult {
 				require.Fail(t, fmt.Sprintf("handler returned unexpected body: got %v want %v", actual, test.expectedResult))
 			}

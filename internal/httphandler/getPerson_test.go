@@ -99,10 +99,10 @@ func TestGetPerson(t *testing.T) {
 			require.Nil(t, err, "err should be nothing")
 
 			if w.Code == http.StatusOK {
-				var response GetPersonResponse
-				err = json.Unmarshal(bytes, &response)
+				var person model.Person
+				err = json.Unmarshal(bytes, &person)
 				require.Nil(t, err, "err should be nothing")
-				require.Equal(t, test.expectedResultName, response.Person.FirstName, fmt.Sprintf("handler returned unexpected body: want %v, got %v", test.expectedResultName, response.Person.FirstName))
+				require.Equal(t, test.expectedResultName, person.FirstName, fmt.Sprintf("handler returned unexpected body: want %v, got %v", test.expectedResultName, person.FirstName))
 			}
 		})
 	}

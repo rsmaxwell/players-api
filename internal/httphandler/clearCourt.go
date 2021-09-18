@@ -49,10 +49,5 @@ func ClearCourt(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	response := struct {
-		Message string `json:"message"`
-	}{
-		Message: "ok",
-	}
-	writeResponseObject(writer, request, http.StatusOK, response)
+	writeResponseObject(writer, request, http.StatusOK, "ok")
 }

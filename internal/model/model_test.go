@@ -98,7 +98,7 @@ func TestPeople(t *testing.T) {
 	p2.FirstName = "xxxxx"
 	p2.Email = "fabdelkader.browx@balaways.com"
 	p2.Phone = "+44 012 098765"
-	err = p2.SavePerson(ctx, db)
+	err = p2.SavePersonTx(db)
 	if err != nil {
 		message := "Could not save person"
 		t.Log(message)

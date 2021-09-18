@@ -67,7 +67,7 @@ func RefreshToken(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	f.DebugVerbose("accessTokenExpiry:  %10s     expires at: %s", cfg.AccessTokenExpiry, time.Now().Add(cfg.AccessTokenExpiry))
-	newAccessToken, err := basic.GenerateToken(claims.ID, cfg.AccessTokenExpiry)
+	newAccessToken, err := basic.GenerateToken(claims.ID, claims.Request, cfg.AccessTokenExpiry)
 	if err != nil {
 		writeResponseError(writer, request, err)
 		return

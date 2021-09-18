@@ -17,12 +17,6 @@ type CreateCourtRequest struct {
 	Court model.Court `json:"court"`
 }
 
-// CreateCourtResponse structure
-type CreateCourtResponse struct {
-	Message string      `json:"message"`
-	Court   model.Court `json:"court"`
-}
-
 var (
 	functionCreateCourt = debug.NewFunction(pkg, "CreateCourt")
 )
@@ -69,8 +63,5 @@ func CreateCourt(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	json.NewEncoder(writer).Encode(CreateCourtResponse{
-		Message: "ok",
-		Court:   c,
-	})
+	writeResponseObject(writer, request, http.StatusOK, c)
 }

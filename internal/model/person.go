@@ -57,6 +57,7 @@ const (
 
 var (
 	functionUpdatePerson      = debug.NewFunction(pkg, "UpdatePerson")
+	functionSavePersonTx      = debug.NewFunction(pkg, "SavePersonTx")
 	functionSavePerson        = debug.NewFunction(pkg, "SavePerson")
 	functionFindPersonByEmail = debug.NewFunction(pkg, "FindPersonByEmail")
 	functionListPeople        = debug.NewFunction(pkg, "ListPeople")
@@ -104,15 +105,43 @@ func NewPerson(firstname string, lastname string, knownas string, email string, 
 	return p
 }
 
+// DeletePerson removes a person and associated waiters and playings
+func (p *FullPerson) SavePersonTx(db *sql.DB) error {
+	f := functionSavePersonTx
+	ctx := context.Background()
+
+	// Create a new context, and begin a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		message := "Could not begin a new transaction"
+		f.DumpError(err, message)
+		return err
+	}
+
+	err = p.xxxSavePerson(ctx, db)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		message := "Could not commit the transaction"
+		f.DumpError(err, message)
+	}
+
+	return nil
+}
+
 // SavePerson writes a new Person to disk and returns the generated id
-func (p *FullPerson) SavePerson(ctx context.Context, db *sql.DB) error {
+func (p *FullPerson) xxxSavePerson(ctx context.Context, db *sql.DB) error {
 	f := functionSavePerson
 
 	fields := "firstname, lastname, knownas, email, phone, hash, status"
 	values := "$1, $2, $3, $4, $5, $6, $7"
 	sqlStatement := "INSERT INTO " + PersonTable + " (" + fields + ") VALUES (" + values + ") RETURNING id"
 
-	err := db.QueryRow(sqlStatement, p.FirstName, p.LastName, p.Knownas, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status).Scan(&p.ID)
+	err := db.QueryRowContext(ctx, sqlStatement, p.FirstName, p.LastName, p.Knownas, p.Email, p.Phone, hex.EncodeToString(p.Hash), p.Status).Scan(&p.ID)
 	if err != nil {
 		pgerr, ok := err.(*pgconn.PgError)
 		if ok {
@@ -359,7 +388,7 @@ func ListPeople(ctx context.Context, db *sql.DB, whereClause string) ([]FullPers
 
 	// Query the people
 	fields := "id, firstname, lastname, knownas, email, phone, hash, status"
-	sqlStatement := `SELECT ` + fields + ` FROM ` + PersonTable + ` ` + whereClause
+	sqlStatement := `SELECT ` + fields + ` FROM ` + PersonTable + ` ` + whereClause + ` ORDER BY ` + `knownas`
 	rows, err := db.QueryContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not select all from " + PersonTable
@@ -409,7 +438,6 @@ func ListPeople(ctx context.Context, db *sql.DB, whereClause string) ([]FullPers
 // Authenticate method
 func (p *FullPerson) Authenticate(db *sql.DB, password string) error {
 	f := functionAuthenticate
-	f.DebugVerbose("id: %d, password:%s", p.ID, "********")
 
 	err := p.checkPassword(password)
 	if err != nil {

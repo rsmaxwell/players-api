@@ -8,12 +8,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
-// GetMetricsResponse structure
-type GetMetricsResponse struct {
-	Message string        `json:"message"`
-	Data    model.Metrics `json:"metrics"`
-}
-
 var (
 	functionGetMetrics = debug.NewFunction(pkg, "GetMetrics")
 )
@@ -53,8 +47,5 @@ func GetMetrics(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	writeResponseObject(writer, request, http.StatusOK, GetMetricsResponse{
-		Message: "ok",
-		Data:    model.MetricsData,
-	})
+	writeResponseObject(writer, request, http.StatusOK, model.MetricsData)
 }

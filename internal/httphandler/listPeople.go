@@ -3,10 +3,7 @@ package httphandler
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/rsmaxwell/players-api/internal/debug"
@@ -31,6 +28,7 @@ var (
 )
 
 func init() {
+	filters[""] = ``
 	filters["all"] = ``
 	filters["players"] = `WHERE status = 'player'`
 	filters["inactive"] = `WHERE status = 'inactive'`
@@ -47,29 +45,12 @@ func ListPeople(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	limitedReader := &io.LimitedReader{R: request.Body, N: 20 * 1024}
-	b, err := ioutil.ReadAll(limitedReader)
-	if err != nil {
-		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	DebugRequestBody(f, request, b)
-
-	var listPeopleRequest ListPeopleRequest
-	err = json.Unmarshal(b, &listPeopleRequest)
-	if err != nil {
-		message := "problem unmarshalling listPeople request"
-		d := DumpError(f, request, err, message)
-		d.AddByteArray("request: ", b)
-		writeResponseMessage(writer, request, http.StatusBadRequest, err.Error())
-		return
-	}
+	filter := request.URL.Query().Get("filter")
 
 	var whereClause string
 	var ok bool
-	if whereClause, ok = filters[listPeopleRequest.Filter]; !ok {
-		message := fmt.Sprintf("unexpected filter name: '%s'", listPeopleRequest.Filter)
+	if whereClause, ok = filters[filter]; !ok {
+		message := fmt.Sprintf("unexpected filter name: '%s'", filter)
 		writeResponseMessage(writer, request, http.StatusBadRequest, message)
 		return
 	}

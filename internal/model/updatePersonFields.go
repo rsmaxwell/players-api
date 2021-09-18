@@ -28,7 +28,24 @@ func UpdatePersonFieldsTx(db *sql.DB, personID int, fields map[string]interface{
 		return err
 	}
 
-	err = UpdatePersonFields(ctx, db, personID, fields)
+	var person FullPerson
+	person.ID = personID
+	err = person.LoadPerson(ctx, db)
+	if err != nil {
+		message := fmt.Sprintf("could not load person: %d", personID)
+		f.DebugVerbose(message)
+		d := f.DumpError(err, message)
+		d.AddObject("fields", fields)
+		return codeerror.NewInternalServerError(message)
+	}
+
+	err = person.UpdatePersonFields(ctx, db, fields)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	_, err = person.CheckConistencyPerson(ctx, db, true)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -43,66 +60,50 @@ func UpdatePersonFieldsTx(db *sql.DB, personID int, fields map[string]interface{
 	return nil
 }
 
-func UpdatePersonFields(ctx context.Context, db *sql.DB, personID int, fields map[string]interface{}) error {
+func (person *FullPerson) UpdatePersonFields(ctx context.Context, db *sql.DB, fields map[string]interface{}) error {
 	f := functionUpdatePersonFields
 
-	var p FullPerson
-	p.ID = personID
-	err := p.LoadPerson(ctx, db)
-	if err != nil {
-		message := fmt.Sprintf("could not load person: %d", personID)
-		f.DebugVerbose(message)
-		d := f.DumpError(err, message)
-		d.AddObject("fields", fields)
-		return codeerror.NewInternalServerError(message)
-	}
-
 	if val, ok := fields["firstname"]; ok {
-		p.FirstName, ok = val.(string)
+		person.FirstName, ok = val.(string)
 		if !ok {
 			message := fmt.Sprintf("unexpected type for [%s]: %v", "firstName", val)
 			f.DebugVerbose(message)
-			f.DumpError(err, message)
 			return codeerror.NewBadRequest(message)
 		}
 	}
 
 	if val, ok := fields["lastname"]; ok {
-		p.LastName, ok = val.(string)
+		person.LastName, ok = val.(string)
 		if !ok {
 			message := fmt.Sprintf("unexpected type for [%s]: %v", "lastName", val)
 			f.DebugVerbose(message)
-			f.DumpError(err, message)
 			return codeerror.NewBadRequest(message)
 		}
 	}
 
 	if val, ok := fields["knownas"]; ok {
-		p.Knownas, ok = val.(string)
+		person.Knownas, ok = val.(string)
 		if !ok {
 			message := fmt.Sprintf("unexpected type for [%s]: %v", "knownas", val)
 			f.DebugVerbose(message)
-			f.DumpError(err, message)
 			return codeerror.NewBadRequest(message)
 		}
 	}
 
 	if val, ok := fields["email"]; ok {
-		p.Email, ok = val.(string)
+		person.Email, ok = val.(string)
 		if !ok {
 			message := fmt.Sprintf("unexpected type for [%s]: %v", "email", val)
 			f.DebugVerbose(message)
-			f.DumpError(err, message)
 			return codeerror.NewBadRequest(message)
 		}
 	}
 
 	if val, ok := fields["phone"]; ok {
-		p.Phone, ok = val.(string)
+		person.Phone, ok = val.(string)
 		if !ok {
 			message := fmt.Sprintf("unexpected type for [%s]: %v", "phone", val)
 			f.DebugVerbose(message)
-			f.DumpError(err, message)
 			return codeerror.NewBadRequest(message)
 		}
 	}
@@ -112,11 +113,11 @@ func UpdatePersonFields(ctx context.Context, db *sql.DB, personID int, fields ma
 		if !ok {
 			message := fmt.Sprintf("unexpected type for [%s]: %v", "password", val)
 			f.DebugVerbose(message)
-			f.DumpError(err, message)
 			return codeerror.NewBadRequest(message)
 		}
 
-		p.Hash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		var err error
+		person.Hash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
 			message := "problem hashing password"
 			f.DebugVerbose(message)
@@ -126,18 +127,17 @@ func UpdatePersonFields(ctx context.Context, db *sql.DB, personID int, fields ma
 	}
 
 	if val, ok := fields["status"]; ok {
-		p.Status, ok = val.(string)
+		person.Status, ok = val.(string)
 		if !ok {
 			message := fmt.Sprintf("unexpected type for [%s]: %v", "status", val)
 			f.DebugVerbose(message)
-			f.DumpError(err, message)
 			return codeerror.NewInternalServerError(message)
 		}
 	}
 
-	err = p.UpdatePerson(ctx, db)
+	err := person.UpdatePerson(ctx, db)
 	if err != nil {
-		message := fmt.Sprintf("problem updating person: %d", personID)
+		message := fmt.Sprintf("problem updating person: %d", person.ID)
 		f.DebugVerbose(message)
 		f.DumpError(err, message)
 		return codeerror.NewInternalServerError(message)

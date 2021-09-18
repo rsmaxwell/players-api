@@ -11,12 +11,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
-// GetCourtResponse structure
-type GetCourtResponse struct {
-	Message string      `json:"message"`
-	Court   model.Court `json:"court"`
-}
-
 var (
 	functionGetCourt = debug.NewFunction(pkg, "GetCourt")
 )
@@ -56,8 +50,5 @@ func GetCourt(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	writeResponseObject(writer, request, http.StatusOK, GetCourtResponse{
-		Message: "ok",
-		Court:   c,
-	})
+	writeResponseObject(writer, request, http.StatusOK, c)
 }

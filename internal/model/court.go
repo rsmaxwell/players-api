@@ -236,7 +236,7 @@ func ListCourts(ctx context.Context, db *sql.DB) ([]Court, error) {
 
 	// Query the courts
 	returnedFields := []string{`id`, `name`}
-	sqlStatement := `SELECT ` + strings.Join(returnedFields, `, `) + ` FROM ` + CourtTable
+	sqlStatement := `SELECT ` + strings.Join(returnedFields, `, `) + ` FROM ` + CourtTable + ` ORDER BY ` + `name`
 	rows, err := db.QueryContext(ctx, sqlStatement)
 	if err != nil {
 		message := "Could not select all from " + CourtTable

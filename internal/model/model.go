@@ -102,7 +102,7 @@ func Populate(db *sql.DB) error {
 
 		p.Status = StatusPlayer
 
-		err = p.SavePerson(ctx, db)
+		err = p.SavePersonTx(db)
 		if err != nil {
 			f.Errorf("Could not save person: firstName: %s, lastname: %s, email: %s", p.FirstName, p.LastName, p.Email)
 			return err

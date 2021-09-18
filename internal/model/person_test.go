@@ -26,7 +26,7 @@ func TestPeopleBasic(t *testing.T) {
 		t.FailNow()
 	}
 
-	err = p.SavePerson(ctx, db)
+	err = p.SavePersonTx(db)
 	if err != nil {
 		t.Log("Could not create new person")
 		t.Logf("%T   %s", err, err.Error())
@@ -93,7 +93,7 @@ func TestPeopleBasic(t *testing.T) {
 	p.Hash = hash
 	p.Status = StatusPlayer
 
-	err = p.SavePerson(ctx, db)
+	err = p.SavePersonTx(db)
 	if err != nil {
 		t.Log("Could not save person")
 		t.FailNow()

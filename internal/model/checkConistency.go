@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	functionCheckConistencyTx = debug.NewFunction(pkg, "CheckConistencyTx")
-	functionCheckConistency   = debug.NewFunction(pkg, "CheckConistency")
+	functionCheckConistencyTx     = debug.NewFunction(pkg, "CheckConistencyTx")
+	functionCheckConistency       = debug.NewFunction(pkg, "CheckConistency")
+	functionCheckConistencyPerson = debug.NewFunction(pkg, "CheckConistencyPerson")
 )
 
 func CheckConistencyTx(db *sql.DB, fix bool) (int, error) {
@@ -50,89 +51,53 @@ func CheckConistency(ctx context.Context, db *sql.DB, fix bool) (int, error) {
 		return 0, err
 	}
 
-	count := 0
+	total := 0
 
 	for _, person := range list {
 
-		waiters, err := ListWaitersForPerson(ctx, db, person.ID)
+		count, err := person.CheckConistencyPerson(ctx, db, fix)
 		if err != nil {
-			message := fmt.Sprintf("Could not list waiters for person: [%d: %s]", person.ID, person.Knownas)
+			message := fmt.Sprintf("Problem checking consistany for person: [%d: %s]", person.ID, person.Knownas)
 			f.Errorf(message)
 			f.DumpError(err, message)
 			return 0, err
 		}
 
-		players, err := ListPlayersForPerson(ctx, db, person.ID)
-		if err != nil {
-			message := fmt.Sprintf("Could not list players for person: [%d: %s]", person.ID, person.Knownas)
-			f.Errorf(message)
-			f.DumpError(err, message)
-			return 0, err
-		}
+		total = total + count
+	}
 
-		if person.Status == StatusPlayer {
-			if len(waiters) < 1 {
-				if len(players) < 1 {
+	return total, nil
+}
 
-					count++
-					f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is a player but has no waiter or player records", person.ID, person.Knownas))
+func (person *FullPerson) CheckConistencyPerson(ctx context.Context, db *sql.DB, fix bool) (int, error) {
+	f := functionCheckConistencyPerson
 
-					if fix {
-						err := AddWaiter(ctx, db, person.ID)
-						if err != nil {
-							message := fmt.Sprintf("Could not add waiter: [%d: %s]", person.ID, person.Knownas)
-							f.Errorf(message)
-							f.DumpError(err, message)
-							return 0, err
-						}
-					}
-				} else if len(players) > 1 {
+	count := 0
 
-					count++
-					f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is a player and has %d player records", person.ID, person.Knownas, len(players)))
+	waiters, err := ListWaitersForPerson(ctx, db, person.ID)
+	if err != nil {
+		message := fmt.Sprintf("Could not list waiters for person: [%d: %s]", person.ID, person.Knownas)
+		f.Errorf(message)
+		f.DumpError(err, message)
+		return 0, err
+	}
 
-					if fix {
-						err = RemovePlayer(ctx, db, person.ID)
-						if err != nil {
-							message := fmt.Sprintf("Could not remove player: id: [%d: %s]", person.ID, person.Knownas)
-							f.Errorf(message)
-							f.DumpError(err, message)
-							return 0, err
-						}
+	players, err := ListPlayersForPerson(ctx, db, person.ID)
+	if err != nil {
+		message := fmt.Sprintf("Could not list players for person: [%d: %s]", person.ID, person.Knownas)
+		f.Errorf(message)
+		f.DumpError(err, message)
+		return 0, err
+	}
 
-						err := AddWaiter(ctx, db, person.ID)
-						if err != nil {
-							message := fmt.Sprintf("Could not add waiter: id: [%d: %s]", person.ID, person.Knownas)
-							f.Errorf(message)
-							f.DumpError(err, message)
-							return 0, err
-						}
-					}
-				} else {
-					// NOP
-				}
-			} else if len(waiters) > 1 {
+	if person.Status == StatusPlayer {
+		if len(waiters) < 1 {
+			if len(players) < 1 {
 
 				count++
-				f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is a player but has %d waiter records", person.ID, person.Knownas, len(waiters)))
 
 				if fix {
-					err = RemoveWaiter(ctx, db, person.ID)
-					if err != nil {
-						message := fmt.Sprintf("Could not remove waiter: [%d: %s]", person.ID, person.Knownas)
-						f.Errorf(message)
-						f.DumpError(err, message)
-						return 0, err
-					}
-
-					err = RemovePlayer(ctx, db, person.ID)
-					if err != nil {
-						message := fmt.Sprintf("Could not remove player: [%d: %s]", person.ID, person.Knownas)
-						f.Errorf(message)
-						f.DumpError(err, message)
-						return 0, err
-					}
-
+					f.DebugError(fmt.Sprintf("Adding waiter record for person [%d: %s]", person.ID, person.Knownas))
 					err := AddWaiter(ctx, db, person.ID)
 					if err != nil {
 						message := fmt.Sprintf("Could not add waiter: [%d: %s]", person.ID, person.Knownas)
@@ -140,56 +105,127 @@ func CheckConistency(ctx context.Context, db *sql.DB, fix bool) (int, error) {
 						f.DumpError(err, message)
 						return 0, err
 					}
+				} else {
+					f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is a player but has no waiter or player records", person.ID, person.Knownas))
 				}
-			} else if len(players) < 1 {
-				// NOP
-			} else {
+			} else if len(players) > 1 {
 
 				count++
-				f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is a player but has 1 waiter record and %d player records", person.ID, person.Knownas, len(players)))
 
 				if fix {
+					f.DebugError(fmt.Sprintf("Removing player record and adding waiter record for person [%d: %s]", person.ID, person.Knownas))
+
 					err = RemovePlayer(ctx, db, person.ID)
 					if err != nil {
-						message := fmt.Sprintf("Could not remove player: [%d: %s]", person.ID, person.Knownas)
+						message := fmt.Sprintf("Could not remove player: id: [%d: %s]", person.ID, person.Knownas)
 						f.Errorf(message)
 						f.DumpError(err, message)
 						return 0, err
 					}
+
+					err := AddWaiter(ctx, db, person.ID)
+					if err != nil {
+						message := fmt.Sprintf("Could not add waiter: id: [%d: %s]", person.ID, person.Knownas)
+						f.Errorf(message)
+						f.DumpError(err, message)
+						return 0, err
+					}
+				} else {
+					f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is a player and has %d player records", person.ID, person.Knownas, len(players)))
 				}
+			} else {
+				// NOP
 			}
+		} else if len(waiters) > 1 {
+
+			count++
+
+			if fix {
+				f.DebugError(fmt.Sprintf("Removing waiter and player records, then adding new waiter record for person [%d: %s]", person.ID, person.Knownas))
+
+				err = RemoveWaiter(ctx, db, person.ID)
+				if err != nil {
+					message := fmt.Sprintf("Could not remove waiter: [%d: %s]", person.ID, person.Knownas)
+					f.Errorf(message)
+					f.DumpError(err, message)
+					return 0, err
+				}
+
+				err = RemovePlayer(ctx, db, person.ID)
+				if err != nil {
+					message := fmt.Sprintf("Could not remove player: [%d: %s]", person.ID, person.Knownas)
+					f.Errorf(message)
+					f.DumpError(err, message)
+					return 0, err
+				}
+
+				err := AddWaiter(ctx, db, person.ID)
+				if err != nil {
+					message := fmt.Sprintf("Could not add waiter: [%d: %s]", person.ID, person.Knownas)
+					f.Errorf(message)
+					f.DumpError(err, message)
+					return 0, err
+				}
+			} else {
+				f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is a player but has %d waiter records", person.ID, person.Knownas, len(waiters)))
+			}
+		} else if len(players) < 1 {
+			// NOP
 		} else {
 
-			if len(waiters) > 0 {
+			count++
 
-				count++
-				f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is not a player but has %d waiter records", person.ID, person.Knownas, len(waiters)))
+			if fix {
+				f.DebugError(fmt.Sprintf("Removing player record for person [%d: %s]", person.ID, person.Knownas))
 
-				if fix {
-					err = RemoveWaiter(ctx, db, person.ID)
-					if err != nil {
-						message := fmt.Sprintf("Could not remove waiter: [%d: %s]", person.ID, person.Knownas)
-						f.Errorf(message)
-						f.DumpError(err, message)
-						return 0, err
-					}
+				err = RemovePlayer(ctx, db, person.ID)
+				if err != nil {
+					message := fmt.Sprintf("Could not remove player: [%d: %s]", person.ID, person.Knownas)
+					f.Errorf(message)
+					f.DumpError(err, message)
+					return 0, err
 				}
+			} else {
+				f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is a player but has 1 waiter record and %d player records", person.ID, person.Knownas, len(players)))
 			}
+		}
+	} else {
 
-			if len(players) > 0 {
+		if len(waiters) > 0 {
 
-				count++
-				f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is not a player but has %d player records", person.ID, person.Knownas, len(players)))
+			count++
 
-				if fix {
-					err = RemovePlayer(ctx, db, person.ID)
-					if err != nil {
-						message := fmt.Sprintf("Could not remove player: [%d: %s]", person.ID, person.Knownas)
-						f.Errorf(message)
-						f.DumpError(err, message)
-						return 0, err
-					}
+			if fix {
+				f.DebugError(fmt.Sprintf("Removing waiter record for person [%d: %s]", person.ID, person.Knownas))
+
+				err = RemoveWaiter(ctx, db, person.ID)
+				if err != nil {
+					message := fmt.Sprintf("Could not remove waiter: [%d: %s]", person.ID, person.Knownas)
+					f.Errorf(message)
+					f.DumpError(err, message)
+					return 0, err
 				}
+			} else {
+				f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is not a player but has %d waiter records", person.ID, person.Knownas, len(waiters)))
+			}
+		}
+
+		if len(players) > 0 {
+
+			count++
+
+			if fix {
+				f.DebugError(fmt.Sprintf("Removing player record for person [%d: %s]", person.ID, person.Knownas))
+
+				err = RemovePlayer(ctx, db, person.ID)
+				if err != nil {
+					message := fmt.Sprintf("Could not remove player: [%d: %s]", person.ID, person.Knownas)
+					f.Errorf(message)
+					f.DumpError(err, message)
+					return 0, err
+				}
+			} else {
+				f.DebugError(fmt.Sprintf("Inconsistant data: person [%d: %s] is not a player but has %d player records", person.ID, person.Knownas, len(players)))
 			}
 		}
 	}

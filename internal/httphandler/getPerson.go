@@ -11,12 +11,6 @@ import (
 	"github.com/rsmaxwell/players-api/internal/model"
 )
 
-// GetPersonResponse structure
-type GetPersonResponse struct {
-	Message string       `json:"message"`
-	Person  model.Person `json:"person"`
-}
-
 var (
 	functionGetPerson = debug.NewFunction(pkg, "GetPerson")
 )
@@ -58,8 +52,6 @@ func GetPerson(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	writeResponseObject(writer, request, http.StatusOK, GetPersonResponse{
-		Message: "ok",
-		Person:  *p.ToLimited(),
-	})
+	limitedPerson := p.ToLimited()
+	writeResponseObject(writer, request, http.StatusOK, limitedPerson)
 }

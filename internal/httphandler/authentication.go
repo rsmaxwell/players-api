@@ -50,6 +50,8 @@ func Signin(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	DebugRequestBody(f, request, b)
+	DebugInfo(f, request, "RemoteAddr: %s", request.RemoteAddr)
+	DebugInfo(f, request, "User-Agent: %s", request.Header["User-Agent"])
 
 	var signinRequest SigninRequest
 	err = json.Unmarshal(b, &signinRequest)
@@ -96,15 +98,17 @@ func Signin(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	requestID := getRequestID(request)
+
 	f.DebugVerbose("accessTokenExpiry:  %10s     expires at: %s", cfg.AccessTokenExpiry, time.Now().Add(cfg.AccessTokenExpiry).Round(time.Second))
-	newAccessToken, err := basic.GenerateToken(p.ID, cfg.AccessTokenExpiry)
+	newAccessToken, err := basic.GenerateToken(p.ID, requestID, cfg.AccessTokenExpiry)
 	if err != nil {
 		writeResponseError(writer, request, err)
 		return
 	}
 
 	f.DebugVerbose("refreshTokenExpiry: %10s     expires at: %s", cfg.RefreshTokenExpiry, time.Now().Add(cfg.RefreshTokenExpiry).Round(time.Second))
-	newRefreshToken, err := basic.GenerateToken(p.ID, cfg.RefreshTokenExpiry)
+	newRefreshToken, err := basic.GenerateToken(p.ID, requestID, cfg.RefreshTokenExpiry)
 	if err != nil {
 		writeResponseError(writer, request, err)
 		return
@@ -190,7 +194,7 @@ func checkAuthenticated(request *http.Request) (int, error) {
 		return 0, err
 	}
 
-	DebugVerbose(f, request, fmt.Sprintf("user: %d", claims.ID))
+	DebugVerbose(f, request, fmt.Sprintf("jwtClaims: user:%d, request:%d", claims.ID, claims.Request))
 
 	return claims.ID, nil
 }

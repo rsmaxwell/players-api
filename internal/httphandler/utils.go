@@ -82,33 +82,34 @@ func SetupHandlers(w *mux.Router) {
 
 	s := w.PathPrefix("/players-api").Subrouter()
 
-	s.HandleFunc("/register", Register).Methods(http.MethodPost, http.MethodOptions)
-	s.HandleFunc("/signin", Signin).Methods(http.MethodPost, http.MethodOptions)
-	s.HandleFunc("/signout", Signout).Methods(http.MethodGet, http.MethodOptions)
-	s.HandleFunc("/refresh", RefreshToken).Methods(http.MethodPost, http.MethodOptions)
+	s.HandleFunc("/register", Register).Methods(http.MethodPost)
+	s.HandleFunc("/signin", Signin).Methods(http.MethodPost)
+	s.HandleFunc("/signout", Signout).Methods(http.MethodGet)
+	s.HandleFunc("/refresh", RefreshToken).Methods(http.MethodPost)
 
-	s.HandleFunc("/waiters", ListWaiters).Methods(http.MethodGet, http.MethodOptions)
+	s.HandleFunc("/waiters", ListWaiters).Methods(http.MethodGet)
 
-	s.HandleFunc("/people", ListPeople).Methods(http.MethodPost, http.MethodOptions)
-	s.HandleFunc("/people/{id}", DeletePerson).Methods(http.MethodDelete, http.MethodOptions)
-	s.HandleFunc("/people/{id}", GetPerson).Methods(http.MethodGet, http.MethodOptions)
-	s.HandleFunc("/people/{id}", UpdatePerson).Methods(http.MethodPut, http.MethodOptions)
+	s.HandleFunc("/people", Register).Methods(http.MethodPost)
+	s.HandleFunc("/people", ListPeople).Methods(http.MethodGet)
+	s.HandleFunc("/people/{id}", DeletePerson).Methods(http.MethodDelete)
+	s.HandleFunc("/people/{id}", GetPerson).Methods(http.MethodGet)
+	s.HandleFunc("/people/{id}", UpdatePerson).Methods(http.MethodPut)
 
-	s.HandleFunc("/people/toplayer/{id1}", MakePersonPlayer).Methods(http.MethodPut, http.MethodOptions)
-	s.HandleFunc("/people/toinactive/{id}", MakePersonInactive).Methods(http.MethodPut, http.MethodOptions)
+	s.HandleFunc("/people/toplayer/{id1}", MakePersonPlayer).Methods(http.MethodPut)
+	s.HandleFunc("/people/toinactive/{id}", MakePersonInactive).Methods(http.MethodPut)
 
-	s.HandleFunc("/people/toplaying/{id1}/{id2}/{id3}", MakePlayerPlay).Methods(http.MethodPut, http.MethodOptions)
-	s.HandleFunc("/people/towaiting/{id}", MakePlayerWait).Methods(http.MethodPut, http.MethodOptions)
+	s.HandleFunc("/people/toplaying/{id1}/{id2}/{id3}", MakePlayerPlay).Methods(http.MethodPut)
+	s.HandleFunc("/people/towaiting/{id}", MakePlayerWait).Methods(http.MethodPut)
 
-	s.HandleFunc("/courts", ListCourts).Methods(http.MethodGet, http.MethodOptions)
-	s.HandleFunc("/courts/{id}", GetCourt).Methods(http.MethodGet, http.MethodOptions)
-	s.HandleFunc("/courts", CreateCourt).Methods(http.MethodPost, http.MethodOptions)
-	s.HandleFunc("/courts/{id}", UpdateCourt).Methods(http.MethodPut, http.MethodOptions)
-	s.HandleFunc("/courts/{id}", DeleteCourt).Methods(http.MethodDelete, http.MethodOptions)
-	s.HandleFunc("/courts/fill/{id}", FillCourt).Methods(http.MethodPut, http.MethodOptions)
-	s.HandleFunc("/courts/clear/{id}", ClearCourt).Methods(http.MethodPut, http.MethodOptions)
+	s.HandleFunc("/courts", ListCourts).Methods(http.MethodGet)
+	s.HandleFunc("/courts/{id}", GetCourt).Methods(http.MethodGet)
+	s.HandleFunc("/newcourt", CreateCourt).Methods(http.MethodPost)
+	s.HandleFunc("/courts/{id}", UpdateCourt).Methods(http.MethodPut)
+	s.HandleFunc("/courts/{id}", DeleteCourt).Methods(http.MethodDelete)
+	s.HandleFunc("/courts/fill/{id}", FillCourt).Methods(http.MethodPut)
+	s.HandleFunc("/courts/clear/{id}", ClearCourt).Methods(http.MethodPut)
 
-	s.HandleFunc("/metrics", GetMetrics).Methods(http.MethodGet, http.MethodOptions)
+	s.HandleFunc("/metrics", GetMetrics).Methods(http.MethodGet)
 
 	w.NotFoundHandler = http.HandlerFunc(NotFound)
 }
@@ -117,7 +118,7 @@ func DebugRequest(f *debug.Function, request *http.Request) error {
 
 	if f.Level() >= debug.APILevel {
 
-		requestID := getRequestID(request)
+		requestID := getFormattedRequestID(request)
 		f.DebugAPI("%s %s %s %s ------------------------------------------------------", requestID, request.Method, request.Host, request.URL)
 
 		for name, headers := range request.Header {
@@ -133,7 +134,7 @@ func DebugRequest(f *debug.Function, request *http.Request) error {
 
 func DebugResponse(f *debug.Function, request *http.Request, status int) {
 	if f.Level() >= debug.APILevel {
-		requestID := getRequestID(request)
+		requestID := getFormattedRequestID(request)
 		f.DebugAPI("%s %s %s %s --> statusCode: %d", requestID, request.Method, request.Host, request.URL, status)
 	}
 }
@@ -141,7 +142,7 @@ func DebugResponse(f *debug.Function, request *http.Request, status int) {
 // DebugRequestBody traces the http request body
 func DebugRequestBody(f *debug.Function, req *http.Request, data []byte) {
 	if f.Level() >= debug.APILevel {
-		requestID := getRequestID(req)
+		requestID := getFormattedRequestID(req)
 		data2, _ := hidePasswords(data)
 		f.DebugVerbose("%s %s", requestID, string(data2))
 	}
@@ -149,7 +150,7 @@ func DebugRequestBody(f *debug.Function, req *http.Request, data []byte) {
 
 func DebugInfo(f *debug.Function, req *http.Request, format string, a ...interface{}) {
 	if f.Level() >= debug.VerboseLevel {
-		requestID := getRequestID(req)
+		requestID := getFormattedRequestID(req)
 		message := fmt.Sprintf(format, a...)
 		f.DebugInfo("%s %s", requestID, message)
 	}
@@ -157,7 +158,7 @@ func DebugInfo(f *debug.Function, req *http.Request, format string, a ...interfa
 
 func DebugError(f *debug.Function, req *http.Request, format string, a ...interface{}) {
 	if f.Level() >= debug.VerboseLevel {
-		requestID := getRequestID(req)
+		requestID := getFormattedRequestID(req)
 		message := fmt.Sprintf(format, a...)
 		f.DebugError("%s %s", requestID, message)
 	}
@@ -165,25 +166,30 @@ func DebugError(f *debug.Function, req *http.Request, format string, a ...interf
 
 func DebugVerbose(f *debug.Function, req *http.Request, format string, a ...interface{}) {
 	if f.Level() >= debug.VerboseLevel {
-		requestID := getRequestID(req)
+		requestID := getFormattedRequestID(req)
 		message := fmt.Sprintf(format, a...)
 		f.DebugVerbose("%s %s", requestID, message)
 	}
 }
 
 // DebugRequestBody traces the http request body
-func getRequestID(req *http.Request) string {
+func getRequestID(request *http.Request) int {
 	f := functionGetRequestID
 
-	ctx := req.Context()
+	ctx := request.Context()
 	object := ctx.Value(ContextRequestIdKey)
 	id, ok := object.(int)
 	if !ok {
 		message := fmt.Sprintf("unexpected context type: %#v", id)
 		f.Dump(message)
-		return ""
+		return 0
 	}
 
+	return id
+}
+
+func getFormattedRequestID(request *http.Request) string {
+	id := getRequestID(request)
 	return fmt.Sprintf("[request:%d]", id)
 }
 
@@ -227,12 +233,12 @@ func walk(input map[string]interface{}) map[string]interface{} {
 
 func Dump(f *debug.Function, request *http.Request, format string, a ...interface{}) *debug.Dump {
 	d := f.Dump(format, a...)
-	d.AddString("RequestID", getRequestID(request))
+	d.AddString("RequestID", getFormattedRequestID(request))
 	return d
 }
 
 func DumpError(f *debug.Function, request *http.Request, err error, format string, a ...interface{}) *debug.Dump {
 	d := f.DumpError(err, format, a...)
-	d.AddString("RequestID", getRequestID(request))
+	d.AddString("RequestID", getFormattedRequestID(request))
 	return d
 }
